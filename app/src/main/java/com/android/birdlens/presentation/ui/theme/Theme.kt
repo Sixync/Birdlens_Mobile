@@ -1,4 +1,4 @@
-package com.example.birdlens.ui.theme
+package com.android.birdlens.ui.theme
 
 import android.app.Activity
 import android.os.Build

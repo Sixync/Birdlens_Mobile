@@ -39,7 +39,7 @@
                 "am", 
                 "start", 
                 "-n", 
-                "com.example.birdlens/.MainActivity"
+                "com.android.birdlens/.MainActivity"
             ],
             "group": "test",
             "dependsOn": ["installDebug"],

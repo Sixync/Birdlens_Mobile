@@ -1,15 +1,17 @@
+// EXE201/app/build.gradle.kts
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.birdlens"
+    namespace = "com.android.birdlens"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.birdlens"
+        applicationId = "com.android.birdlens"
         minSdk = 33
         targetSdk = 35
         versionCode = 1
@@ -49,6 +51,13 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.navigation.runtime.android)
+    // Material Icons
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
+    // Coil
+    implementation(libs.coil.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -56,4 +65,13 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    implementation(platform("com.google.firebase:firebase-bom:33.13.0")) // Ensure this is a recent version
+    implementation("com.google.firebase:firebase-analytics")
+
+    // Firebase Authentication
+    implementation("com.google.firebase:firebase-auth-ktx")
+
+    // Google Sign-In (for One Tap)
+    implementation("com.google.android.gms:play-services-auth:20.7.0") // This version is okay for now
 }

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "154465275979",
+    "project_id": "birdlens-e6efb",
+    "storage_bucket": "birdlens-e6efb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:154465275979:android:17127bd0c38c4ac29cfdce",
+        "android_client_info": {
+          "package_name": "com.android.birdlens"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "154465275979-i2fqua0c6rfrrpdflm8uktm4p6mko44b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.android.birdlens",
+            "certificate_hash": "851b4385347c5aab493526e671cdd17049d6241d"
+          }
+        },
+        {
+          "client_id": "154465275979-jjmn8mi9a47mjms952rcba7eph12kgo0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZf8J5E7HcU6DC5hg572_GS9-vz-3iLTo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "154465275979-jjmn8mi9a47mjms952rcba7eph12kgo0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,4 @@
-package com.example.birdlens
+package com.android.birdlens
 
 import org.junit.Test
 
