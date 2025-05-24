@@ -17,7 +17,7 @@ import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScr
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
 import com.android.birdlens.presentation.ui.screens.register.RegisterScreen
-import com.android.birdlens.presentation.ui.screens.settings.SettingsScreen // <-- Add this import
+import com.android.birdlens.presentation.ui.screens.settings.SettingsScreen
 import com.android.birdlens.presentation.ui.screens.tour.TourScreen
 import com.android.birdlens.presentation.ui.screens.tourdetail.TourDetailScreen
 import com.android.birdlens.presentation.ui.screens.welcome.WelcomeScreen
@@ -73,11 +73,7 @@ fun AppNavigation(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onRegistrationSuccess = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Welcome.route)
-                    }
-                },
+                // onRegistrationSuccess = { ... } // <-- This parameter is removed
                 onLoginWithFacebook = {
                     navController.navigate(Screen.LoginSuccess.route) {
                         popUpTo(Screen.Welcome.route)
@@ -146,7 +142,7 @@ fun AppNavigation(
             MapScreen(navController = navController)
         }
         composable(Screen.Community.route) { CommunityScreen(navController = navController) }
-        composable(Screen.Settings.route) { // <-- Add this route
+        composable(Screen.Settings.route) {
             SettingsScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel

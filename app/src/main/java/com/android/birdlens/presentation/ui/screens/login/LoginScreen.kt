@@ -34,17 +34,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.android.birdlens.presentation.navigation.Screen // Ensure correct import
+import com.android.birdlens.data.model.request.LoginRequest
+import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
-// import kotlinx.coroutines.launch // Not needed directly here if LaunchedEffect is used
 
 @Composable
 fun LoginScreen(
     navController: NavController,
     googleAuthViewModel: GoogleAuthViewModel,
     onNavigateBack: () -> Unit,
-    onLoginSuccess: () -> Unit, // Callback for successful traditional login
+    onLoginSuccess: () -> Unit, // This will be triggered by ViewModel state now
     onForgotPassword: () -> Unit,
     onLoginWithFacebook: () -> Unit,
     onLoginWithX: () -> Unit,
@@ -54,28 +54,52 @@ fun LoginScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
-    val authState by googleAuthViewModel.authState.collectAsState()
+    val googleSignInState by googleAuthViewModel.googleAuthState.collectAsState()
+    val traditionalLoginApiState by googleAuthViewModel.traditionalLoginState.collectAsState()
 
-    LaunchedEffect(authState) {
-        when (val state = authState) {
-            is GoogleAuthViewModel.AuthState.Success -> {
+    // Handle Google Sign-In State
+    LaunchedEffect(googleSignInState) {
+        when (val state = googleSignInState) {
+            is GoogleAuthViewModel.GoogleSignInState.Success -> {
                 Toast.makeText(context, "Google Sign-In Success: ${state.user.displayName}", Toast.LENGTH_SHORT).show()
                 navController.navigate(Screen.LoginSuccess.route) {
-                    popUpTo(Screen.Welcome.route) { inclusive = true } // Go to LoginSuccess, clear back stack up to Welcome
+                    popUpTo(Screen.Welcome.route) { inclusive = true}
                 }
-                googleAuthViewModel.resetAuthState() // Reset state after handling
+                googleAuthViewModel.resetGoogleAuthState()
             }
-            is GoogleAuthViewModel.AuthState.Error -> {
-                Toast.makeText(context, "Error: ${state.message}", Toast.LENGTH_LONG).show()
-                googleAuthViewModel.resetAuthState() // Reset state after handling
+            is GoogleAuthViewModel.GoogleSignInState.Error -> {
+                Toast.makeText(context, "Google Error: ${state.message}", Toast.LENGTH_LONG).show()
+                googleAuthViewModel.resetGoogleAuthState()
             }
-            // Loading and Idle states are handled by UI elements below
             else -> { /* Do nothing for Loading or Idle in LaunchedEffect */ }
         }
     }
 
+    // Handle Traditional Login API State
+    LaunchedEffect(traditionalLoginApiState) {
+        when (val state = traditionalLoginApiState) {
+            is GoogleAuthViewModel.TraditionalLoginState.Success -> {
+                Toast.makeText(context, "Login Successful: Welcome ${state.loginData.username ?: "User"}", Toast.LENGTH_SHORT).show()
+                navController.navigate(Screen.LoginSuccess.route) {
+                    popUpTo(Screen.Welcome.route) { inclusive = true}
+                }
+                googleAuthViewModel.resetTraditionalLoginState()
+            }
+            is GoogleAuthViewModel.TraditionalLoginState.Error -> {
+                Toast.makeText(context, "Login Error: ${state.message}", Toast.LENGTH_LONG).show()
+                googleAuthViewModel.resetTraditionalLoginState()
+            }
+            else -> { /* Idle or Loading */ }
+        }
+    }
+
+    val isLoading = googleSignInState is GoogleAuthViewModel.GoogleSignInState.Loading ||
+            traditionalLoginApiState is GoogleAuthViewModel.TraditionalLoginState.Loading
+
+
     Box(modifier = modifier.fillMaxSize()) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+            // ... background drawing ...
             val canvasWidth = size.width
             val canvasHeight = size.height
             drawRect(color = GreenDeep)
@@ -190,14 +214,17 @@ fun LoginScreen(
 
                     Button(
                         onClick = {
-                            // TODO: Implement traditional login logic here
-                            // For now, directly call onLoginSuccess for placeholder
-                            onLoginSuccess()
+                            if (username.isNotBlank() && password.isNotBlank()) {
+                                googleAuthViewModel.loginUser(LoginRequest(username, password))
+                            } else {
+                                Toast.makeText(context, "Please enter username and password", Toast.LENGTH_SHORT).show()
+                            }
                         },
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen),
                         modifier = Modifier.size(60.dp),
-                        contentPadding = PaddingValues(0.dp)
+                        contentPadding = PaddingValues(0.dp),
+                        enabled = !isLoading
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -212,20 +239,21 @@ fun LoginScreen(
                     SocialLoginButton(
                         text = "Login with Google",
                         onClick = {
-                            if (authState !is GoogleAuthViewModel.AuthState.Loading) {
+                            if (!isLoading) {
                                 googleAuthViewModel.startGoogleSignIn(isSignUp = false)
                             }
                         },
-                        iconPlaceholder = true // You might want to add a Google icon here
+                        iconPlaceholder = true,
+                        enabled = !isLoading
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    SocialLoginButton(text = "Login with Facebook", onClick = onLoginWithFacebook, iconPlaceholder = true)
+                    SocialLoginButton(text = "Login with Facebook", onClick = onLoginWithFacebook, iconPlaceholder = true, enabled = !isLoading)
                     Spacer(modifier = Modifier.height(12.dp))
-                    SocialLoginButton(text = "Login with X", onClick = onLoginWithX, iconPlaceholder = true)
+                    SocialLoginButton(text = "Login with X", onClick = onLoginWithX, iconPlaceholder = true, enabled = !isLoading)
                     Spacer(modifier = Modifier.height(12.dp))
-                    SocialLoginButton(text = "Login with Apple", onClick = onLoginWithApple, iconPlaceholder = true)
+                    SocialLoginButton(text = "Login with Apple", onClick = onLoginWithApple, iconPlaceholder = true, enabled = !isLoading)
 
-                    if (authState is GoogleAuthViewModel.AuthState.Loading) {
+                    if (isLoading) {
                         Spacer(modifier = Modifier.height(16.dp))
                         CircularProgressIndicator(color = TextWhite)
                     }
@@ -235,8 +263,7 @@ fun LoginScreen(
     }
 }
 
-// CustomTextField and SocialLoginButton composables remain the same
-// ... (CustomTextField and SocialLoginButton code from your file) ...
+// ... (CustomTextField and SocialLoginButton composables remain the same) ...
 @Composable
 fun CustomTextField(
     value: String,
@@ -279,26 +306,29 @@ fun SocialLoginButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    iconPlaceholder: Boolean = false // Consider replacing with an actual Icon composable
+    iconPlaceholder: Boolean = false,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(50),
         colors = ButtonDefaults.buttonColors(
             containerColor = SocialButtonBackground,
-            contentColor = SocialButtonText
+            contentColor = SocialButtonText,
+            disabledContainerColor = SocialButtonBackground.copy(alpha = 0.5f),
+            disabledContentColor = SocialButtonText.copy(alpha = 0.5f)
         ),
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(48.dp),
+        enabled = enabled
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             if (iconPlaceholder) {
-                // TODO: Replace with actual Google icon, e.g., Image(painterResource(id = R.drawable.ic_google_logo), ...)
-                Box(modifier = Modifier.size(24.dp)) // Placeholder for icon
+                Box(modifier = Modifier.size(24.dp))
                 Spacer(modifier = Modifier.width(12.dp))
             }
             Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
@@ -313,10 +343,7 @@ fun SocialLoginButton(
 fun LoginScreenPreview() {
     BirdlensTheme {
         val navController = rememberNavController()
-        // For preview, you might need a dummy ViewModel or mock its state
         val dummyViewModel = GoogleAuthViewModel()
-        // In a real app, initialize would be called from Activity
-        // dummyViewModel.initialize(LocalContext.current as ComponentActivity) // This won't work in @Preview
         LoginScreen(
             navController = navController,
             googleAuthViewModel = dummyViewModel,
