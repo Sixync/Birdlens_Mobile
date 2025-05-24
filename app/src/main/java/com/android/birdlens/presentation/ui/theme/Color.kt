@@ -39,3 +39,7 @@ val BirdlensGradientEnd = Color(0xFF69D84D)   // New
 val ActionButtonLightGray = Color(0xFFD3D3D3) // For "Join Now", "Add to Cart"
 val ActionButtonTextDark = Color.Black.copy(alpha = 0.8f)
 val StoreNamePlaceholderCircle = Color.LightGray
+
+// New Colors for Settings Screen
+val LogoutButtonGreen = Color(0xFF50B062) // A distinct green for logout button
+val DividerColor = TextWhite.copy(alpha = 0.2f)
