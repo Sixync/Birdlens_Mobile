@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/example/birdlens/presentation/ui/screens/login/LoginScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/login/LoginScreen.kt
 package com.android.birdlens.presentation.ui.screens.login
 
 import android.annotation.SuppressLint

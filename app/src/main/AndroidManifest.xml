@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Permissions required by Google Maps -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
 
     <application
         android:allowBackup="true"
@@ -14,6 +19,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Birdlens"
         tools:targetApi="31">
+
+        <!--
+             TODO: You need to add your Google Maps API key here.
+             Get an API key from https://console.cloud.google.com/google/maps-apis/overview
+             and replace "YOUR_API_KEY" with your actual key.
+        -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="my_api_KEY" />
+
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

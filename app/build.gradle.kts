@@ -58,6 +58,9 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     // Coil
     implementation(libs.coil.compose)
+    implementation(libs.maps.compose) // Added
+    implementation(libs.play.services.maps) // Added
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

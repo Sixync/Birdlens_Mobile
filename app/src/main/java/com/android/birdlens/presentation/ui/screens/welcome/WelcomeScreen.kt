@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/example/birdlens/presentation/ui/screens/welcome/WelcomeScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/welcome/WelcomeScreen.kt
 package com.android.birdlens.presentation.ui.screens.welcome
 
 import androidx.compose.foundation.Canvas

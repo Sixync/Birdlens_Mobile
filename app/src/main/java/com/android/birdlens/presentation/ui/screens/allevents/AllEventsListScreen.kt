@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/example/birdlens/presentation/ui/screens/allevents/AllEventsListScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/allevents/AllEventsListScreen.kt
 package com.android.birdlens.presentation.ui.screens.allevents
 
 import androidx.compose.foundation.Canvas

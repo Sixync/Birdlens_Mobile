@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/example/birdlens/presentation/ui/screens/loginsuccess/LoginSuccessScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/loginsuccess/LoginSuccessScreen.kt
 package com.android.birdlens.presentation.ui.screens.loginsuccess
 
 import androidx.compose.foundation.Canvas

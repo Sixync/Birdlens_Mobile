@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/example/birdlens/presentation/ui/screens/tour/TourScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/tour/TourScreen.kt
 package com.android.birdlens.presentation.ui.screens.tour
 
 import androidx.compose.foundation.Canvas
@@ -76,7 +76,7 @@ fun TourScreen(
     val bottomNavItems = listOf(
         BottomNavItem("Filter", { Icon(Icons.Outlined.Tune, "Filter") }, { Icon(Icons.Filled.Tune, "Filter") }, "filter_route"), // Placeholder route
         BottomNavItem("People", { Icon(Icons.Outlined.Groups, "People") }, { Icon(Icons.Filled.Groups, "People") }, "people_route"), // Placeholder route
-        BottomNavItem("Map", { Icon(Icons.Outlined.Map, "Map") }, { Icon(Icons.Filled.Map, "Map") }, "map_route"),           // Placeholder route
+        BottomNavItem("Map", { Icon(Icons.Outlined.Map, "Map") }, { Icon(Icons.Filled.Map, "Map") }, Screen.Map.route),
         BottomNavItem("Cart", { Icon(Icons.Outlined.ShoppingCart, "Marketplace") }, { Icon(Icons.Filled.ShoppingCart, "Marketplace") }, Screen.Marketplace.route), // Updated to Marketplace
         BottomNavItem("Calendar", { Icon(Icons.Outlined.CalendarToday, "Calendar") }, { Icon(Icons.Filled.CalendarToday, "Calendar") }, Screen.Tour.route) // Main/home tab
     )

@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/example/birdlens/presentation/navigation/AppNavigation.kt
+// app/src/main/java/com/android/birdlens/presentation/navigation/AppNavigation.kt
 package com.android.birdlens.presentation.navigation
 
 import androidx.compose.runtime.Composable
@@ -13,6 +13,7 @@ import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
+import com.android.birdlens.presentation.ui.screens.map.MapScreen // Added import
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
 import com.android.birdlens.presentation.ui.screens.register.RegisterScreen
 import com.android.birdlens.presentation.ui.screens.tour.TourScreen
@@ -48,20 +49,16 @@ fun AppNavigation(
                     }
                 },
                 onForgotPassword = { /* TODO */ },
-                // Google Sign-In is handled by the ViewModel, success navigation is handled in LoginScreen via LaunchedEffect
-                // For other social logins, we keep the placeholder navigation for now
+                // ... other login methods
                 onLoginWithFacebook = {
-                    // Placeholder: Simulate successful Facebook login and navigate
                     navController.navigate(Screen.LoginSuccess.route) {
                         popUpTo(Screen.Welcome.route)
                     }
                 },
                 onLoginWithX = {
-                    // Placeholder: Simulate successful X login and navigate
                     navController.navigate(Screen.LoginSuccess.route) { popUpTo(Screen.Welcome.route) }
                 },
                 onLoginWithApple = {
-                    // Placeholder: Simulate successful Apple login and navigate
                     navController.navigate(Screen.LoginSuccess.route) {
                         popUpTo(Screen.Welcome.route)
                     }
@@ -78,20 +75,16 @@ fun AppNavigation(
                         popUpTo(Screen.Welcome.route)
                     }
                 },
-                // Google Sign-Up/In is handled by the ViewModel, success navigation is handled in RegisterScreen via LaunchedEffect
-                // For other social logins, we keep the placeholder navigation for now
+                // ... other register methods
                 onLoginWithFacebook = {
-                    // Placeholder: Simulate successful Facebook login and navigate
                     navController.navigate(Screen.LoginSuccess.route) {
                         popUpTo(Screen.Welcome.route)
                     }
                 },
                 onLoginWithX = {
-                    // Placeholder: Simulate successful X login and navigate
                     navController.navigate(Screen.LoginSuccess.route) { popUpTo(Screen.Welcome.route) }
                 },
                 onLoginWithApple = {
-                    // Placeholder: Simulate successful Apple login and navigate
                     navController.navigate(Screen.LoginSuccess.route) {
                         popUpTo(Screen.Welcome.route)
                     }
@@ -107,7 +100,6 @@ fun AppNavigation(
                 }
             )
         }
-        // ... other composable routes remain the same
         composable(Screen.Tour.route) {
             TourScreen(
                 navController = navController,
@@ -123,7 +115,7 @@ fun AppNavigation(
             AllEventsListScreen(
                 navController = navController,
                 onEventItemClick = { eventId ->
-                    navController.navigate(Screen.TourDetail.createRoute(eventId))
+                    navController.navigate(Screen.TourDetail.createRoute(eventId)) // Can navigate to tour detail
                 }
             )
         }
@@ -150,6 +142,9 @@ fun AppNavigation(
         }
         composable(Screen.Marketplace.route) {
             MarketplaceScreen(navController = navController)
+        }
+        composable(Screen.Map.route) { // Added MapScreen route
+            MapScreen(navController = navController)
         }
     }
 }

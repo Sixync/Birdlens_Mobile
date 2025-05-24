@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/example/birdlens/presentation/navigation/Screen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/Screen.kt
 package com.android.birdlens.presentation.navigation
 
 sealed class Screen(val route: String) {
@@ -14,6 +14,7 @@ sealed class Screen(val route: String) {
     }
     data object Cart : Screen("cart_screen")
     data object Marketplace : Screen("marketplace_screen")
+    data object Map : Screen("map_screen") // Added Map Screen
     // Add other screens here as your app grows
     // data object MainApp : Screen("main_app_screen")
 }

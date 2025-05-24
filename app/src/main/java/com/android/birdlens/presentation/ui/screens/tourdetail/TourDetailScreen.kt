@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/example/birdlens/presentation/ui/screens/tourdetail/TourDetailScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/tourdetail/TourDetailScreen.kt
 package com.android.birdlens.presentation.ui.screens.tourdetail
 
 import androidx.compose.foundation.Canvas

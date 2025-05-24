@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/example/birdlens/presentation/ui/screens/cart/CartScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/cart/CartScreen.kt
 package com.android.birdlens.presentation.ui.screens.cart
 
 import androidx.compose.foundation.Canvas
