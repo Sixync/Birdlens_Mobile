@@ -2,6 +2,7 @@
 package com.android.birdlens.presentation.ui.screens.login
 
 import android.annotation.SuppressLint
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -44,62 +45,77 @@ fun LoginScreen(
     navController: NavController,
     googleAuthViewModel: GoogleAuthViewModel,
     onNavigateBack: () -> Unit,
-    onLoginSuccess: () -> Unit, // This will be triggered by ViewModel state now
+    // onLoginSuccess is now handled by observing FirebaseSignInState
     onForgotPassword: () -> Unit,
-    onLoginWithFacebook: () -> Unit,
+    onLoginWithFacebook: () -> Unit, // Assuming these are placeholders for now
     onLoginWithX: () -> Unit,
     onLoginWithApple: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") } // Changed from username
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
-    val googleSignInState by googleAuthViewModel.googleAuthState.collectAsState()
-    val traditionalLoginApiState by googleAuthViewModel.traditionalLoginState.collectAsState()
 
-    // Handle Google Sign-In State
-    LaunchedEffect(googleSignInState) {
-        when (val state = googleSignInState) {
-            is GoogleAuthViewModel.GoogleSignInState.Success -> {
-                Toast.makeText(context, "Google Sign-In Success: ${state.user.displayName}", Toast.LENGTH_SHORT).show()
+    val googleOneTapState by googleAuthViewModel.googleSignInOneTapState.collectAsState()
+    val backendAuthState by googleAuthViewModel.backendAuthState.collectAsState()
+    val firebaseSignInState by googleAuthViewModel.firebaseSignInState.collectAsState()
+
+    // Handle Firebase Sign-In State (final step for all auth flows)
+    LaunchedEffect(firebaseSignInState) {
+        when (val state = firebaseSignInState) {
+            is GoogleAuthViewModel.FirebaseSignInState.Success -> {
+                Toast.makeText(context, "Firebase Sign-In Success: ${state.firebaseUser.uid}", Toast.LENGTH_SHORT).show()
+                // You have state.firebaseIdToken to use for your backend API calls
+                Log.d("LoginScreen", "Firebase ID Token: ${state.firebaseIdToken.take(15)}...")
                 navController.navigate(Screen.LoginSuccess.route) {
-                    popUpTo(Screen.Welcome.route) { inclusive = true}
+                    popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
-                googleAuthViewModel.resetGoogleAuthState()
+                googleAuthViewModel.resetFirebaseSignInState() // Reset after handling
+                googleAuthViewModel.resetBackendAuthState() // Also reset previous step's state
+                googleAuthViewModel.resetGoogleOneTapState() // Reset if it was Google flow
             }
-            is GoogleAuthViewModel.GoogleSignInState.Error -> {
-                Toast.makeText(context, "Google Error: ${state.message}", Toast.LENGTH_LONG).show()
-                googleAuthViewModel.resetGoogleAuthState()
+            is GoogleAuthViewModel.FirebaseSignInState.Error -> {
+                Toast.makeText(context, "Firebase Sign-In Error: ${state.message}", Toast.LENGTH_LONG).show()
+                googleAuthViewModel.resetFirebaseSignInState()
             }
-            else -> { /* Do nothing for Loading or Idle in LaunchedEffect */ }
+            else -> { /* Idle or Loading for Firebase Sign-In */ }
         }
     }
 
-    // Handle Traditional Login API State
-    LaunchedEffect(traditionalLoginApiState) {
-        when (val state = traditionalLoginApiState) {
-            is GoogleAuthViewModel.TraditionalLoginState.Success -> {
-                Toast.makeText(context, "Login Successful: Welcome ${state.loginData.username ?: "User"}", Toast.LENGTH_SHORT).show()
-                navController.navigate(Screen.LoginSuccess.route) {
-                    popUpTo(Screen.Welcome.route) { inclusive = true}
-                }
-                googleAuthViewModel.resetTraditionalLoginState()
+    // Handle Backend Auth State (intermediate step)
+    LaunchedEffect(backendAuthState) {
+        when (val state = backendAuthState) {
+            is GoogleAuthViewModel.BackendAuthState.Error -> {
+                Toast.makeText(context, "Auth Error (${state.operation}): ${state.message}", Toast.LENGTH_LONG).show()
+                googleAuthViewModel.resetBackendAuthState()
             }
-            is GoogleAuthViewModel.TraditionalLoginState.Error -> {
-                Toast.makeText(context, "Login Error: ${state.message}", Toast.LENGTH_LONG).show()
-                googleAuthViewModel.resetTraditionalLoginState()
-            }
-            else -> { /* Idle or Loading */ }
+            // CustomTokenReceived is handled by ViewModel calling signInToFirebaseWithCustomToken
+            // RegistrationSuccess also leads to signInToFirebaseWithCustomToken
+            else -> { /* Idle, Loading, or Success (which triggers Firebase sign-in) */ }
         }
     }
 
-    val isLoading = googleSignInState is GoogleAuthViewModel.GoogleSignInState.Loading ||
-            traditionalLoginApiState is GoogleAuthViewModel.TraditionalLoginState.Loading
+    // Handle Google OneTap State (initial step for Google Sign-In)
+    LaunchedEffect(googleOneTapState) {
+        when (val state = googleOneTapState) {
+            is GoogleAuthViewModel.GoogleSignInOneTapState.Error -> {
+                Toast.makeText(context, "Google Sign-In Error: ${state.message}", Toast.LENGTH_LONG).show()
+                googleAuthViewModel.resetGoogleOneTapState()
+            }
+            // UILaunching and GoogleIdTokenRetrieved are intermediate states handled by VM
+            else -> { /* Idle, UILaunching, GoogleIdTokenRetrieved */ }
+        }
+    }
+
+
+    val isLoading = backendAuthState is GoogleAuthViewModel.BackendAuthState.Loading ||
+            firebaseSignInState is GoogleAuthViewModel.FirebaseSignInState.Loading ||
+            googleOneTapState is GoogleAuthViewModel.GoogleSignInOneTapState.UILaunching
 
 
     Box(modifier = modifier.fillMaxSize()) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            // ... background drawing ...
+            // ... background drawing (no changes needed here) ...
             val canvasWidth = size.width
             val canvasHeight = size.height
             drawRect(color = GreenDeep)
@@ -133,6 +149,7 @@ fun LoginScreen(
                 .navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
+            // ... Back button ... (no changes)
             Box(modifier = Modifier.fillMaxWidth()) {
                 IconButton(
                     onClick = onNavigateBack,
@@ -163,6 +180,7 @@ fun LoginScreen(
                 ) {
                     Text(
                         text = "LOG IN",
+                        // ... style ...
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = TextWhite,
@@ -172,9 +190,9 @@ fun LoginScreen(
                     )
 
                     CustomTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        placeholder = "Username",
+                        value = email, // Changed from username
+                        onValueChange = { email = it },
+                        placeholder = "Email", // Changed from Username
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -188,6 +206,7 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    // ... Forgot password text ... (no changes)
                     Spacer(modifier = Modifier.height(12.dp))
 
                     ClickableText(
@@ -210,16 +229,18 @@ fun LoginScreen(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
 
+
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    Button(
+                    Button( // Login Button
                         onClick = {
-                            if (username.isNotBlank() && password.isNotBlank()) {
-                                googleAuthViewModel.loginUser(LoginRequest(username, password))
+                            if (email.isNotBlank() && password.isNotBlank()) {
+                                googleAuthViewModel.loginUser(LoginRequest(email, password))
                             } else {
-                                Toast.makeText(context, "Please enter username and password", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
                             }
                         },
+                        // ... style, enabled state ...
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen),
                         modifier = Modifier.size(60.dp),
@@ -236,22 +257,25 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    SocialLoginButton(
+                    SocialLoginButton( // Google Login Button
                         text = "Login with Google",
                         onClick = {
                             if (!isLoading) {
-                                googleAuthViewModel.startGoogleSignIn(isSignUp = false)
+                                googleAuthViewModel.startGoogleSignIn()
                             }
                         },
-                        iconPlaceholder = true,
+                        // ... style, enabled state ...
+                        iconPlaceholder = true, // Replace with actual Google icon later
                         enabled = !isLoading
                     )
+                    // ... Other social login buttons ...
                     Spacer(modifier = Modifier.height(12.dp))
                     SocialLoginButton(text = "Login with Facebook", onClick = onLoginWithFacebook, iconPlaceholder = true, enabled = !isLoading)
                     Spacer(modifier = Modifier.height(12.dp))
                     SocialLoginButton(text = "Login with X", onClick = onLoginWithX, iconPlaceholder = true, enabled = !isLoading)
                     Spacer(modifier = Modifier.height(12.dp))
                     SocialLoginButton(text = "Login with Apple", onClick = onLoginWithApple, iconPlaceholder = true, enabled = !isLoading)
+
 
                     if (isLoading) {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -263,7 +287,7 @@ fun LoginScreen(
     }
 }
 
-// ... (CustomTextField and SocialLoginButton composables remain the same) ...
+// ... CustomTextField and SocialLoginButton composables remain the same ...
 @Composable
 fun CustomTextField(
     value: String,
@@ -328,7 +352,9 @@ fun SocialLoginButton(
             horizontalArrangement = Arrangement.Center
         ) {
             if (iconPlaceholder) {
-                Box(modifier = Modifier.size(24.dp))
+                // TODO: Replace with actual icon if available
+                // For example: Icon(painter = painterResource(id = R.drawable.ic_google_logo), contentDescription = "Google")
+                Box(modifier = Modifier.size(24.dp)) // Placeholder for icon
                 Spacer(modifier = Modifier.width(12.dp))
             }
             Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
@@ -343,12 +369,12 @@ fun SocialLoginButton(
 fun LoginScreenPreview() {
     BirdlensTheme {
         val navController = rememberNavController()
-        val dummyViewModel = GoogleAuthViewModel()
+        // In a real app, use a ViewModel factory or Hilt for ViewModel injection
+        val dummyViewModel = GoogleAuthViewModel() // For preview only
         LoginScreen(
             navController = navController,
             googleAuthViewModel = dummyViewModel,
             onNavigateBack = {},
-            onLoginSuccess = {},
             onForgotPassword = {},
             onLoginWithFacebook = {},
             onLoginWithX = {},

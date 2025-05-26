@@ -2,6 +2,7 @@
 package com.android.birdlens.presentation.ui.screens.register
 
 import android.annotation.SuppressLint
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -40,9 +41,9 @@ fun RegisterScreen(
     navController: NavController,
     googleAuthViewModel: GoogleAuthViewModel,
     onNavigateBack: () -> Unit,
-    onLoginWithFacebook: () -> Unit,
-    onLoginWithX: () -> Unit,
-    onLoginWithApple: () -> Unit,
+    onLoginWithFacebook: () -> Unit, // Placeholder
+    onLoginWithX: () -> Unit,      // Placeholder
+    onLoginWithApple: () -> Unit,     // Placeholder
     modifier: Modifier = Modifier
 ) {
     var email by remember { mutableStateOf("") }
@@ -51,52 +52,77 @@ fun RegisterScreen(
     var retypePassword by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
-    var ageString by remember { mutableStateOf("") } // Age as string for TextField
+    var ageString by remember { mutableStateOf("") }
 
     val context = LocalContext.current
-    val googleSignInState by googleAuthViewModel.googleAuthState.collectAsState()
-    val registrationApiState by googleAuthViewModel.registrationState.collectAsState()
 
-    // Handle Google Sign-In State
-    LaunchedEffect(googleSignInState) {
-        when (val state = googleSignInState) {
-            is GoogleAuthViewModel.GoogleSignInState.Success -> {
-                Toast.makeText(context, "Google Sign-Up/In Success: ${state.user.displayName}", Toast.LENGTH_SHORT).show()
-                navController.navigate(Screen.LoginSuccess.route) {
+    val googleOneTapState by googleAuthViewModel.googleSignInOneTapState.collectAsState()
+    val backendAuthState by googleAuthViewModel.backendAuthState.collectAsState()
+    val firebaseSignInState by googleAuthViewModel.firebaseSignInState.collectAsState()
+
+    // Handle Firebase Sign-In State (final step for all auth flows)
+    LaunchedEffect(firebaseSignInState) {
+        when (val state = firebaseSignInState) {
+            is GoogleAuthViewModel.FirebaseSignInState.Success -> {
+                Toast.makeText(context, "Firebase Sign-In Success (after registration/Google): ${state.firebaseUser.uid}", Toast.LENGTH_SHORT).show()
+                Log.d("RegisterScreen", "Firebase ID Token: ${state.firebaseIdToken.take(15)}...")
+                navController.navigate(Screen.LoginSuccess.route) { // Or directly to Tour screen
                     popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
-                googleAuthViewModel.resetGoogleAuthState()
+                googleAuthViewModel.resetFirebaseSignInState()
+                googleAuthViewModel.resetBackendAuthState()
+                googleAuthViewModel.resetGoogleOneTapState()
             }
-            is GoogleAuthViewModel.GoogleSignInState.Error -> {
-                Toast.makeText(context, "Google Error: ${state.message}", Toast.LENGTH_LONG).show()
-                googleAuthViewModel.resetGoogleAuthState()
+            is GoogleAuthViewModel.FirebaseSignInState.Error -> {
+                Toast.makeText(context, "Firebase Sign-In Error: ${state.message}", Toast.LENGTH_LONG).show()
+                googleAuthViewModel.resetFirebaseSignInState()
             }
-            else -> { /* Idle or Loading for Google Sign-In */ }
+            else -> { /* Idle or Loading */ }
         }
     }
 
-    // Handle Traditional Registration API State
-    LaunchedEffect(registrationApiState) {
-        when (val state = registrationApiState) {
-            is GoogleAuthViewModel.RegistrationState.Success -> {
-                Toast.makeText(context, "Registration Successful! Please login.", Toast.LENGTH_LONG).show()
-                navController.navigate(Screen.Login.route) { // Navigate to Login after successful registration
-                    popUpTo(Screen.Welcome.route) // Clear back stack up to Welcome
+    // Handle Backend Auth State (intermediate step for both traditional and Google)
+    LaunchedEffect(backendAuthState) {
+        when (val state = backendAuthState) {
+            is GoogleAuthViewModel.BackendAuthState.Error -> {
+                val operationType = when (state.operation) {
+                    GoogleAuthViewModel.AuthOperation.REGISTER -> "Registration"
+                    GoogleAuthViewModel.AuthOperation.GOOGLE_SIGN_IN -> "Google Sign-Up"
+                    else -> "Authentication"
                 }
-                googleAuthViewModel.resetRegistrationState()
+                Toast.makeText(context, "$operationType Error: ${state.message}", Toast.LENGTH_LONG).show()
+                googleAuthViewModel.resetBackendAuthState()
             }
-            is GoogleAuthViewModel.RegistrationState.Error -> {
-                Toast.makeText(context, "Registration API Error: ${state.message}", Toast.LENGTH_LONG).show()
-                googleAuthViewModel.resetRegistrationState()
+            is GoogleAuthViewModel.BackendAuthState.RegistrationSuccess -> {
+                // ViewModel automatically calls signInToFirebaseWithCustomToken
+                Toast.makeText(context, "Registration with backend successful. Signing into Firebase...", Toast.LENGTH_SHORT).show()
             }
-            else -> { /* Idle or Loading for API registration */ }
+            is GoogleAuthViewModel.BackendAuthState.CustomTokenReceived -> {
+                // This is for Google flow, ViewModel automatically calls signInToFirebaseWithCustomToken
+                Toast.makeText(context, "Google auth with backend successful. Signing into Firebase...", Toast.LENGTH_SHORT).show()
+            }
+            else -> { /* Idle or Loading */ }
         }
     }
 
+    // Handle Google OneTap State (initial step for Google Sign-Up)
+    LaunchedEffect(googleOneTapState) {
+        when (val state = googleOneTapState) {
+            is GoogleAuthViewModel.GoogleSignInOneTapState.Error -> {
+                Toast.makeText(context, "Google Sign-Up Error: ${state.message}", Toast.LENGTH_LONG).show()
+                googleAuthViewModel.resetGoogleOneTapState()
+            }
+            else -> { /* Idle, UILaunching, GoogleIdTokenRetrieved (handled by VM) */ }
+        }
+    }
+
+    val isLoading = backendAuthState is GoogleAuthViewModel.BackendAuthState.Loading ||
+            firebaseSignInState is GoogleAuthViewModel.FirebaseSignInState.Loading ||
+            googleOneTapState is GoogleAuthViewModel.GoogleSignInOneTapState.UILaunching
 
     Box(modifier = modifier.fillMaxSize()) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            // ... background canvas drawing ...
+            // ... background canvas drawing (no changes needed here) ...
             val canvasWidth = size.width
             val canvasHeight = size.height
             drawRect(color = GreenDeep)
@@ -135,7 +161,7 @@ fun RegisterScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp)) // Reduced spacer
+            Spacer(modifier = Modifier.height(8.dp))
 
             Surface(
                 color = CardBackground,
@@ -147,8 +173,8 @@ fun RegisterScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState()) // Make content scrollable
-                        .padding(horizontal = 24.dp, vertical = 24.dp), // Adjusted vertical padding
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -156,128 +182,80 @@ fun RegisterScreen(
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = TextWhite,
-                            letterSpacing = 1.sp // Adjusted letter spacing
+                            letterSpacing = 1.sp
                         ),
-                        modifier = Modifier.padding(bottom = 20.dp) // Adjusted padding
+                        modifier = Modifier.padding(bottom = 20.dp)
                     )
 
-                    CustomTextField(
-                        value = firstName,
-                        onValueChange = { firstName = it },
-                        placeholder = "First Name",
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
+                    CustomTextField(value = firstName, onValueChange = { firstName = it }, placeholder = "First Name", modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next))
                     Spacer(modifier = Modifier.height(12.dp))
-                    CustomTextField(
-                        value = lastName,
-                        onValueChange = { lastName = it },
-                        placeholder = "Last Name",
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
+                    CustomTextField(value = lastName, onValueChange = { lastName = it }, placeholder = "Last Name", modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next))
                     Spacer(modifier = Modifier.height(12.dp))
-                    CustomTextField(
-                        value = ageString,
-                        onValueChange = { ageString = it.filter { char -> char.isDigit() } }, // Allow only digits
-                        placeholder = "Age",
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
-                    )
+                    CustomTextField(value = ageString, onValueChange = { ageString = it.filter { char -> char.isDigit() } }, placeholder = "Age", modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next))
                     Spacer(modifier = Modifier.height(12.dp))
-                    CustomTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        placeholder = "Email",
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
-                    )
+                    CustomTextField(value = email, onValueChange = { email = it }, placeholder = "Email", modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next))
                     Spacer(modifier = Modifier.height(12.dp))
-                    CustomTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        placeholder = "Username",
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
+                    CustomTextField(value = username, onValueChange = { username = it }, placeholder = "Username", modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next))
                     Spacer(modifier = Modifier.height(12.dp))
-                    CustomTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        placeholder = "Password",
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next)
-                    )
+                    CustomTextField(value = password, onValueChange = { password = it }, placeholder = "Password", visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next))
                     Spacer(modifier = Modifier.height(12.dp))
-                    CustomTextField(
-                        value = retypePassword,
-                        onValueChange = { retypePassword = it },
-                        placeholder = "Retype password",
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done)
-                    )
+                    CustomTextField(value = retypePassword, onValueChange = { retypePassword = it }, placeholder = "Retype password", visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done))
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    Button(
+                    Button( // Traditional Registration Button
                         onClick = {
                             val age = ageString.toIntOrNull()
                             if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || username.isBlank() || password.isBlank()) {
-                                Toast.makeText(context, "All fields except Avatar are required.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "All fields are required.", Toast.LENGTH_SHORT).show()
                             } else if (age == null || age <= 0) {
                                 Toast.makeText(context, "Please enter a valid age.", Toast.LENGTH_SHORT).show()
-                            }
-                            else if (password != retypePassword) {
+                            } else if (password.length < 6) {
+                                Toast.makeText(context, "Password must be at least 6 characters.", Toast.LENGTH_SHORT).show()
+                            } else if (password != retypePassword) {
                                 Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show()
                             } else {
                                 val request = RegisterRequest(
-                                    username = username,
-                                    password = password,
-                                    email = email,
-                                    firstName = firstName,
-                                    lastName = lastName,
-                                    age = age
-                                    // avatarUrl can be added later if you have an input for it
+                                    username = username, password = password, email = email,
+                                    firstName = firstName, lastName = lastName, age = age
                                 )
                                 googleAuthViewModel.registerUser(request)
                             }
                         },
                         shape = RoundedCornerShape(50),
                         colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen),
-                        modifier = Modifier
-                            .fillMaxWidth(0.7f) // Slightly wider button
-                            .height(50.dp),
-                        enabled = registrationApiState !is GoogleAuthViewModel.RegistrationState.Loading && googleSignInState !is GoogleAuthViewModel.GoogleSignInState.Loading
+                        modifier = Modifier.fillMaxWidth(0.7f).height(50.dp),
+                        enabled = !isLoading
                     ) {
                         Text("Continue", color = TextWhite, fontSize = 16.sp)
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp)) // Space before social logins
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    SocialLoginButton(
+                    SocialLoginButton( // Google Sign-Up Button
                         text = "Sign up with Google",
                         onClick = {
-                            if (googleSignInState !is GoogleAuthViewModel.GoogleSignInState.Loading) {
-                                googleAuthViewModel.startGoogleSignIn(isSignUp = true)
+                            if (!isLoading) {
+                                googleAuthViewModel.startGoogleSignIn()
                             }
                         },
-                        iconPlaceholder = true,
-                        enabled = registrationApiState !is GoogleAuthViewModel.RegistrationState.Loading && googleSignInState !is GoogleAuthViewModel.GoogleSignInState.Loading
+                        iconPlaceholder = true, // Replace with actual Google icon
+                        enabled = !isLoading
                     )
+                    // ... Other social sign-up buttons ...
                     Spacer(modifier = Modifier.height(10.dp))
-                    SocialLoginButton(text = "Sign up with Facebook", onClick = onLoginWithFacebook, iconPlaceholder = true, enabled = registrationApiState !is GoogleAuthViewModel.RegistrationState.Loading && googleSignInState !is GoogleAuthViewModel.GoogleSignInState.Loading)
+                    SocialLoginButton(text = "Sign up with Facebook", onClick = onLoginWithFacebook, iconPlaceholder = true, enabled = !isLoading)
                     Spacer(modifier = Modifier.height(10.dp))
-                    SocialLoginButton(text = "Sign up with X", onClick = onLoginWithX, iconPlaceholder = true, enabled = registrationApiState !is GoogleAuthViewModel.RegistrationState.Loading && googleSignInState !is GoogleAuthViewModel.GoogleSignInState.Loading)
+                    SocialLoginButton(text = "Sign up with X", onClick = onLoginWithX, iconPlaceholder = true, enabled = !isLoading)
                     Spacer(modifier = Modifier.height(10.dp))
-                    SocialLoginButton(text = "Sign up with Apple", onClick = onLoginWithApple, iconPlaceholder = true, enabled = registrationApiState !is GoogleAuthViewModel.RegistrationState.Loading && googleSignInState !is GoogleAuthViewModel.GoogleSignInState.Loading)
+                    SocialLoginButton(text = "Sign up with Apple", onClick = onLoginWithApple, iconPlaceholder = true, enabled = !isLoading)
 
-                    if (registrationApiState is GoogleAuthViewModel.RegistrationState.Loading || googleSignInState is GoogleAuthViewModel.GoogleSignInState.Loading) {
+
+                    if (isLoading) {
                         Spacer(modifier = Modifier.height(16.dp))
                         CircularProgressIndicator(color = TextWhite)
                     }
-                    Spacer(modifier = Modifier.height(16.dp)) // Bottom padding
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -290,12 +268,11 @@ fun RegisterScreen(
 fun RegisterScreenPreview() {
     BirdlensTheme {
         val navController = rememberNavController()
-        val dummyViewModel = GoogleAuthViewModel()
+        val dummyViewModel = GoogleAuthViewModel() // For preview purposes
         RegisterScreen(
             navController = navController,
             googleAuthViewModel = dummyViewModel,
             onNavigateBack = {},
-            // onRegistrationSuccess = {}, // Removed, handled by ViewModel state
             onLoginWithFacebook = {},
             onLoginWithX = {},
             onLoginWithApple = {}

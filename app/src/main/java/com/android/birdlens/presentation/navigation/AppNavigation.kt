@@ -45,11 +45,6 @@ fun AppNavigation(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onLoginSuccess = {
-                    navController.navigate(Screen.LoginSuccess.route) {
-                        popUpTo(Screen.Welcome.route)
-                    }
-                },
                 onForgotPassword = { /* TODO */ },
                 onLoginWithFacebook = {
                     navController.navigate(Screen.LoginSuccess.route) {
