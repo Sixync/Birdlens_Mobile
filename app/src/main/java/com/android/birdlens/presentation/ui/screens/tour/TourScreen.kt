@@ -1,7 +1,6 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/tour/TourScreen.kt
 package com.android.birdlens.presentation.ui.screens.tour
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,16 +13,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -32,24 +28,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-// import androidx.navigation.compose.currentBackStackEntryAsState // Replaced by currentBackStackEntryFlow
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.android.birdlens.presentation.navigation.Screen
+import com.android.birdlens.presentation.ui.components.AppScaffold // Import
 import com.android.birdlens.ui.theme.*
-import kotlinx.coroutines.flow.collect // Ensure this import for flow collection
 
-// --- Data Models (Dummy) ---
+// --- Data Models (Keep) ---
 data class TourItem(val id: Int, val imageUrl: String, val title: String = "")
-data class BottomNavItem(val label: String, val icon: @Composable () -> Unit, val selectedIcon: @Composable () -> Unit, val route: String)
+// --- BottomNavItem and BottomNavigationBar removed ---
 
-
-// --- Main Screen Composable ---
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TourScreen(
-    navController: NavController,
+    navController: NavHostController, // Changed NavController to NavHostController for consistency
     modifier: Modifier = Modifier,
     onNavigateToAllEvents: () -> Unit,
     onNavigateToAllTours: () -> Unit,
@@ -58,7 +50,6 @@ fun TourScreen(
     isPreviewMode: Boolean = LocalInspectionMode.current
 ) {
     var searchQuery by remember { mutableStateOf("") }
-
 
     // Dummy data
     val eventsOfTheYear = listOf(
@@ -73,124 +64,64 @@ fun TourScreen(
         TourItem(7, "https://images.unsplash.com/photo-1483728642387-6c351bEC1d69?w=300&auto=format&fit=crop&q=60", "Mountain Peak")
     )
 
-    val bottomNavItems = listOf(
-        BottomNavItem("Filter", { Icon(Icons.Outlined.Tune, "Filter") }, { Icon(Icons.Filled.Tune, "Filter") },  Screen.Settings.route),
-        BottomNavItem("People", { Icon(Icons.Outlined.Groups, "People") }, { Icon(Icons.Filled.Groups, "People") }, Screen.Community.route),
-        BottomNavItem("Map", { Icon(Icons.Outlined.Map, "Map") }, { Icon(Icons.Filled.Map, "Map") }, Screen.Map.route),
-        BottomNavItem("Cart", { Icon(Icons.Outlined.ShoppingCart, "Marketplace") }, { Icon(Icons.Filled.ShoppingCart, "Marketplace") }, Screen.Marketplace.route), // Updated to Marketplace
-        BottomNavItem("Calendar", { Icon(Icons.Outlined.CalendarToday, "Calendar") }, { Icon(Icons.Filled.CalendarToday, "Calendar") }, Screen.Tour.route) // Main/home tab
-    )
-
-    var selectedBottomNavItem by remember {
-        mutableStateOf(bottomNavItems.indexOfFirst { it.route == Screen.Tour.route }.coerceAtLeast(0))
-    }
-
-    LaunchedEffect(navController) {
-        navController.currentBackStackEntryFlow.collect { backStackEntry ->
-            val currentRoute = backStackEntry.destination.route
-            val newIndex = bottomNavItems.indexOfFirst { it.route == currentRoute }
-            if (newIndex != -1) {
-                selectedBottomNavItem = newIndex
-            } else {
-                // If on a screen not in bottomNav (e.g., TourDetail, or Cart if Cart had its own different bottom bar),
-                // keep the "Calendar" (Tour) tab selected as the conceptual parent.
-                selectedBottomNavItem = bottomNavItems.indexOfFirst { it.route == Screen.Tour.route }.coerceAtLeast(0)
-            }
-        }
-    }
-
-
-    Box(modifier = modifier.fillMaxSize()) {
-        // Background
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val canvasWidth = size.width
-            val canvasHeight = size.height
-            drawRect(color = GreenDeep)
-            val path1 = Path().apply { moveTo(0f, canvasHeight * 0.1f); cubicTo(canvasWidth * 0.2f, canvasHeight * 0.05f, canvasWidth * 0.3f, canvasHeight * 0.4f, canvasWidth * 0.6f, canvasHeight * 0.35f); cubicTo(canvasWidth * 0.9f, canvasHeight * 0.3f, canvasWidth * 1.1f, canvasHeight * 0.6f, canvasWidth * 0.7f, canvasHeight * 0.7f); lineTo(0f, canvasHeight * 0.8f); close() }
-            drawPath(path = path1, brush = Brush.radialGradient(listOf(GreenWave1.copy(alpha = 0.8f), GreenWave3.copy(alpha = 0.6f), GreenDeep.copy(alpha = 0.3f)), center = Offset(canvasWidth * 0.2f, canvasHeight * 0.2f), radius = canvasWidth * 0.8f))
-            val path2 = Path().apply { moveTo(canvasWidth, canvasHeight * 0.5f); cubicTo(canvasWidth * 0.8f, canvasHeight * 0.6f, canvasWidth * 0.7f, canvasHeight * 0.3f, canvasWidth * 0.4f, canvasHeight * 0.4f); cubicTo(canvasWidth * 0.1f, canvasHeight * 0.5f, canvasWidth * 0.0f, canvasHeight * 0.9f, canvasWidth * 0.3f, canvasHeight); lineTo(canvasWidth, canvasHeight); close() }
-            drawPath(path = path2, brush = Brush.linearGradient(listOf(GreenWave4.copy(alpha = 0.4f), GreenWave1.copy(alpha = 0.3f), GreenDeep.copy(alpha = 0.1f)), start = Offset(canvasWidth * 0.8f, canvasHeight * 0.5f), end = Offset(canvasWidth * 0.3f, canvasHeight)))
-        }
-
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding(),
-            containerColor = Color.Transparent,
-            bottomBar = {
-                BottomNavigationBar(
-                    items = bottomNavItems,
-                    selectedItemIndex = selectedBottomNavItem,
-                    onItemSelected = { index ->
-                        val destinationRoute = bottomNavItems[index].route
-                        if (navController.currentDestination?.route != destinationRoute) {
-                            if (destinationRoute == Screen.Cart.route) {
-                                // Simple navigation to Cart, keeps TourScreen on the back stack
-                                navController.navigate(Screen.Cart.route)
-                            } else {
-                                // Standard bottom nav behavior for other tabs
-                                navController.navigate(destinationRoute) {
-                                    popUpTo(Screen.Tour.route) { // Pop back to TourScreen (our main tab)
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true // Avoid multiple copies of the same destination
-                                    restoreState = true  // Restore state when reselecting
-                                }
-                            }
-                        }
-                    }
+    AppScaffold(
+        navController = navController, // Pass the navController
+        topBar = {
+            // TourScreenHeader is specific to TourScreen, so define or call it here.
+            // Ensure it doesn't include status bar padding if AppScaffold handles it.
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) { // Added vertical padding
+                TourScreenHeader(
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    onNavigateToCart = { navController.navigate(Screen.Cart.route) }
                 )
             }
-        ) { innerPadding ->
-            LazyColumn(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-            ) {
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TourScreenHeader(
-                        searchQuery = searchQuery,
-                        onSearchQueryChange = { searchQuery = it },
-                        onNavigateToCart = { navController.navigate(Screen.Cart.route) } // Header cart icon
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-                item {
-                    SectionWithHorizontalList(
-                        title = "Events of the year",
-                        items = eventsOfTheYear,
-                        onItemClick = { tourItem -> onTourItemClick(tourItem.id) },
-                        onSeeAllClick = onNavigateToAllEvents,
-                        isPreviewMode = isPreviewMode
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-                item {
-                    SectionHeader(title = "Popular Tour", onSeeAllClick = onNavigateToPopularTours)
-                    PopularTourCard(item = popularTour, onClick = { onTourItemClick(popularTour.id) }, isPreviewMode = isPreviewMode)
-                    PageIndicator(count = 3, selectedIndex = 0) // This indicator is static, might need logic if pager is used
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-                item {
-                    SectionWithHorizontalList(
-                        title = "All Tours",
-                        items = allToursData,
-                        onItemClick = { tourItem -> onTourItemClick(tourItem.id) },
-                        onSeeAllClick = onNavigateToAllTours,
-                        isPreviewMode = isPreviewMode
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
+        },
+        showBottomBar = true, // TourScreen has a bottom navigation bar
+        floatingActionButton = { /* No FAB in TourScreen design, so empty lambda or default {} */ }
+        // currentRoute is now handled internally by AppScaffold
+    ) { innerPadding -> // This is the content slot from AppScaffold
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding) // Apply padding from AppScaffold
+                .fillMaxSize()
+                .padding(horizontal = 16.dp), // Original horizontal padding for list content
+            contentPadding = PaddingValues(top = 8.dp) // Add padding if TourScreenHeader is complex and outside topBar slot
+        ) {
+            // The TourScreenHeader is now in the topBar slot of AppScaffold.
+            // If it were meant to scroll with content, it would be an item here.
+
+            item {
+                SectionWithHorizontalList(
+                    title = "Events of the year",
+                    items = eventsOfTheYear,
+                    onItemClick = { tourItem -> onTourItemClick(tourItem.id) },
+                    onSeeAllClick = onNavigateToAllEvents,
+                    isPreviewMode = isPreviewMode
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+            item {
+                SectionHeader(title = "Popular Tour", onSeeAllClick = onNavigateToPopularTours)
+                PopularTourCard(item = popularTour, onClick = { onTourItemClick(popularTour.id) }, isPreviewMode = isPreviewMode)
+                PageIndicator(count = 3, selectedIndex = 0) // Example static indicator
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+            item {
+                SectionWithHorizontalList(
+                    title = "All Tours",
+                    items = allToursData,
+                    onItemClick = { tourItem -> onTourItemClick(tourItem.id) },
+                    onSeeAllClick = onNavigateToAllTours,
+                    isPreviewMode = isPreviewMode
+                )
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
-
-// --- Reusable Sub-Components ---
+// --- Reusable Sub-Components (Keep or move as needed) ---
 @Composable
 fun TourScreenHeader(
     searchQuery: String,
@@ -331,7 +262,6 @@ fun TourItemCardSmall(
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            // You can add a title overlay here if needed
             if (item.title.isNotEmpty()) {
                 Box(
                     modifier = Modifier
@@ -422,38 +352,6 @@ fun PageIndicator(count: Int, selectedIndex: Int, modifier: Modifier = Modifier)
         }
     }
 }
-
-@Composable
-fun BottomNavigationBar(
-    items: List<BottomNavItem>,
-    selectedItemIndex: Int,
-    onItemSelected: (Int) -> Unit
-) {
-    NavigationBar(
-        containerColor = BottomNavGreen,
-        contentColor = TextWhite,
-        modifier = Modifier.height(70.dp) // Standard height
-    ) {
-        items.forEachIndexed { index, item ->
-            NavigationBarItem(
-                selected = selectedItemIndex == index,
-                onClick = { onItemSelected(index) },
-                icon = {
-                    if (selectedItemIndex == index) item.selectedIcon() else item.icon()
-                },
-                label = { Text(item.label, fontSize = 10.sp) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = TextWhite,
-                    unselectedIconColor = TextWhite.copy(alpha = 0.7f),
-                    selectedTextColor = TextWhite,
-                    unselectedTextColor = TextWhite.copy(alpha = 0.7f),
-                    indicatorColor = BottomNavGreen // Or a slightly different shade for selection
-                )
-            )
-        }
-    }
-}
-
 
 // --- Preview ---
 @Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
