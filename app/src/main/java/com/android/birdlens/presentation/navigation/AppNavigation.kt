@@ -16,13 +16,13 @@ import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
+import com.android.birdlens.presentation.ui.screens.pickdays.PickDaysScreen // New Import
 import com.android.birdlens.presentation.ui.screens.register.RegisterScreen
 import com.android.birdlens.presentation.ui.screens.settings.SettingsScreen
 import com.android.birdlens.presentation.ui.screens.tour.TourScreen
 import com.android.birdlens.presentation.ui.screens.tourdetail.TourDetailScreen
 import com.android.birdlens.presentation.ui.screens.welcome.WelcomeScreen
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
-// No need to import AppScaffold here, individual screens will use it.
 
 @Composable
 fun AppNavigation(
@@ -35,15 +35,14 @@ fun AppNavigation(
         startDestination = Screen.Welcome.route,
         modifier = modifier
     ) {
+        // ... (Welcome, Login, Register, LoginSuccess composables remain the same)
         composable(Screen.Welcome.route) {
-            // WelcomeScreen will use AuthScreenLayout internally
             WelcomeScreen(
                 onLoginClicked = { navController.navigate(Screen.Login.route) },
                 onNewUserClicked = { navController.navigate(Screen.Register.route) }
             )
         }
         composable(Screen.Login.route) {
-            // LoginScreen will use AuthScreenLayout internally
             LoginScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
@@ -55,7 +54,6 @@ fun AppNavigation(
             )
         }
         composable(Screen.Register.route) {
-            // RegisterScreen will use AuthScreenLayout internally
             RegisterScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
@@ -66,7 +64,6 @@ fun AppNavigation(
             )
         }
         composable(Screen.LoginSuccess.route) {
-            // LoginSuccessScreen can use AuthScreenLayout or a simple Box with SharedAppBackground
             LoginSuccessScreen(
                 onContinue = {
                     navController.navigate(Screen.Tour.route) {
@@ -76,13 +73,13 @@ fun AppNavigation(
             )
         }
 
-        // Screens using AppScaffold will take navController and use it internally
+
         composable(Screen.Tour.route) {
             TourScreen(
-                navController = navController, // Pass navController to TourScreen
+                navController = navController,
                 onNavigateToAllEvents = { navController.navigate(Screen.AllEventsList.route) },
                 onNavigateToAllTours = { navController.navigate(Screen.AllToursList.route) },
-                onNavigateToPopularTours = { navController.navigate(Screen.AllToursList.route) },
+                onNavigateToPopularTours = { navController.navigate(Screen.AllToursList.route) }, // Example: could be same list with filter
                 onTourItemClick = { tourId ->
                     navController.navigate(Screen.TourDetail.createRoute(tourId))
                 }
@@ -92,7 +89,7 @@ fun AppNavigation(
             AllEventsListScreen(
                 navController = navController,
                 onEventItemClick = { eventId ->
-                    navController.navigate(Screen.TourDetail.createRoute(eventId)) // Assuming events also lead to a "detail" screen
+                    navController.navigate(Screen.TourDetail.createRoute(eventId))
                 }
             )
         }
@@ -110,6 +107,14 @@ fun AppNavigation(
         ) { backStackEntry ->
             val tourId = backStackEntry.arguments?.getInt("tourId") ?: -1
             TourDetailScreen(navController = navController, tourId = tourId)
+        }
+        composable(
+            route = Screen.PickDays.route, // New Route
+            arguments = listOf(navArgument("tourId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val tourId = backStackEntry.arguments?.getInt("tourId") ?: -1
+            // Assuming PickDaysScreen needs navController and tourId
+            PickDaysScreen(navController = navController, tourId = tourId)
         }
         composable(Screen.Cart.route) {
             CartScreen(navController = navController)

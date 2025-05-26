@@ -12,6 +12,9 @@ sealed class Screen(val route: String) {
     data object TourDetail : Screen("tour_detail_screen/{tourId}") { // New with argument
         fun createRoute(tourId: Int) = "tour_detail_screen/$tourId"
     }
+    data object PickDays : Screen("pick_days_screen/{tourId}") { // New Screen
+        fun createRoute(tourId: Int) = "pick_days_screen/$tourId"
+    }
     data object Cart : Screen("cart_screen")
     data object Marketplace : Screen("marketplace_screen")
     data object Map : Screen("map_screen") // Added Map Screen
