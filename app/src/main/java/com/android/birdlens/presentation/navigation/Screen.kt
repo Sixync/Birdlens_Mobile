@@ -20,6 +20,7 @@ sealed class Screen(val route: String) {
     data object Map : Screen("map_screen") // Added Map Screen
     data object Community : Screen("community_screen")
     data object Settings : Screen("settings_screen")
+    data object AccountInfo : Screen("account_info_screen") // New Account Info Screen
     // Add other screens here as your app grows
     // data object MainApp : Screen("main_app_screen")
 }

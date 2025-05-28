@@ -2,6 +2,7 @@
 package com.android.birdlens.presentation.viewmodel
 
 import android.app.Activity
+import android.app.Application // New import
 import android.content.Context
 import android.content.IntentSender
 import android.util.Log
@@ -10,12 +11,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel // Changed from ViewModel to AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.birdlens.data.model.request.GoogleIdTokenRequest // New import
+import com.android.birdlens.data.model.request.GoogleIdTokenRequest
 import com.android.birdlens.data.model.request.LoginRequest
 import com.android.birdlens.data.model.request.RegisterRequest
-// LoginData and UserResponse might not be directly used in success states if custom token is the key
+import com.android.birdlens.data.network.ApiService // For type
 import com.android.birdlens.data.network.RetrofitInstance
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
@@ -26,7 +27,6 @@ import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.ConnectionResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-// GoogleAuthProvider is not used for client-side Firebase auth with Google anymore
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,35 +35,33 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class GoogleAuthViewModel : ViewModel() {
+class GoogleAuthViewModel(application: Application) : AndroidViewModel(application) { // Changed
     private val auth: FirebaseAuth = Firebase.auth
+    private val appApplication: Application = application // Store application context
 
-    // State for Google One Tap UI flow (getting Google ID token)
+    // ApiService instance initialized with context
+    private val apiService: ApiService = RetrofitInstance.api(application.applicationContext)
+
+    // ... (rest of the _googleSignInOneTapState, _backendAuthState, _firebaseSignInState declarations remain the same)
     private val _googleSignInOneTapState = MutableStateFlow<GoogleSignInOneTapState>(GoogleSignInOneTapState.Idle)
     val googleSignInOneTapState: StateFlow<GoogleSignInOneTapState> = _googleSignInOneTapState.asStateFlow()
 
-    // State for your backend authentication (getting Firebase Custom Token)
     private val _backendAuthState = MutableStateFlow<BackendAuthState>(BackendAuthState.Idle)
     val backendAuthState: StateFlow<BackendAuthState> = _backendAuthState.asStateFlow()
 
-    // State for Firebase sign-in with Custom Token and getting Firebase ID Token
     private val _firebaseSignInState = MutableStateFlow<FirebaseSignInState>(FirebaseSignInState.Idle)
     val firebaseSignInState: StateFlow<FirebaseSignInState> = _firebaseSignInState.asStateFlow()
 
     private var oneTapClient: SignInClient? = null
     private lateinit var signInRequest: BeginSignInRequest
-    // signUpRequest can be the same as signInRequest if backend handles new Google users
     private lateinit var googleIdTokenSignInRequest: BeginSignInRequest
-
 
     private var googleSignInLauncher: ActivityResultLauncher<IntentSenderRequest>? = null
 
-    // IMPORTANT: This must be your WEB client ID from Google Cloud Console for Firebase Google Sign-In
-    // (OAuth 2.0 client IDs -> Type: Web application)
-    // Your current value "154465275979-jjmn8mi9a47mjms952rcba7eph12kgo0.apps.googleusercontent.com" looks like a web client ID.
     private val serverClientId = "154465275979-jjmn8mi9a47mjms952rcba7eph12kgo0.apps.googleusercontent.com"
 
-
+    // initialize, checkGooglePlayServices, startGoogleSignIn, handleGoogleOneTapResult, handleGoogleOneTapException methods remain the same
+    // ...
     fun initialize(activity: ComponentActivity) {
         if (!checkGooglePlayServices(activity)) {
             _googleSignInOneTapState.value = GoogleSignInOneTapState.Error("Google Play Services unavailable or outdated.")
@@ -73,17 +71,15 @@ class GoogleAuthViewModel : ViewModel() {
         oneTapClient = Identity.getSignInClient(activity)
         Log.d("GoogleAuthVM", "Initializing with serverClientId: $serverClientId")
 
-        // This request is for getting a Google ID Token from Google's One Tap.
-        // It's used for both sign-in and sign-up via Google, the backend will differentiate.
         googleIdTokenSignInRequest = BeginSignInRequest.builder()
             .setGoogleIdTokenRequestOptions(
                 BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
                     .setSupported(true)
-                    .setServerClientId(serverClientId) // Crucial: Web client ID
-                    .setFilterByAuthorizedAccounts(false) // Allow new accounts
+                    .setServerClientId(serverClientId)
+                    .setFilterByAuthorizedAccounts(false)
                     .build()
             )
-            .setAutoSelectEnabled(false) // Or true if you want auto sign-in for returning users
+            .setAutoSelectEnabled(false)
             .build()
 
         googleSignInLauncher = activity.registerForActivityResult(
@@ -94,7 +90,6 @@ class GoogleAuthViewModel : ViewModel() {
     }
 
     private fun checkGooglePlayServices(activity: Activity): Boolean {
-        // ... (checkGooglePlayServices implementation remains the same)
         val availability = GoogleApiAvailability.getInstance()
         val resultCode = availability.isGooglePlayServicesAvailable(activity)
 
@@ -110,7 +105,7 @@ class GoogleAuthViewModel : ViewModel() {
         return true
     }
 
-    fun startGoogleSignIn() { // No isSignUp needed, backend handles it
+    fun startGoogleSignIn() {
         if (googleSignInLauncher == null || oneTapClient == null) {
             _googleSignInOneTapState.value = GoogleSignInOneTapState.Error("Google Sign-In not initialized.")
             Log.e("GoogleAuthVM", "Launcher or OneTapClient not initialized for Google Sign-In")
@@ -149,7 +144,6 @@ class GoogleAuthViewModel : ViewModel() {
                 if (googleIdToken != null) {
                     Log.d("GoogleAuthVM", "Got Google ID token from One Tap: ${googleIdToken.take(15)}...")
                     _googleSignInOneTapState.value = GoogleSignInOneTapState.GoogleIdTokenRetrieved(googleIdToken)
-                    // Now, exchange this Google ID token with your backend
                     authenticateWithBackendUsingGoogleToken(googleIdToken)
                 } else {
                     _googleSignInOneTapState.value = GoogleSignInOneTapState.Error("No Google ID token found from One Tap.")
@@ -171,7 +165,6 @@ class GoogleAuthViewModel : ViewModel() {
     }
 
     private fun handleGoogleOneTapException(e: Exception) {
-        // ... (handleGoogleSignInException logic can be reused/adapted here) ...
         val errorMessage = when (e) {
             is ApiException -> "Google API Error: ${CommonStatusCodes.getStatusCodeString(e.statusCode)} (${e.statusCode})"
             is IntentSender.SendIntentException -> "Failed to send Google Sign-In intent."
@@ -181,18 +174,20 @@ class GoogleAuthViewModel : ViewModel() {
         Log.e("GoogleAuthVM", "Google One Tap Exception: $errorMessage", e)
     }
 
+
     private fun authenticateWithBackendUsingGoogleToken(googleIdToken: String) {
         _backendAuthState.value = BackendAuthState.Loading
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.signInWithGoogleToken(GoogleIdTokenRequest(googleIdToken))
+                // Use the member apiService
+                val response = apiService.signInWithGoogleToken(GoogleIdTokenRequest(googleIdToken))
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (!apiResponse.error && apiResponse.data != null) {
                         val customToken = apiResponse.data
                         Log.d("GoogleAuthVM", "Backend Google Auth Success, got custom token: ${customToken.take(15)}...")
                         _backendAuthState.value = BackendAuthState.CustomTokenReceived(customToken)
-                        signInToFirebaseWithCustomToken(customToken) // Proceed to Firebase sign-in
+                        signInToFirebaseWithCustomToken(customToken)
                     } else {
                         val errorMsg = apiResponse.message ?: "Backend Google auth failed: API error."
                         _backendAuthState.value = BackendAuthState.Error(errorMsg, AuthOperation.GOOGLE_SIGN_IN)
@@ -214,18 +209,14 @@ class GoogleAuthViewModel : ViewModel() {
         _backendAuthState.value = BackendAuthState.Loading
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.registerUser(registerRequest)
+                // Use the member apiService
+                val response = apiService.registerUser(registerRequest)
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (!apiResponse.error && apiResponse.data != null) {
-                        val customToken = apiResponse.data // Assuming data is the custom token
+                        val customToken = apiResponse.data
                         Log.d("GoogleAuthVM", "Backend Registration Success, got custom token: ${customToken.take(15)}...")
-                        // For registration, you might want a specific state before Firebase sign-in
-                        // or directly proceed if the UX is to auto-login.
                         _backendAuthState.value = BackendAuthState.RegistrationSuccess(customToken)
-                        // Typically, after registration, the user might need to login separately,
-                        // or you can auto-login them with the custom token.
-                        // For this flow, let's assume auto-login:
                         signInToFirebaseWithCustomToken(customToken)
                     } else {
                         val errorMsg = apiResponse.message ?: "Registration failed: API error."
@@ -248,14 +239,15 @@ class GoogleAuthViewModel : ViewModel() {
         _backendAuthState.value = BackendAuthState.Loading
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.loginUser(loginRequest)
+                // Use the member apiService
+                val response = apiService.loginUser(loginRequest)
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (!apiResponse.error && apiResponse.data != null) {
                         val customToken = apiResponse.data
                         Log.d("GoogleAuthVM", "Backend Login Success, got custom token: ${customToken.take(15)}...")
                         _backendAuthState.value = BackendAuthState.CustomTokenReceived(customToken)
-                        signInToFirebaseWithCustomToken(customToken) // Proceed to Firebase sign-in
+                        signInToFirebaseWithCustomToken(customToken)
                     } else {
                         val errorMsg = apiResponse.message ?: "Login failed: API error."
                         _backendAuthState.value = BackendAuthState.Error(errorMsg, AuthOperation.LOGIN)
@@ -273,6 +265,8 @@ class GoogleAuthViewModel : ViewModel() {
         }
     }
 
+    // signInToFirebaseWithCustomToken, signOut, reset methods, getCurrentFirebaseUser, and Sealed classes remain the same
+    // ...
     private fun signInToFirebaseWithCustomToken(customToken: String) {
         _firebaseSignInState.value = FirebaseSignInState.Loading
         viewModelScope.launch {
@@ -282,14 +276,13 @@ class GoogleAuthViewModel : ViewModel() {
                 val firebaseUser = authResult.user
                 if (firebaseUser != null) {
                     Log.d("GoogleAuthVM", "Firebase signInWithCustomToken SUCCESS. User UID: ${firebaseUser.uid}")
-                    // Now get the Firebase ID token
                     val idTokenResult = firebaseUser.getIdToken(true).await()
                     val firebaseIdToken = idTokenResult.token
                     if (firebaseIdToken != null) {
                         Log.d("GoogleAuthVM", "Firebase ID Token obtained: ${firebaseIdToken.take(15)}...")
-                        // TODO: Store this firebaseIdToken securely for API calls to your backend
-                        // Example: a DataStore or encrypted SharedPreferences utility class
-                        // For now, we pass it in the state.
+                        Log.d("GoogleAuthVM_POSTMAN", "Firebase ID Token for Postman: $firebaseIdToken") // LOG THE TOKEN
+                        // Store the token using TokenManager
+                        com.android.birdlens.data.TokenManager.getInstance(appApplication.applicationContext).saveFirebaseIdToken(firebaseIdToken)
                         _firebaseSignInState.value = FirebaseSignInState.Success(firebaseUser, firebaseIdToken)
                     } else {
                         _firebaseSignInState.value = FirebaseSignInState.Error("Failed to get Firebase ID Token after custom sign-in.")
@@ -306,18 +299,18 @@ class GoogleAuthViewModel : ViewModel() {
         }
     }
 
-    fun signOut(context: Context) {
+    fun signOut(context: Context) { // context here is fine for TokenManager
         viewModelScope.launch {
             try {
-                auth.signOut() // Sign out from Firebase
-                oneTapClient?.signOut()?.await() // Sign out from Google One Tap
-                // Reset all auth states
+                auth.signOut()
+                oneTapClient?.signOut()?.await()
+                com.android.birdlens.data.TokenManager.getInstance(context.applicationContext).clearTokens() // Clear stored token
                 resetAllAuthStates()
                 Log.d("GoogleAuthVM", "User signed out from Firebase and Google One Tap")
-                // TODO: Clear any stored Firebase ID token from secure storage
             } catch (e: Exception) {
                 Log.e("GoogleAuthVM", "Error during sign out: ${e.localizedMessage}", e)
-                resetAllAuthStates() // Still reset states
+                com.android.birdlens.data.TokenManager.getInstance(context.applicationContext).clearTokens() // Still clear token
+                resetAllAuthStates()
             }
         }
     }
@@ -334,11 +327,10 @@ class GoogleAuthViewModel : ViewModel() {
 
     fun getCurrentFirebaseUser(): FirebaseUser? = auth.currentUser
 
-    // --- State Sealed Classes ---
     sealed class GoogleSignInOneTapState {
         object Idle : GoogleSignInOneTapState()
         object UILaunching : GoogleSignInOneTapState()
-        data class GoogleIdTokenRetrieved(val idToken: String) : GoogleSignInOneTapState() // Intermediate state
+        data class GoogleIdTokenRetrieved(val idToken: String) : GoogleSignInOneTapState()
         data class Error(val message: String) : GoogleSignInOneTapState()
     }
 
@@ -347,8 +339,8 @@ class GoogleAuthViewModel : ViewModel() {
     sealed class BackendAuthState {
         object Idle : BackendAuthState()
         object Loading : BackendAuthState()
-        data class CustomTokenReceived(val customToken: String) : BackendAuthState() // For login or Google
-        data class RegistrationSuccess(val customToken: String) : BackendAuthState() // Specifically after registration API call
+        data class CustomTokenReceived(val customToken: String) : BackendAuthState()
+        data class RegistrationSuccess(val customToken: String) : BackendAuthState()
         data class Error(val message: String, val operation: AuthOperation) : BackendAuthState()
     }
 

@@ -3,11 +3,13 @@ package com.android.birdlens.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.android.birdlens.presentation.ui.screens.accountinfo.AccountInfoScreen // New Import
 import com.android.birdlens.presentation.ui.screens.allevents.AllEventsListScreen
 import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
@@ -16,12 +18,13 @@ import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
-import com.android.birdlens.presentation.ui.screens.pickdays.PickDaysScreen // New Import
+import com.android.birdlens.presentation.ui.screens.pickdays.PickDaysScreen
 import com.android.birdlens.presentation.ui.screens.register.RegisterScreen
 import com.android.birdlens.presentation.ui.screens.settings.SettingsScreen
 import com.android.birdlens.presentation.ui.screens.tour.TourScreen
 import com.android.birdlens.presentation.ui.screens.tourdetail.TourDetailScreen
 import com.android.birdlens.presentation.ui.screens.welcome.WelcomeScreen
+import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel // New Import
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 
 @Composable
@@ -109,11 +112,10 @@ fun AppNavigation(
             TourDetailScreen(navController = navController, tourId = tourId)
         }
         composable(
-            route = Screen.PickDays.route, // New Route
+            route = Screen.PickDays.route,
             arguments = listOf(navArgument("tourId") { type = NavType.IntType })
         ) { backStackEntry ->
             val tourId = backStackEntry.arguments?.getInt("tourId") ?: -1
-            // Assuming PickDaysScreen needs navController and tourId
             PickDaysScreen(navController = navController, tourId = tourId)
         }
         composable(Screen.Cart.route) {
@@ -132,6 +134,13 @@ fun AppNavigation(
             SettingsScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel
+            )
+        }
+        composable(Screen.AccountInfo.route) { // New Route for AccountInfoScreen
+            val accountInfoViewModel: AccountInfoViewModel = viewModel() // Or use Hilt for injection
+            AccountInfoScreen(
+                navController = navController,
+                accountInfoViewModel = accountInfoViewModel
             )
         }
     }

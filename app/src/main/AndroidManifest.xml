@@ -24,7 +24,7 @@
         <!--
              TODO: You need to add your Google Maps API key here.
              Get an API key from https://console.cloud.google.com/google/maps-apis/overview
-             and replace "YOUR_API_KEY" with your actual key.
+             and replace "my_api_key" with your actual key.
         -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
