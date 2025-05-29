@@ -36,6 +36,7 @@ import androidx.navigation.compose.rememberNavController
 import com.android.birdlens.data.model.request.LoginRequest
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AuthScreenLayout
+import com.android.birdlens.presentation.ui.screens.accountinfo.ApplicationProvider
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
 
@@ -148,7 +149,7 @@ fun LoginScreen(
                 CustomTextField(
                     value = email,
                     onValueChange = { email = it },
-                    placeholder = "Username",
+                    placeholder = "Email",
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = AuthInputBackground,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = androidx.compose.ui.text.input.ImeAction.Next)
@@ -347,8 +348,7 @@ fun SocialLoginButton(
 fun LoginScreenPreview() {
     BirdlensTheme {
         val navController = rememberNavController()
-        // In a real app, use a ViewModel factory or Hilt for ViewModel injection
-        val dummyViewModel = GoogleAuthViewModel() // For preview only
+        val dummyViewModel = GoogleAuthViewModel(ApplicationProvider.getApplicationContext()) // Pass context
         LoginScreen(
             navController = navController,
             googleAuthViewModel = dummyViewModel,

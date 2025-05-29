@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.android.birdlens.presentation.navigation.Screen
-import com.android.birdlens.presentation.ui.components.AppScaffold // Import
-import com.android.birdlens.presentation.ui.components.SimpleTopAppBar // Import
+import com.android.birdlens.presentation.ui.components.AppScaffold
+import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
 
@@ -47,7 +47,9 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     val settingsItemsSection1 = listOf(
-        SettingsItem("Account", Icons.Outlined.AccountCircle) { /* TODO */ },
+        SettingsItem("Account", Icons.Outlined.AccountCircle) {
+            navController.navigate(Screen.AccountInfo.route) // Navigate to AccountInfoScreen
+        },
         SettingsItem("Notifications", Icons.Outlined.Notifications) { /* TODO */ },
         SettingsItem("Privacy & Security", Icons.Outlined.Lock) { /* TODO */ },
         SettingsItem("Help & Support", Icons.AutoMirrored.Filled.HelpOutline) { /* TODO */ },
@@ -63,26 +65,26 @@ fun SettingsScreen(
         topBar = {
             SimpleTopAppBar(
                 title = "Settings",
-                onNavigateBack = { navController.popBackStack() } // Assuming back navigation is desired
+                onNavigateBack = { navController.popBackStack() }
             )
         },
         showBottomBar = true
     ) { innerPadding ->
-        Surface( // This Surface forms the card-like appearance for the settings list
-            color = CardBackground.copy(alpha = 0.7f), // Use the card background
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), // Rounded top corners
+        Surface(
+            color = CardBackground.copy(alpha = 0.7f),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             modifier = Modifier
-                .padding(innerPadding) // Apply padding from AppScaffold
-                .padding(top = 8.dp) // Additional top padding if needed after TopAppBar
+                .padding(innerPadding)
+                .padding(top = 8.dp)
                 .fillMaxSize()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp) // Horizontal padding for content inside the Surface
+                    .padding(horizontal = 16.dp)
             ) {
                 LazyColumn(
-                    modifier = Modifier.weight(1f) // LazyColumn takes available space
+                    modifier = Modifier.weight(1f)
                 ) {
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -130,7 +132,7 @@ fun SettingsScreen(
                             HorizontalDivider(color = DividerColor, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
                         }
                     }
-                } // End of LazyColumn
+                }
 
                 Button(
                     onClick = {
@@ -143,12 +145,12 @@ fun SettingsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = LogoutButtonGreen),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp) // Padding for the logout button
+                        .padding(vertical = 24.dp)
                         .height(50.dp)
                 ) {
                     Text("LOG OUT", color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(modifier = Modifier.height(8.dp)) // Padding at the very bottom
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -160,7 +162,7 @@ fun SettingsListItem(item: SettingsItem) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = item.onClick)
-            .padding(vertical = 12.dp), // Padding for each item
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(imageVector = item.icon, contentDescription = item.title, tint = TextWhite, modifier = Modifier.size(24.dp))
@@ -174,7 +176,9 @@ fun SettingsListItem(item: SettingsItem) {
 @Composable
 fun SettingsScreenPreview() {
     BirdlensTheme {
-        val dummyGoogleAuthViewModel = GoogleAuthViewModel()
+        val dummyGoogleAuthViewModel = GoogleAuthViewModel(
+            application = TODO()
+        )
         SettingsScreen(navController = rememberNavController(), googleAuthViewModel = dummyGoogleAuthViewModel)
     }
 }

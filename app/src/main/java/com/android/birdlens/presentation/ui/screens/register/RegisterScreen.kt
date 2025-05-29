@@ -29,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import com.android.birdlens.data.model.request.RegisterRequest
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AuthScreenLayout
+import com.android.birdlens.presentation.ui.screens.accountinfo.ApplicationProvider
 import com.android.birdlens.presentation.ui.screens.login.CustomTextField
 import com.android.birdlens.presentation.ui.screens.login.SocialLoginButton
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
@@ -229,7 +230,7 @@ fun RegisterScreen(
 fun RegisterScreenPreview() {
     BirdlensTheme {
         val navController = rememberNavController()
-        val dummyViewModel = GoogleAuthViewModel()
+        val dummyViewModel = GoogleAuthViewModel(ApplicationProvider.getApplicationContext()) // Pass context
         RegisterScreen(
             navController = navController,
             googleAuthViewModel = dummyViewModel,
