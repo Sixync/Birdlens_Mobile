@@ -1,10 +1,50 @@
 // EXE201/app/build.gradle.kts
+
+import java.util.Properties
+import java.io.FileInputStream
+
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
 }
+
+// Read API key from local.properties (project root)
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties") // Path relative to project root
+var googleMapsApiKeyFromProperties = "YOUR_API_KEY_MISSING_IN_LOCAL_PROPERTIES" // Default/fallback value
+
+if (localPropertiesFile.exists()) {
+    try {
+        FileInputStream(localPropertiesFile).use { fis ->
+            localProperties.load(fis)
+            googleMapsApiKeyFromProperties = localProperties.getProperty("MAPS_API_KEY") // Get property, could be null
+            if (googleMapsApiKeyFromProperties != null) {
+                println("Successfully loaded MAPS_API_KEY from local.properties.")
+            } else {
+                println("Warning: MAPS_API_KEY not found in local.properties.")
+            }
+        }
+    } catch (e: Exception) {
+        System.err.println("Warning: Could not load MAPS_API_KEY from local.properties: ${e.message}")
+        println("Warning: Failed to load MAPS_API_KEY from local.properties.")
+    }
+} else {
+    println("Warning: local.properties file not found. MAPS_API_KEY will not be set from it.")
+}
+
+
+val googleMapsApiKey = if (googleMapsApiKeyFromProperties.isNullOrBlank()) {
+    println("Using default/fallback API Key because value from local.properties was null or blank.")
+    "YOUR_API_KEY_MISSING_OR_BLANK" // A distinct fallback
+} else {
+    googleMapsApiKeyFromProperties!!
+}
+
+println("MAPS_API_KEY to be used in build: ${googleMapsApiKey.take(5)}...")
+
 
 android {
     namespace = "com.android.birdlens"
@@ -18,6 +58,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
     }
 
     buildTypes {
@@ -59,7 +100,8 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
     implementation(libs.maps.compose) // Added
-    implementation(libs.play.services.maps) // Added
+    implementation(libs.play.services.maps)
+    implementation(libs.androidx.media3.common.ktx) // Added
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
