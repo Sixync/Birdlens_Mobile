@@ -21,6 +21,9 @@ sealed class Screen(val route: String) {
     data object Community : Screen("community_screen")
     data object Settings : Screen("settings_screen")
     data object AccountInfo : Screen("account_info_screen") // New Account Info Screen
+    data object BirdInfo : Screen("bird_info_screen/{speciesCode}") { // New Bird Info Screen
+        fun createRoute(speciesCode: String) = "bird_info_screen/$speciesCode"
+    }
     // Add other screens here as your app grows
     // data object MainApp : Screen("main_app_screen")
 }

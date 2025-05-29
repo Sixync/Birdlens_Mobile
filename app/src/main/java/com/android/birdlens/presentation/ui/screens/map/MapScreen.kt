@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.android.birdlens.presentation.navigation.Screen
-import com.android.birdlens.presentation.ui.components.AppScaffold // Import
+import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.ui.theme.*
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -48,7 +48,15 @@ fun MapScreen(
     var showMapError by remember { mutableStateOf(false) }
 
     val floatingActionItems = listOf(
-        FloatingMapActionItem(icon = { Icon(Icons.Filled.Nature, contentDescription = "Bird Locations", tint = TextWhite) }, contentDescription = "Bird Locations", onClick = { Toast.makeText(context, "Show Bird Locations", Toast.LENGTH_SHORT).show() }, badgeCount = 0),
+        FloatingMapActionItem(
+            icon = { Icon(Icons.Filled.Info, contentDescription = "Bird Info (Test)", tint = TextWhite) }, // Changed icon for test
+            contentDescription = "Bird Info (Test)",
+            onClick = {
+                // Navigate to BirdInfoScreen with a sample species code
+                // Example: "houspa" for House Sparrow
+                navController.navigate(Screen.BirdInfo.createRoute("houspa"))
+            }
+        ),
         FloatingMapActionItem(icon = { Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Bookmarks", tint = TextWhite) }, contentDescription = "Bookmarks", onClick = { Toast.makeText(context, "Show Bookmarks", Toast.LENGTH_SHORT).show() }),
         FloatingMapActionItem(icon = { Icon(Icons.Outlined.WbSunny, contentDescription = "Weather", tint = TextWhite) }, contentDescription = "Weather", onClick = { Toast.makeText(context, "Show Weather", Toast.LENGTH_SHORT).show() }),
         FloatingMapActionItem(icon = { Icon(Icons.Outlined.StarBorder, contentDescription = "Popular Hotspots", tint = TextWhite) }, contentDescription = "Popular Hotspots", onClick = { Toast.makeText(context, "Show Hotspots", Toast.LENGTH_SHORT).show() }),
@@ -63,7 +71,7 @@ fun MapScreen(
     AppScaffold(
         navController = navController,
         topBar = {
-            MapScreenHeader( // Specific header for MapScreen
+            MapScreenHeader(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCart = { navController.navigate(Screen.Cart.route) }
             )
@@ -72,7 +80,7 @@ fun MapScreen(
     ) { innerPadding ->
         Box(
             modifier = Modifier
-                .padding(innerPadding) // Apply padding from AppScaffold
+                .padding(innerPadding)
                 .fillMaxSize()
         ) {
             GoogleMap(
@@ -93,7 +101,7 @@ fun MapScreen(
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(start = 16.dp, top = 16.dp) // Added top padding
+                    .padding(start = 16.dp, top = 16.dp)
                     .wrapContentHeight(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -112,6 +120,7 @@ fun MapScreen(
     }
 }
 
+// ... (MapScreenHeader and FloatingMapButton remain the same)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreenHeader(
@@ -134,7 +143,7 @@ fun MapScreenHeader(
             }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-        modifier = modifier.padding(top=8.dp) // Added to give some space if status bar padding isn't enough by itself
+        modifier = modifier.padding(top=8.dp)
     )
 }
 
