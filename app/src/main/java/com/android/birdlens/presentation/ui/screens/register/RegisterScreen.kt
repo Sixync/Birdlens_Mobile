@@ -31,7 +31,7 @@ import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AuthScreenLayout
 import com.android.birdlens.presentation.ui.screens.accountinfo.ApplicationProvider
 import com.android.birdlens.presentation.ui.screens.login.CustomTextField
-import com.android.birdlens.presentation.ui.screens.login.SocialLoginButton
+// import com.android.birdlens.presentation.ui.screens.login.SocialLoginButton // Keep if planning to use for other social, remove if not
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
 
@@ -40,9 +40,10 @@ fun RegisterScreen(
     navController: NavController,
     googleAuthViewModel: GoogleAuthViewModel,
     onNavigateBack: () -> Unit,
-    onLoginWithFacebook: () -> Unit,
-    onLoginWithX: () -> Unit,
-    onLoginWithApple: () -> Unit,
+    // Removed onLoginWithFacebook, onLoginWithX, onLoginWithApple as per simplification
+    // onLoginWithFacebook: () -> Unit,
+    // onLoginWithX: () -> Unit,
+    // onLoginWithApple: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var email by remember { mutableStateOf("") }
@@ -55,21 +56,22 @@ fun RegisterScreen(
 
     val context = LocalContext.current
 
-    val googleOneTapState by googleAuthViewModel.googleSignInOneTapState.collectAsState()
+    // Removed googleOneTapState
+    // val googleOneTapState by googleAuthViewModel.googleSignInOneTapState.collectAsState()
     val backendAuthState by googleAuthViewModel.backendAuthState.collectAsState()
     val firebaseSignInState by googleAuthViewModel.firebaseSignInState.collectAsState()
 
     LaunchedEffect(firebaseSignInState) {
         when (val state = firebaseSignInState) {
             is GoogleAuthViewModel.FirebaseSignInState.Success -> {
-                Toast.makeText(context, "Firebase Sign-In Success (after registration/Google): ${state.firebaseUser.uid}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Firebase Sign-In Success (after registration): ${state.firebaseUser.uid}", Toast.LENGTH_SHORT).show()
                 Log.d("RegisterScreen", "Firebase ID Token: ${state.firebaseIdToken.take(15)}...")
                 navController.navigate(Screen.LoginSuccess.route) {
                     popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
                 googleAuthViewModel.resetFirebaseSignInState()
                 googleAuthViewModel.resetBackendAuthState()
-                googleAuthViewModel.resetGoogleOneTapState()
+                // googleAuthViewModel.resetGoogleOneTapState() // No longer needed
             }
             is GoogleAuthViewModel.FirebaseSignInState.Error -> {
                 Toast.makeText(context, "Firebase Sign-In Error: ${state.message}", Toast.LENGTH_LONG).show()
@@ -84,39 +86,35 @@ fun RegisterScreen(
             is GoogleAuthViewModel.BackendAuthState.Error -> {
                 val operationType = when (state.operation) {
                     GoogleAuthViewModel.AuthOperation.REGISTER -> "Registration"
-                    GoogleAuthViewModel.AuthOperation.GOOGLE_SIGN_IN -> "Google Sign-Up"
-                    else -> "Authentication"
+                    // GoogleAuthViewModel.AuthOperation.GOOGLE_SIGN_IN -> "Google Sign-Up" // Removed
+                    else -> "Authentication" // Could be LOGIN if called from a different context, but here it's REGISTER
                 }
                 Toast.makeText(context, "$operationType Error: ${state.message}", Toast.LENGTH_LONG).show()
                 googleAuthViewModel.resetBackendAuthState()
             }
             is GoogleAuthViewModel.BackendAuthState.RegistrationSuccess -> {
                 Toast.makeText(context, "Registration with backend successful. Signing into Firebase...", Toast.LENGTH_SHORT).show()
+                // Firebase sign-in is triggered automatically by the ViewModel
             }
+            // CustomTokenReceived is typically for login or Google Sign-In, not direct registration response.
+            // Keeping it in case the VM's logic handles it generically.
             is GoogleAuthViewModel.BackendAuthState.CustomTokenReceived -> {
-                Toast.makeText(context, "Google auth with backend successful. Signing into Firebase...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Auth with backend successful. Signing into Firebase...", Toast.LENGTH_SHORT).show()
             }
             else -> { /* Idle or Loading */ }
         }
     }
 
-    LaunchedEffect(googleOneTapState) {
-        when (val state = googleOneTapState) {
-            is GoogleAuthViewModel.GoogleSignInOneTapState.Error -> {
-                Toast.makeText(context, "Google Sign-Up Error: ${state.message}", Toast.LENGTH_LONG).show()
-                googleAuthViewModel.resetGoogleOneTapState()
-            }
-            else -> { /* Idle, UILaunching, GoogleIdTokenRetrieved (handled by VM) */ }
-        }
-    }
+    // Removed LaunchedEffect for googleOneTapState
 
     val isLoading = backendAuthState is GoogleAuthViewModel.BackendAuthState.Loading ||
-            firebaseSignInState is GoogleAuthViewModel.FirebaseSignInState.Loading ||
-            googleOneTapState is GoogleAuthViewModel.GoogleSignInOneTapState.UILaunching
+            firebaseSignInState is GoogleAuthViewModel.FirebaseSignInState.Loading
+    // Removed googleOneTapState check from isLoading
 
     AuthScreenLayout(
         modifier = modifier,
         topContent = {
+            // ... (topContent remains the same)
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 16.dp, top = 16.dp)) {
@@ -182,7 +180,7 @@ fun RegisterScreen(
                             Toast.makeText(context, "All fields are required.", Toast.LENGTH_SHORT).show()
                         } else if (age == null || age <= 0) {
                             Toast.makeText(context, "Please enter a valid age.", Toast.LENGTH_SHORT).show()
-                        } else if (password.length < 6) {
+                        } else if (password.length < 6) { // Basic password validation
                             Toast.makeText(context, "Password must be at least 6 characters.", Toast.LENGTH_SHORT).show()
                         } else if (password != retypePassword) {
                             Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show()
@@ -190,6 +188,7 @@ fun RegisterScreen(
                             val request = RegisterRequest(
                                 username = username, password = password, email = email,
                                 firstName = firstName, lastName = lastName, age = age
+                                // avatarUrl is optional and defaults to null
                             )
                             googleAuthViewModel.registerUser(request)
                         }
@@ -204,13 +203,10 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                SocialLoginButton(text = "Sign up with Google", onClick = { if (!isLoading) { googleAuthViewModel.startGoogleSignIn() } }, iconPlaceholder = true, enabled = !isLoading, backgroundColor = SocialButtonBackgroundLight, contentColor = SocialButtonTextDark)
-                Spacer(modifier = Modifier.height(10.dp))
-                SocialLoginButton(text = "Sign up with Facebook", onClick = onLoginWithFacebook, iconPlaceholder = true, enabled = !isLoading, backgroundColor = SocialButtonBackgroundLight, contentColor = SocialButtonTextDark)
-                Spacer(modifier = Modifier.height(10.dp))
-                SocialLoginButton(text = "Sign up with X", onClick = onLoginWithX, iconPlaceholder = true, enabled = !isLoading, backgroundColor = SocialButtonBackgroundLight, contentColor = SocialButtonTextDark)
-                Spacer(modifier = Modifier.height(10.dp))
-                SocialLoginButton(text = "Sign up with Apple", onClick = onLoginWithApple, iconPlaceholder = true, enabled = !isLoading, backgroundColor = SocialButtonBackgroundLight, contentColor = SocialButtonTextDark)
+                // Removed SocialLoginButton for Google and other social platforms
+                // Example:
+                // SocialLoginButton(text = "Sign up with Google", onClick = { if (!isLoading) { /* googleAuthViewModel.startGoogleSignIn() */ Toast.makeText(context, "Google Sign-up not available.", Toast.LENGTH_SHORT).show() } }, iconPlaceholder = true, enabled = !isLoading, backgroundColor = SocialButtonBackgroundLight, contentColor = SocialButtonTextDark)
+                // Spacer(modifier = Modifier.height(10.dp))
 
 
                 if (isLoading) {
@@ -234,10 +230,8 @@ fun RegisterScreenPreview() {
         RegisterScreen(
             navController = navController,
             googleAuthViewModel = dummyViewModel,
-            onNavigateBack = {},
-            onLoginWithFacebook = {},
-            onLoginWithX = {},
-            onLoginWithApple = {}
+            onNavigateBack = {}
+            // Removed Facebook, X, Apple click handlers from preview call
         )
     }
 }
