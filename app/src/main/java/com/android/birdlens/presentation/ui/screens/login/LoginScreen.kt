@@ -46,16 +46,18 @@ fun LoginScreen(
     googleAuthViewModel: GoogleAuthViewModel,
     onNavigateBack: () -> Unit,
     onForgotPassword: () -> Unit,
-    onLoginWithFacebook: () -> Unit,
-    onLoginWithX: () -> Unit,
-    onLoginWithApple: () -> Unit,
+    // Removed onLoginWithFacebook, onLoginWithX, onLoginWithApple as per simplification
+    // onLoginWithFacebook: () -> Unit,
+    // onLoginWithX: () -> Unit,
+    // onLoginWithApple: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    val googleOneTapState by googleAuthViewModel.googleSignInOneTapState.collectAsState()
+    // Removed googleOneTapState as Google Sign-In flow is simplified
+    // val googleOneTapState by googleAuthViewModel.googleSignInOneTapState.collectAsState()
     val backendAuthState by googleAuthViewModel.backendAuthState.collectAsState()
     val firebaseSignInState by googleAuthViewModel.firebaseSignInState.collectAsState()
 
@@ -69,7 +71,7 @@ fun LoginScreen(
                 }
                 googleAuthViewModel.resetFirebaseSignInState()
                 googleAuthViewModel.resetBackendAuthState()
-                googleAuthViewModel.resetGoogleOneTapState()
+                // googleAuthViewModel.resetGoogleOneTapState() // No longer needed
             }
             is GoogleAuthViewModel.FirebaseSignInState.Error -> {
                 Toast.makeText(context, "Firebase Sign-In Error: ${state.message}", Toast.LENGTH_LONG).show()
@@ -89,23 +91,16 @@ fun LoginScreen(
         }
     }
 
-    LaunchedEffect(googleOneTapState) {
-        when (val state = googleOneTapState) {
-            is GoogleAuthViewModel.GoogleSignInOneTapState.Error -> {
-                Toast.makeText(context, "Google Sign-In Error: ${state.message}", Toast.LENGTH_LONG).show()
-                googleAuthViewModel.resetGoogleOneTapState()
-            }
-            else -> { /* Idle, UILaunching, GoogleIdTokenRetrieved */ }
-        }
-    }
+    // Removed LaunchedEffect for googleOneTapState
 
     val isLoading = backendAuthState is GoogleAuthViewModel.BackendAuthState.Loading ||
-            firebaseSignInState is GoogleAuthViewModel.FirebaseSignInState.Loading ||
-            googleOneTapState is GoogleAuthViewModel.GoogleSignInOneTapState.UILaunching
+            firebaseSignInState is GoogleAuthViewModel.FirebaseSignInState.Loading
+    // Removed googleOneTapState check from isLoading
 
     AuthScreenLayout(
         modifier = modifier,
         topContent = {
+            // ... (topContent remains the same)
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 16.dp, top = 16.dp)) {
@@ -215,45 +210,26 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                SocialLoginButton(
-                    text = "Login with Google",
-                    onClick = {
-                        if (!isLoading) {
-                            googleAuthViewModel.startGoogleSignIn()
-                        }
-                    },
-                    iconPlaceholder = true,
-                    enabled = !isLoading,
-                    backgroundColor = SocialButtonBackgroundLight,
-                    contentColor = SocialButtonTextDark
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                SocialLoginButton(
-                    text = "Login with Facebook",
-                    onClick = onLoginWithFacebook,
-                    iconPlaceholder = true,
-                    enabled = !isLoading,
-                    backgroundColor = SocialButtonBackgroundLight,
-                    contentColor = SocialButtonTextDark
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                SocialLoginButton(
-                    text = "Login with X",
-                    onClick = onLoginWithX,
-                    iconPlaceholder = true,
-                    enabled = !isLoading,
-                    backgroundColor = SocialButtonBackgroundLight,
-                    contentColor = SocialButtonTextDark
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                SocialLoginButton(
-                    text = "Login with Apple",
-                    onClick = onLoginWithApple,
-                    iconPlaceholder = true,
-                    enabled = !isLoading,
-                    backgroundColor = SocialButtonBackgroundLight,
-                    contentColor = SocialButtonTextDark
-                )
+                // Removed SocialLoginButton for Google
+                // Removed SocialLoginButton for Facebook
+                // Removed SocialLoginButton for X
+                // Removed SocialLoginButton for Apple
+                // Example:
+                // SocialLoginButton(
+                //     text = "Login with Google",
+                //     onClick = {
+                //         if (!isLoading) {
+                //             // googleAuthViewModel.startGoogleSignIn() // Removed
+                //             Toast.makeText(context, "Google login not available.", Toast.LENGTH_SHORT).show()
+                //         }
+                //     },
+                //     iconPlaceholder = true,
+                //     enabled = !isLoading,
+                //     backgroundColor = SocialButtonBackgroundLight,
+                //     contentColor = SocialButtonTextDark
+                // )
+                // Spacer(modifier = Modifier.height(12.dp))
+
 
                 if (isLoading) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -266,6 +242,11 @@ fun LoginScreen(
     }
 }
 
+// ... (CustomTextField and SocialLoginButton composables remain the same, though SocialLoginButton might be unused now or adapted)
+// SocialLoginButton might be removed if no social logins are presented. For now, keeping its definition if other parts of app might use it.
+// If truly unused, its definition can be removed as well.
+
+// ...
 @Composable
 fun CustomTextField(
     value: String,
@@ -334,13 +315,14 @@ fun SocialLoginButton(
             modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             if (iconPlaceholder) {
-                Box(modifier = Modifier.size(20.dp))
+                Box(modifier = Modifier.size(20.dp)) // Placeholder for an icon
                 Spacer(modifier = Modifier.width(12.dp))
             }
             Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
+
 
 @SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true, device = "spec:width=360dp,height=780dp,dpi=480")
@@ -353,10 +335,8 @@ fun LoginScreenPreview() {
             navController = navController,
             googleAuthViewModel = dummyViewModel,
             onNavigateBack = {},
-            onForgotPassword = {},
-            onLoginWithFacebook = {},
-            onLoginWithX = {},
-            onLoginWithApple = {}
+            onForgotPassword = {}
+            // Removed Facebook, X, Apple click handlers from preview call
         )
     }
 }

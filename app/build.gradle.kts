@@ -140,7 +140,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
 
     // Google Sign-In (for One Tap)
-    implementation("com.google.android.gms:play-services-auth:20.7.0") // This version is okay for now
+    //implementation("com.google.android.gms:play-services-auth:20.7.0") // This version is okay for now
 
 
     // Retrofit for network calls

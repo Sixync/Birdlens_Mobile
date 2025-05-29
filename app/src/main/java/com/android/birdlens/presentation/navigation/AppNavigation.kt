@@ -52,20 +52,15 @@ fun AppNavigation(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onForgotPassword = { /* TODO */ },
-                onLoginWithFacebook = { /* Placeholder */ },
-                onLoginWithX = { /* Placeholder */ },
-                onLoginWithApple = { /* Placeholder */ }
+                onForgotPassword = { /* TODO */ }
+
             )
         }
         composable(Screen.Register.route) {
             RegisterScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onLoginWithFacebook = { /* Placeholder */ },
-                onLoginWithX = { /* Placeholder */ },
-                onLoginWithApple = { /* Placeholder */ }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable(Screen.LoginSuccess.route) {
