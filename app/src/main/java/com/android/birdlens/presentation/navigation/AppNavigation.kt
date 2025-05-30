@@ -28,6 +28,7 @@ import com.android.birdlens.presentation.ui.screens.welcome.WelcomeScreen
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.presentation.viewmodel.BirdInfoViewModel // New Import
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
+import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
 
 @Composable
 fun AppNavigation(
@@ -54,6 +55,20 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() },
                 onForgotPassword = { /* TODO */ }
 
+            )
+        }
+        composable(
+            route = Screen.HotspotBirdList.route,
+            arguments = listOf(navArgument("hotspotId") {
+                type = NavType.StringType
+                // nullable = true // hotspotId can be non-nullable if you ensure it's always passed
+            })
+        ) { backStackEntry ->
+            val hotspotId = backStackEntry.arguments?.getString("hotspotId")
+            // Add a check for hotspotId != null if it's critical, or handle null in the screen
+            HotspotBirdListScreen(
+                navController = navController,
+                hotspotId = hotspotId ?: "" // Pass an empty string or handle null more gracefully
             )
         }
         composable(Screen.Register.route) {

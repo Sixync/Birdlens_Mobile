@@ -1,6 +1,6 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
 package com.android.birdlens.presentation.ui.screens.map
 
+import android.Manifest
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,9 +27,59 @@ import androidx.navigation.compose.rememberNavController
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.ui.theme.*
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+
+// Data class for bird hotspots
+data class BirdHotspot(
+    val id: String,
+    val name: String,
+    val position: LatLng,
+    val birdCommonNames: List<String>, // Common names for display
+    val birdSpeciesCodes: List<String>, // eBird species codes for API calls
+    val snippetText: String // Short description for the marker
+)
+
+// Sample bird hotspots in Vietnam (adjust coordinates as needed)
+val sampleBirdHotspots = listOf(
+    BirdHotspot(
+        id = "bh1",
+        name = "Cuc Phuong National Park",
+        position = LatLng(20.316667, 105.616667),
+        birdCommonNames = listOf("Silver Pheasant", "Red-vented Barbet"),
+        birdSpeciesCodes = listOf("silphe", "revbar1"), // eBird codes
+        snippetText = "Famous for diverse birdlife."
+    ),
+    BirdHotspot(
+        id = "bh2",
+        name = "Bach Ma National Park",
+        position = LatLng(16.1950, 107.8550),
+        birdCommonNames = listOf("Crested Argus", "Annam Partridge (Green-legged Partridge)"),
+        birdSpeciesCodes = listOf("crearg1", "grnpar1"), // eBird codes
+        snippetText = "Mid-altitude forest birds."
+    ),
+    BirdHotspot(
+        id = "bh3",
+        name = "Tram Chim National Park",
+        position = LatLng(10.7000, 105.5333),
+        birdCommonNames = listOf("Sarus Crane", "Bengal Florican"),
+        birdSpeciesCodes = listOf("sarcra1", "benflo1"), // eBird codes
+        snippetText = "Wetland bird sanctuary."
+    ),
+    BirdHotspot(
+        id = "bh4",
+        name = "Cat Tien National Park",
+        position = LatLng(11.4500, 107.4333),
+        birdCommonNames = listOf("Germain's Peacock-Pheasant", "Bar-bellied Pitta"),
+        birdSpeciesCodes = listOf("gerpea1", "babpit1"), // eBird codes
+        snippetText = "Lowland forest, many endemics."
+    )
+    // Add more hotspots as needed
+)
 
 data class FloatingMapActionItem(
     val icon: @Composable () -> Unit,
@@ -38,7 +88,7 @@ data class FloatingMapActionItem(
     val badgeCount: Int? = null
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun MapScreen(
     navController: NavController,
@@ -47,13 +97,37 @@ fun MapScreen(
     val context = LocalContext.current
     var showMapError by remember { mutableStateOf(false) }
 
+    // Permissions state
+    val locationPermissionsState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        )
+    )
+
+    var mapProperties by remember {
+        mutableStateOf(MapProperties(mapType = MapType.NORMAL))
+    }
+    var uiSettings by remember {
+        mutableStateOf(MapUiSettings(zoomControlsEnabled = true, mapToolbarEnabled = true))
+    }
+
+    LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
+        if (locationPermissionsState.allPermissionsGranted) {
+            mapProperties = mapProperties.copy(isMyLocationEnabled = true)
+            uiSettings = uiSettings.copy(myLocationButtonEnabled = true)
+        } else {
+            mapProperties = mapProperties.copy(isMyLocationEnabled = false)
+            uiSettings = uiSettings.copy(myLocationButtonEnabled = false)
+        }
+    }
+
+
     val floatingActionItems = listOf(
         FloatingMapActionItem(
-            icon = { Icon(Icons.Filled.Info, contentDescription = "Bird Info (Test)", tint = TextWhite) }, // Changed icon for test
+            icon = { Icon(Icons.Filled.Info, contentDescription = "Bird Info (Test)", tint = TextWhite) },
             contentDescription = "Bird Info (Test)",
             onClick = {
-                // Navigate to BirdInfoScreen with a sample species code
-                // Example: "houspa" for House Sparrow
                 navController.navigate(Screen.BirdInfo.createRoute("houspa"))
             }
         ),
@@ -65,14 +139,14 @@ fun MapScreen(
 
     val vietnamCenter = LatLng(16.047079, 108.220825)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(vietnamCenter, 5f)
+        position = CameraPosition.fromLatLngZoom(vietnamCenter, 6f)
     }
 
     AppScaffold(
         navController = navController,
         topBar = {
             MapScreenHeader(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() else { /* Handle no backstack */ } },
                 onNavigateToCart = { navController.navigate(Screen.Cart.route) }
             )
         },
@@ -83,21 +157,67 @@ fun MapScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = true),
-                properties = MapProperties(mapType = MapType.NORMAL),
-                onMapLoaded = { showMapError = false },
-            ) {
-                // Add Markers here
+            if (locationPermissionsState.allPermissionsGranted) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    properties = mapProperties,
+                    uiSettings = uiSettings,
+                    onMapLoaded = { showMapError = false },
+                ) {
+                    sampleBirdHotspots.forEach { hotspot ->
+                        Marker(
+                            state = MarkerState(position = hotspot.position),
+                            title = hotspot.name,
+                            snippet = hotspot.snippetText,
+                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+                            onInfoWindowClick = {
+                                // Navigate to the HotspotBirdListScreen, passing the hotspot's ID
+                                navController.navigate(Screen.HotspotBirdList.createRoute(hotspot.id))
+                            }
+                        )
+                    }
+                }
+            } else {
+                // Show UI to request permissions
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "Location permission is required to show your current location and enhance map features.",
+                        color = TextWhite,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    Button(
+                        onClick = { locationPermissionsState.launchMultiplePermissionRequest() },
+                        colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
+                    ) {
+                        Text("Grant Permissions", color = TextWhite)
+                    }
+                    if (locationPermissionsState.shouldShowRationale) {
+                        Text(
+                            "If you permanently denied permission, you'll need to enable it in app settings.",
+                            color = TextWhite.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 8.dp),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
             }
-            if (showMapError) {
+
+            if (showMapError && locationPermissionsState.allPermissionsGranted) { // Only show map-specific error if permissions are granted
                 Box(modifier = Modifier.fillMaxSize().background(GreenDeep.copy(alpha = 0.8f)), contentAlignment = Alignment.Center) {
                     Text("Could not load map. Ensure Google Play Services is updated and API key is valid.", color = TextWhite, modifier = Modifier.padding(32.dp), textAlign = TextAlign.Center)
                 }
             }
 
+            // Floating Action Buttons on the left
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
@@ -115,12 +235,11 @@ fun MapScreen(
     val googlePlayServicesAvailable = com.google.android.gms.common.GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
     if (googlePlayServicesAvailable != com.google.android.gms.common.ConnectionResult.SUCCESS) {
         LaunchedEffect(googlePlayServicesAvailable) {
-            showMapError = true
+            showMapError = true // Set true if Play Services are an issue
         }
     }
 }
 
-// ... (MapScreenHeader and FloatingMapButton remain the same)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreenHeader(
@@ -161,7 +280,7 @@ fun FloatingMapButton(item: FloatingMapActionItem) {
         modifier = Modifier
             .size(56.dp)
             .clip(CircleShape)
-            .background(ButtonGreen.copy(alpha = 0.8f))
+            .background(ButtonGreen.copy(alpha = 0.85f))
             .clickable(onClick = item.onClick)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {

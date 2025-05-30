@@ -125,6 +125,8 @@ dependencies {
     implementation(libs.play.services.maps)
     implementation(libs.androidx.media3.common.ktx) // Added
 
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
