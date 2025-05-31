@@ -9,9 +9,10 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.android.birdlens.presentation.ui.screens.accountinfo.AccountInfoScreen // New Import
+import com.android.birdlens.presentation.ui.screens.accountinfo.AccountInfoScreen
 import com.android.birdlens.presentation.ui.screens.allevents.AllEventsListScreen
 import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
+import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen // New Import
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
 import com.android.birdlens.presentation.ui.screens.login.LoginScreen
@@ -24,8 +25,10 @@ import com.android.birdlens.presentation.ui.screens.settings.SettingsScreen
 import com.android.birdlens.presentation.ui.screens.tour.TourScreen
 import com.android.birdlens.presentation.ui.screens.tourdetail.TourDetailScreen
 import com.android.birdlens.presentation.ui.screens.welcome.WelcomeScreen
-import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel // New Import
+import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
+import com.android.birdlens.presentation.viewmodel.BirdInfoViewModel // New Import
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
+import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
 
 @Composable
 fun AppNavigation(
@@ -54,6 +57,20 @@ fun AppNavigation(
 
             )
         }
+        composable(
+            route = Screen.HotspotBirdList.route,
+            arguments = listOf(navArgument("hotspotId") {
+                type = NavType.StringType
+                // nullable = true // hotspotId can be non-nullable if you ensure it's always passed
+            })
+        ) { backStackEntry ->
+            val hotspotId = backStackEntry.arguments?.getString("hotspotId")
+            // Add a check for hotspotId != null if it's critical, or handle null in the screen
+            HotspotBirdListScreen(
+                navController = navController,
+                hotspotId = hotspotId ?: "" // Pass an empty string or handle null more gracefully
+            )
+        }
         composable(Screen.Register.route) {
             RegisterScreen(
                 navController = navController,
@@ -77,7 +94,7 @@ fun AppNavigation(
                 navController = navController,
                 onNavigateToAllEvents = { navController.navigate(Screen.AllEventsList.route) },
                 onNavigateToAllTours = { navController.navigate(Screen.AllToursList.route) },
-                onNavigateToPopularTours = { navController.navigate(Screen.AllToursList.route) }, // Example: could be same list with filter
+                onNavigateToPopularTours = { navController.navigate(Screen.AllToursList.route) },
                 onTourItemClick = { tourId ->
                     navController.navigate(Screen.TourDetail.createRoute(tourId))
                 }
@@ -131,11 +148,21 @@ fun AppNavigation(
                 googleAuthViewModel = googleAuthViewModel
             )
         }
-        composable(Screen.AccountInfo.route) { // New Route for AccountInfoScreen
-            val accountInfoViewModel: AccountInfoViewModel = viewModel() // Or use Hilt for injection
+        composable(Screen.AccountInfo.route) {
+            val accountInfoViewModel: AccountInfoViewModel = viewModel()
             AccountInfoScreen(
                 navController = navController,
                 accountInfoViewModel = accountInfoViewModel
+            )
+        }
+        composable( // New Route for BirdInfoScreen
+            route = Screen.BirdInfo.route,
+            arguments = listOf(navArgument("speciesCode") { type = NavType.StringType })
+        ) { // NavBackStackEntry is implicitly available to viewModel()
+            val birdInfoViewModel: BirdInfoViewModel = viewModel()
+            BirdInfoScreen(
+                navController = navController,
+                viewModel = birdInfoViewModel
             )
         }
     }

@@ -15,24 +15,40 @@ plugins {
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties") // Path relative to project root
 var googleMapsApiKeyFromProperties = "YOUR_API_KEY_MISSING_IN_LOCAL_PROPERTIES" // Default/fallback value
+var ebirdApiKeyFromProperties = "YOUR_EBIRD_API_KEY_MISSING" // Default/fallback for eBird
+
 
 if (localPropertiesFile.exists()) {
     try {
         FileInputStream(localPropertiesFile).use { fis ->
             localProperties.load(fis)
-            googleMapsApiKeyFromProperties = localProperties.getProperty("MAPS_API_KEY") // Get property, could be null
+            googleMapsApiKeyFromProperties = localProperties.getProperty("MAPS_API_KEY")
+            ebirdApiKeyFromProperties = localProperties.getProperty("EBIRD_API_KEY") // Get eBird API key
+
             if (googleMapsApiKeyFromProperties != null) {
                 println("Successfully loaded MAPS_API_KEY from local.properties.")
             } else {
                 println("Warning: MAPS_API_KEY not found in local.properties.")
             }
+            if (ebirdApiKeyFromProperties != null) {
+                println("Successfully loaded EBIRD_API_KEY from local.properties.")
+            } else {
+                println("Warning: EBIRD_API_KEY not found in local.properties.")
+            }
         }
     } catch (e: Exception) {
-        System.err.println("Warning: Could not load MAPS_API_KEY from local.properties: ${e.message}")
-        println("Warning: Failed to load MAPS_API_KEY from local.properties.")
+        System.err.println("Warning: Could not load API keys from local.properties: ${e.message}")
+        println("Warning: Failed to load API keys from local.properties.")
     }
 } else {
-    println("Warning: local.properties file not found. MAPS_API_KEY will not be set from it.")
+    println("Warning: local.properties file not found. API keys will not be set from it.")
+}
+
+val ebirdApiKey = if (ebirdApiKeyFromProperties.isNullOrBlank() || ebirdApiKeyFromProperties == "YOUR_EBIRD_API_KEY_MISSING") {
+    println("Using default/fallback eBird API Key because value from local.properties was null, blank, or placeholder.")
+    "YOUR_EBIRD_API_KEY_MISSING_IN_CONFIG" // A distinct fallback
+} else {
+    ebirdApiKeyFromProperties!!
 }
 
 
@@ -60,6 +76,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
         resourceConfigurations.addAll(listOf("en", "vi"))
+        buildConfigField("String", "EBIRD_API_KEY", "\"$ebirdApiKey\"")
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true // This line enables the BuildConfig class generation
     }
 
     buildTypes {
@@ -104,6 +126,8 @@ dependencies {
     implementation(libs.play.services.maps)
     implementation(libs.androidx.media3.common.ktx)
     implementation(libs.core.ktx) // Added
+
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
