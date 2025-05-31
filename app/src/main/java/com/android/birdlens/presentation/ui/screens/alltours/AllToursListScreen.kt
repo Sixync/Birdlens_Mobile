@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource // Import this
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -30,9 +31,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
-import com.android.birdlens.presentation.ui.components.AppScaffold // Import
-import com.android.birdlens.presentation.ui.components.SimpleTopAppBar // Import
-import com.android.birdlens.presentation.ui.screens.tour.TourItem // Reusing TourItem
+import com.android.birdlens.R // Import this
+import com.android.birdlens.presentation.ui.components.AppScaffold
+import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
+import com.android.birdlens.presentation.ui.screens.tour.TourItem
 import com.android.birdlens.ui.theme.*
 
 @Composable
@@ -51,7 +53,7 @@ fun AllToursListScreen(
                 2 -> "https://images.unsplash.com/photo-1528181304800-259b08848526?w=600&auto=format&fit=crop&q=60"
                 else -> "https://images.unsplash.com/photo-1483728642387-6c351bEC1d69?w=600&auto=format&fit=crop&q=60"
             },
-            title = "Amazing Tour Destination #${index + 1}"
+            title = "Amazing Tour Destination #${index + 1}" // Dynamic title
         )
     }
 
@@ -59,21 +61,21 @@ fun AllToursListScreen(
         navController = navController,
         topBar = {
             SimpleTopAppBar(
-                title = "All Tours",
+                title = stringResource(id = R.string.all_tours_title), // Localized
                 onNavigateBack = { navController.popBackStack() }
             )
         },
-        showBottomBar = false // Typically, list detail screens don't show main bottom nav
+        showBottomBar = false
     ) { innerPadding ->
         LazyColumn(
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
-                bottom = innerPadding.calculateBottomPadding() + 16.dp, // Use innerPadding for bottom
-                top = innerPadding.calculateTopPadding() + 8.dp // Use innerPadding for top
+                bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                top = innerPadding.calculateTopPadding() + 8.dp
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = modifier.fillMaxSize() // modifier from parameter if specific needed
+            modifier = modifier.fillMaxSize()
         ) {
             item {
                 Row(
@@ -81,11 +83,26 @@ fun AllToursListScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Result found (${allToursList.size})", color = TextWhite.copy(alpha = 0.8f), fontSize = 14.sp)
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { /* TODO: Show sort options */ }) {
-                        Text("Sort By", color = TextWhite.copy(alpha = 0.8f), fontSize = 14.sp)
+                    Text(
+                        stringResource(id = R.string.results_found_count, allToursList.size), // Localized
+                        color = TextWhite.copy(alpha = 0.8f),
+                        fontSize = 14.sp
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { /* TODO: Show sort options */ }
+                    ) {
+                        Text(
+                            stringResource(id = R.string.sort_by), // Localized
+                            color = TextWhite.copy(alpha = 0.8f),
+                            fontSize = 14.sp
+                        )
                         Spacer(Modifier.width(4.dp))
-                        Icon(Icons.Filled.FilterList, contentDescription = "Sort", tint = TextWhite.copy(alpha = 0.8f))
+                        Icon(
+                            Icons.Filled.FilterList,
+                            contentDescription = stringResource(id = R.string.sort_icon_description), // Localized
+                            tint = TextWhite.copy(alpha = 0.8f)
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -114,7 +131,7 @@ fun FullWidthTourItemCard(
             .height(220.dp)
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.1f)) // Ensure cards have a background
+        colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.1f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (isPreviewMode) {
@@ -122,12 +139,15 @@ fun FullWidthTourItemCard(
                     modifier = Modifier.fillMaxSize().background(Color.DarkGray.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Preview Image", color = TextWhite)
+                    Text(
+                        stringResource(id = R.string.preview_image_placeholder), // Localized
+                        color = TextWhite
+                    )
                 }
             } else {
                 Image(
                     painter = rememberAsyncImagePainter(model = item.imageUrl),
-                    contentDescription = item.title,
+                    contentDescription = item.title, // Dynamic title used as content description
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -152,7 +172,12 @@ fun FullWidthTourItemCard(
                     .background(Color.Black.copy(alpha = 0.4f), CircleShape)
                     .size(36.dp)
             ) {
-                Icon(Icons.Filled.CalendarToday, contentDescription = "Tour Type", tint = TextWhite, modifier = Modifier.size(20.dp))
+                Icon(
+                    Icons.Filled.CalendarToday,
+                    contentDescription = stringResource(id = R.string.tour_type_icon_description), // Localized
+                    tint = TextWhite,
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
             Box(
@@ -163,7 +188,12 @@ fun FullWidthTourItemCard(
                     .background(Color.Red.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
-                Text("FREE RENTAL", color = TextWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(id = R.string.free_rental_badge), // Localized
+                    color = TextWhite,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Column(
@@ -171,7 +201,7 @@ fun FullWidthTourItemCard(
                     .align(Alignment.BottomStart)
                     .padding(16.dp)
             ) {
-                Text(
+                Text( // Dynamic item title
                     item.title,
                     color = TextWhite,
                     fontWeight = FontWeight.Bold,
@@ -182,10 +212,19 @@ fun FullWidthTourItemCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     repeat(5) {
-                        Icon(Icons.Filled.Star, contentDescription = "Rating Star", tint = Color.Yellow, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = stringResource(id = R.string.rating_star_description), // Localized
+                            tint = Color.Yellow,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Tour #${item.id % 100}", color = TextWhite.copy(alpha = 0.9f), fontSize = 14.sp)
+                    Text( // Dynamic tour ID text
+                        stringResource(id = R.string.tour_id_prefix, item.id % 100), // Localized format string
+                        color = TextWhite.copy(alpha = 0.9f),
+                        fontSize = 14.sp
+                    )
                 }
             }
         }
@@ -196,8 +235,10 @@ fun FullWidthTourItemCard(
 @Composable
 fun AllToursListScreenPreview() {
     BirdlensTheme {
-        AllToursListScreen(navController = rememberNavController(),
+        AllToursListScreen(
+            navController = rememberNavController(),
             onTourItemClick = {},
-            isPreviewMode = true)
+            isPreviewMode = true
+        )
     }
 }

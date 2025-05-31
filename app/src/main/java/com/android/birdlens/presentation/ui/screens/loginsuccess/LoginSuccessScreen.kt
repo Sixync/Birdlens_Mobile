@@ -10,11 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource // Added
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.android.birdlens.R // Added
 import com.android.birdlens.presentation.ui.components.AuthScreenLayout
 import com.android.birdlens.ui.theme.*
 
@@ -42,7 +44,7 @@ fun LoginSuccessScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Login Successful",
+                    text = stringResource(id = R.string.login_successful_title), // Changed
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = TextWhite,
@@ -51,7 +53,7 @@ fun LoginSuccessScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Welcome to BirdLens",
+                    text = stringResource(id = R.string.welcome_to_app), // Changed
                     style = MaterialTheme.typography.titleLarge.copy(
                         color = TextWhite.copy(alpha = 0.9f),
                         textAlign = TextAlign.Center,
@@ -68,7 +70,7 @@ fun LoginSuccessScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Continue",
+                        contentDescription = stringResource(id = R.string.continue_button), // Changed
                         tint = TextWhite,
                         modifier = Modifier.size(30.dp)
                     )

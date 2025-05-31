@@ -1,3 +1,171 @@
 <resources>
     <string name="app_name">Birdlens</string>
+
+    <!-- General -->
+    <string name="retry">Retry</string>
+    <string name="loading">Loading…</string>
+    <string name="error_network">Network error. Please try again.</string>
+    <string name="error_unknown">An unknown error occurred.</string>
+    <string name="back">Back</string>
+    <string name="continue_button">Continue</string>
+    <string name="search_something">Search something…</string>
+    <string name="see_all">See all -></string>
+    <string name="confirm">CONFIRM</string>
+    <string name="buy_now">BUY NOW</string>
+    <string name="all_selected_count">ALL (%d)</string> <!-- %d for count -->
+
+    <!-- Welcome Screen -->
+    <string name="welcome_title">Welcome</string>
+    <string name="login">Login</string>
+    <string name="i_am_new_user">I am a new user</string>
+
+    <!-- Login Screen -->
+    <string name="log_in_title">LOG IN</string>
+    <string name="email_placeholder">Email</string>
+    <string name="password_placeholder">Password</string>
+    <string name="forgot_password_prompt">Forget your password?</string>
+    <string name="click_here">Click here</string>
+    <string name="login_error_credentials">Please enter email and password</string>
+
+    <!-- Register Screen -->
+    <string name="create_account_title">CREATE YOUR ACCOUNT</string>
+    <string name="first_name_placeholder">First Name</string>
+    <string name="last_name_placeholder">Last Name</string>
+    <string name="age_placeholder">Age</string>
+    <string name="username_placeholder">Username</string>
+    <string name="retype_password_placeholder">Retype password</string>
+    <string name="register_error_all_fields">All fields are required.</string>
+    <string name="register_error_valid_age">Please enter a valid age.</string>
+    <string name="register_error_password_length">Password must be at least 6 characters.</string>
+    <string name="register_error_passwords_mismatch">Passwords do not match.</string>
+
+
+    <!-- Login Success Screen -->
+    <string name="login_successful_title">Login Successful</string>
+    <string name="welcome_to_app">Welcome to BirdLens</string>
+
+    <!-- Bottom Navigation -->
+    <string name="bottom_nav_settings">Settings</string>
+    <string name="bottom_nav_community">Community</string>
+    <string name="bottom_nav_map">Map</string>
+    <string name="bottom_nav_marketplace">Marketplace</string>
+    <string name="bottom_nav_tours">Tours</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_privacy_security">Privacy &amp; Security</string>
+    <string name="settings_help_support">Help &amp; Support</string>
+    <string name="settings_about">About</string>
+    <string name="settings_saved">Saved</string>
+    <string name="settings_liked">Liked</string>
+    <string name="settings_logout">LOG OUT</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_select_language">Select Language</string>
+    <string name="language_english">English</string>
+    <string name="language_vietnamese">Vietnamese</string>
+
+    <!-- Account Info Screen -->
+    <string name="account_info_title">Account Information</string>
+    <string name="account_info_username">Username</string>
+    <string name="account_info_email">Email</string>
+    <string name="account_info_first_name">First Name</string>
+    <string name="account_info_last_name">Last Name</string>
+    <string name="account_info_age">Age</string>
+    <string name="account_info_error_loading">Error: %s</string> <!-- %s for error message -->
+    <string name="user_avatar_description">User Avatar</string>
+
+    <!-- Tour Screen -->
+    <string name="tour_screen_title_birdlens">BIRDLENS</string>
+    <string name="tour_screen_subtitle_tours">Tours</string>
+    <string name="tour_screen_events_of_year">Events of the year</string>
+    <string name="tour_screen_popular_tour">Popular Tour</string>
+    <string name="tour_screen_all_tours">All Tours</string>
+    <string name="tour_image_description">Tour image</string>
+    <string name="popular_tour_image_description">Popular tour image</string>
+
+    <string name="tour_screen_preview_image_small">Preview Img</string>
+    <string name="tour_screen_preview_image_popular">Preview Popular Img</string>
+
+    <!-- All Events/Tours List Screens -->
+    <string name="all_events_title">All Events</string>
+    <string name="all_tours_title">All Tours</string>
+    <string name="results_found_count">Result found (%d)</string> <!-- %d for count -->
+    <string name="sort_by">Sort By</string>
+    <string name="sort_icon_description">Sort</string>
+    <string name="preview_image_placeholder">Preview Image</string>
+    <string name="tour_type_icon_description">Tour Type</string>
+    <string name="free_rental_badge">FREE RENTAL</string>
+    <string name="rating_star_description">Rating Star</string>
+    <string name="tour_id_prefix">Tour #%d</string> <!-- %d for tour id, assuming item.id % 100 is for display -->
+    <!-- Tour Detail Screen Specific -->
+    <string name="tour_detail_preview_pager_image">Preview Pager Img %d</string> <!-- %d for page index -->
+    <string name="tour_detail_image_description">Tour Image %d</string> <!-- %d for image index -->
+    <string name="tour_detail_reviews_count">%d Reviews</string> <!-- %d for review count -->
+    <string name="tour_detail_price_format">Price: %s/trip</string> <!-- %s for price, note: removed $ for easier localization if needed -->
+    <string name="tour_detail_description_label">Description</string>
+    <string name="tour_detail_pick_days_button">Pick your days</string>
+
+    <!-- Pick Days Screen -->
+    <string name="pick_days_title">PICK YOUR DAYS</string>
+    <string name="purchase_success_dialog_title">Purchase successfully</string>
+    <string name="purchase_success_icon_description">Success</string>
+    <string name="days_of_week_mon">Mon</string>
+    <string name="days_of_week_tue">Tue</string>
+    <string name="days_of_week_wed">Wed</string>
+    <string name="days_of_week_thu">Thu</string>
+    <string name="days_of_week_fri">Fri</string>
+    <string name="days_of_week_sat">Sat</string>
+    <string name="days_of_week_sun">Sun</string>
+
+
+    <!-- Cart Screen -->
+    <string name="cart_title">YOUR CART</string>
+    <string name="cart_item_price_format">Price %s</string> <!-- %s for price -->
+    <string name="cart_decrement_quantity">Decrement</string>
+    <string name="cart_increment_quantity">Increment</string>
+    <string name="cart_item_image_preview_placeholder">Img</string>
+    <string name="cart_item_image_preview_placeholder_detail">Preview Img</string>
+
+    <!-- Community Screen -->
+    <string name="community_title">Community</string>
+    <string name="community_search_placeholder">Search community posts…</string>
+    <string name="community_user_avatar_description">User Avatar</string>
+    <string name="community_post_image_description">Post Image</string>
+    <string name="community_action_like">Like</string> <!-- For accessibility if icons alone aren't enough -->
+    <string name="community_action_comment">Comment</string>
+    <string name="community_action_share">Share</string>
+
+
+    <!-- Map Screen -->
+    <string name="map_screen_title_birdlens">BIRDLENS</string> <!-- Header title -->
+    <string name="map_error_loading">Could not load map. Ensure Google Play Services is updated and API key is valid.</string>
+    <string name="map_action_bird_locations">Bird Locations</string>
+    <string name="map_action_bookmarks">Bookmarks</string>
+    <string name="map_action_weather">Weather</string>
+    <string name="map_action_popular_hotspots">Popular Hotspots</string>
+    <string name="map_action_migration_routes">Migration Routes</string>
+    <string name="map_action_show_bird_locations_toast">Show Bird Locations</string>
+    <string name="map_action_show_bookmarks_toast">Show Bookmarks</string>
+    <string name="map_action_show_weather_toast">Show Weather</string>
+    <string name="map_action_show_hotspots_toast">Show Hotspots</string>
+    <string name="map_action_show_migration_toast">Show Migration (Not Implemented)</string>
+
+    <!-- Marketplace Screen -->
+    <string name="marketplace_title_birdlens">BIRDLENS</string> <!-- Header title -->
+    <string name="marketplace_subtitle">Marketplace</string>
+    <string name="marketplace_search_placeholder">Search something</string>
+    <string name="marketplace_section_bird_pictures">Bird pictures</string>
+    <string name="marketplace_section_categories">Categories</string>
+    <string name="marketplace_section_deals">Deals</string>
+    <string name="marketplace_section_rental_services">Rental Services</string>
+    <string name="marketplace_preview_image_title">Preview: %s</string> <!-- %s for title -->
+    <string name="marketplace_preview_image_placeholder">Img</string>
+    <string name="marketplace_preview_deal_placeholder">Preview Deal</string>
+
+    <!-- Common Icons Description -->
+    <string name="icon_cart_description">Cart</string>
+    <string name="icon_search_description">Search</string>
+
 </resources>

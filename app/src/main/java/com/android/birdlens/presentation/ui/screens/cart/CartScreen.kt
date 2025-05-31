@@ -19,24 +19,29 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource // Import this
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
-import com.android.birdlens.presentation.ui.components.AppScaffold // Import
+import com.android.birdlens.R // Import this
+import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.ui.theme.*
 
+// CartItemData data class remains the same
 data class CartItemData(
     val id: Int,
-    val name: String,
-    val price: String,
+    val name: String, // Dynamic
+    val price: String, // Dynamic
     val imageUrl: String?,
     var quantity: Int,
     var isSelected: Boolean
 )
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,10 +66,21 @@ fun CartScreen(
         navController = navController,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("YOUR CART", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
+                title = {
+                    Text(
+                        stringResource(id = R.string.cart_title), // Localized
+                        color = TextWhite,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextWhite)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(id = R.string.back), // Localized
+                            tint = TextWhite
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -72,11 +88,11 @@ fun CartScreen(
                 )
             )
         },
-        showBottomBar = true // Cart screen is a main tab
+        showBottomBar = true
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding) // Apply padding from AppScaffold
+                .padding(innerPadding)
                 .fillMaxSize()
         ) {
             LazyColumn(
@@ -131,7 +147,7 @@ fun CartItemCard(
         colors = CardDefaults.cardColors(containerColor = ButtonGreen.copy(alpha = 0.8f)),
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
+            .height(IntrinsicSize.Min) // Ensure card wraps content height
     ) {
         Row(
             modifier = Modifier
@@ -153,7 +169,7 @@ fun CartItemCard(
             if (item.imageUrl != null && !isPreviewMode) {
                 Image(
                     painter = rememberAsyncImagePainter(model = item.imageUrl),
-                    contentDescription = item.name,
+                    contentDescription = item.name, // Dynamic item name for accessibility
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(70.dp)
@@ -168,9 +184,18 @@ fun CartItemCard(
                     contentAlignment = Alignment.Center
                 ) {
                     if (isPreviewMode && item.imageUrl == null) {
-                        Text("Img", color = TextWhite.copy(alpha = 0.7f), fontSize = 10.sp)
-                    } else if (isPreviewMode && item.imageUrl != null){
-                        Text("Preview Img", color = TextWhite.copy(alpha = 0.7f), fontSize = 8.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Text(
+                            stringResource(id = R.string.cart_item_image_preview_placeholder), // Localized
+                            color = TextWhite.copy(alpha = 0.7f),
+                            fontSize = 10.sp
+                        )
+                    } else if (isPreviewMode && item.imageUrl != null) {
+                        Text(
+                            stringResource(id = R.string.cart_item_image_preview_placeholder_detail), // Localized
+                            color = TextWhite.copy(alpha = 0.7f),
+                            fontSize = 8.sp,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }
@@ -178,9 +203,13 @@ fun CartItemCard(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(item.name, color = TextWhite, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Text(item.name, color = TextWhite, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) // Dynamic
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Price ${item.price}", color = TextWhite.copy(alpha = 0.8f), fontSize = 14.sp)
+                Text(
+                    stringResource(id = R.string.cart_item_price_format, item.price), // Localized format string
+                    color = TextWhite.copy(alpha = 0.8f),
+                    fontSize = 14.sp
+                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -206,17 +235,27 @@ fun QuantitySelector(
             .padding(horizontal = 0.dp, vertical = 0.dp)
     ) {
         IconButton(onClick = onDecrement, modifier = Modifier.size(32.dp).clip(CircleShape)) {
-            Icon(Icons.Filled.Remove, contentDescription = "Decrement", tint = TextWhite, modifier = Modifier.size(18.dp))
+            Icon(
+                Icons.Filled.Remove,
+                contentDescription = stringResource(id = R.string.cart_decrement_quantity), // Localized
+                tint = TextWhite,
+                modifier = Modifier.size(18.dp)
+            )
         }
         Text(
-            text = quantity.toString(),
+            text = quantity.toString(), // Dynamic number
             color = TextWhite,
             fontWeight = FontWeight.Bold,
             fontSize = 14.sp,
             modifier = Modifier.padding(horizontal = 8.dp)
         )
         IconButton(onClick = onIncrement, modifier = Modifier.size(32.dp).clip(CircleShape)) {
-            Icon(Icons.Filled.Add, contentDescription = "Increment", tint = TextWhite, modifier = Modifier.size(18.dp))
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = stringResource(id = R.string.cart_increment_quantity), // Localized
+                tint = TextWhite,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -251,7 +290,11 @@ fun CartFooter(
                     )
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("ALL ($selectedItemCount)", color = TextWhite, fontSize = 14.sp)
+                Text(
+                    stringResource(id = R.string.all_selected_count, selectedItemCount), // Localized
+                    color = TextWhite,
+                    fontSize = 14.sp
+                )
             }
 
             Button(
@@ -264,7 +307,10 @@ fun CartFooter(
                 modifier = Modifier.height(48.dp),
                 contentPadding = PaddingValues(horizontal = 24.dp)
             ) {
-                Text("BUY NOW", fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(id = R.string.buy_now), // Localized
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
