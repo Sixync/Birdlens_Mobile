@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource // Added
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.birdlens.ui.theme.BottomNavGreen
@@ -30,7 +31,7 @@ fun AppBottomNavigationBar(
                 icon = {
                     if (isSelected) item.selectedIcon() else item.icon()
                 },
-                label = { Text(item.label, fontSize = 10.sp) },
+                label = { Text(stringResource(id = item.labelResId), fontSize = 10.sp) }, // Use stringResource
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = TextWhite,
                     unselectedIconColor = TextWhite.copy(alpha = 0.7f),

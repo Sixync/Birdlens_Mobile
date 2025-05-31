@@ -59,6 +59,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
+        resourceConfigurations.addAll(listOf("en", "vi"))
     }
 
     buildTypes {
@@ -101,7 +102,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.maps.compose) // Added
     implementation(libs.play.services.maps)
-    implementation(libs.androidx.media3.common.ktx) // Added
+    implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.core.ktx) // Added
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

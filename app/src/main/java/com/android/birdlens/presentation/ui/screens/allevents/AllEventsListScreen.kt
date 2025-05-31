@@ -12,14 +12,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource // Import this
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.android.birdlens.presentation.ui.components.AppScaffold // Import
-import com.android.birdlens.presentation.ui.components.SimpleTopAppBar // Import
-import com.android.birdlens.presentation.ui.screens.alltours.FullWidthTourItemCard
+import com.android.birdlens.R // Import this
+import com.android.birdlens.presentation.ui.components.AppScaffold
+import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
+import com.android.birdlens.presentation.ui.screens.alltours.FullWidthTourItemCard // Reusing this
 import com.android.birdlens.presentation.ui.screens.tour.TourItem
 import com.android.birdlens.ui.theme.*
 
@@ -38,19 +40,19 @@ fun AllEventsListScreen(
                 1 -> "https://images.unsplash.com/photo-1559507984-555c777a7554?w=600&auto=format&fit=crop&q=60"
                 else -> "https://images.unsplash.com/photo-1508007520041-4640673955de?w=600&auto=format&fit=crop&q=60"
             },
-            title = "Special Event #${index + 1}"
+            title = "Special Event #${index + 1}" // Dynamic title
         )
     }
 
     AppScaffold(
         navController = navController,
         topBar = {
-            SimpleTopAppBar( // Use the simple top app bar
-                title = "All Events",
+            SimpleTopAppBar(
+                title = stringResource(id = R.string.all_events_title), // Localized
                 onNavigateBack = { navController.popBackStack() }
             )
         },
-        showBottomBar = false // Decide if this screen needs a bottom bar
+        showBottomBar = false
     ) { innerPadding ->
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp, top = innerPadding.calculateTopPadding() + 8.dp),
@@ -63,17 +65,32 @@ fun AllEventsListScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Result found (${allEventsList.size})", color = TextWhite.copy(alpha = 0.8f), fontSize = 14.sp)
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { /* TODO: Show sort options */ }) {
-                        Text("Sort By", color = TextWhite.copy(alpha = 0.8f), fontSize = 14.sp)
+                    Text(
+                        stringResource(id = R.string.results_found_count, allEventsList.size), // Localized
+                        color = TextWhite.copy(alpha = 0.8f),
+                        fontSize = 14.sp
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { /* TODO: Show sort options */ }
+                    ) {
+                        Text(
+                            stringResource(id = R.string.sort_by), // Localized
+                            color = TextWhite.copy(alpha = 0.8f),
+                            fontSize = 14.sp
+                        )
                         Spacer(Modifier.width(4.dp))
-                        Icon(Icons.Filled.FilterList, contentDescription = "Sort", tint = TextWhite.copy(alpha = 0.8f))
+                        Icon(
+                            Icons.Filled.FilterList,
+                            contentDescription = stringResource(id = R.string.sort_icon_description), // Localized
+                            tint = TextWhite.copy(alpha = 0.8f)
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
             items(allEventsList, key = { it.id }) { eventItem ->
-                FullWidthTourItemCard(
+                FullWidthTourItemCard( // This card already uses string resources for its static parts
                     item = eventItem,
                     onClick = { onEventItemClick(eventItem.id) },
                     isPreviewMode = isPreviewMode
@@ -87,8 +104,10 @@ fun AllEventsListScreen(
 @Composable
 fun AllEventsListScreenPreview() {
     BirdlensTheme {
-        AllEventsListScreen(navController = rememberNavController(),
+        AllEventsListScreen(
+            navController = rememberNavController(),
             onEventItemClick = {},
-            isPreviewMode = true)
+            isPreviewMode = true
+        )
     }
 }

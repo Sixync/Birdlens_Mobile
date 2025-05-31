@@ -7,11 +7,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource // Make sure this is imported
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.android.birdlens.R // Make sure this is imported for R.string access
 import com.android.birdlens.presentation.ui.components.AuthScreenLayout
 import com.android.birdlens.ui.theme.AuthCardBackground
 import com.android.birdlens.ui.theme.ButtonGreen
@@ -28,7 +30,8 @@ fun WelcomeScreen(
         Spacer(modifier = Modifier.weight(0.25f))
 
         Text(
-            text = "Welcome",
+            // CRITICAL: Use stringResource for the title
+            text = stringResource(id = R.string.welcome_title),
             style =
             TextStyle(
                 fontFamily = MaterialTheme.typography.headlineLarge.fontFamily,
@@ -65,7 +68,15 @@ fun WelcomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
-                ) { Text("Login", color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Medium) }
+                ) {
+                    // CRITICAL: Use stringResource for the button text
+                    Text(
+                        stringResource(id = R.string.login),
+                        color = TextWhite,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
 
                 Button(
                     onClick = onNewUserClicked,
@@ -74,15 +85,25 @@ fun WelcomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
-                ) { Text("I am a new user", color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Medium) }
+                ) {
+                    // CRITICAL: Use stringResource for the button text
+                    Text(
+                        stringResource(id = R.string.i_am_new_user),
+                        color = TextWhite,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 48.dp)) // Ensure space above nav bar
     }
 }
 
 @Preview(showBackground = true, device = "spec:width=360dp,height=640dp,dpi=480")
 @Composable
 fun WelcomeScreenPreview() {
-    BirdlensTheme { WelcomeScreen(onLoginClicked = {}, onNewUserClicked = {}) }
+    BirdlensTheme {
+        WelcomeScreen(onLoginClicked = {}, onNewUserClicked = {})
+    }
 }

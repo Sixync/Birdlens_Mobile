@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.android.birdlens.R
 import com.android.birdlens.data.model.request.LoginRequest
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AuthScreenLayout
@@ -46,18 +48,12 @@ fun LoginScreen(
     googleAuthViewModel: GoogleAuthViewModel,
     onNavigateBack: () -> Unit,
     onForgotPassword: () -> Unit,
-    // Removed onLoginWithFacebook, onLoginWithX, onLoginWithApple as per simplification
-    // onLoginWithFacebook: () -> Unit,
-    // onLoginWithX: () -> Unit,
-    // onLoginWithApple: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    // Removed googleOneTapState as Google Sign-In flow is simplified
-    // val googleOneTapState by googleAuthViewModel.googleSignInOneTapState.collectAsState()
     val backendAuthState by googleAuthViewModel.backendAuthState.collectAsState()
     val firebaseSignInState by googleAuthViewModel.firebaseSignInState.collectAsState()
 
@@ -71,7 +67,6 @@ fun LoginScreen(
                 }
                 googleAuthViewModel.resetFirebaseSignInState()
                 googleAuthViewModel.resetBackendAuthState()
-                // googleAuthViewModel.resetGoogleOneTapState() // No longer needed
             }
             is GoogleAuthViewModel.FirebaseSignInState.Error -> {
                 Toast.makeText(context, "Firebase Sign-In Error: ${state.message}", Toast.LENGTH_LONG).show()
@@ -91,16 +86,23 @@ fun LoginScreen(
         }
     }
 
-    // Removed LaunchedEffect for googleOneTapState
-
     val isLoading = backendAuthState is GoogleAuthViewModel.BackendAuthState.Loading ||
             firebaseSignInState is GoogleAuthViewModel.FirebaseSignInState.Loading
-    // Removed googleOneTapState check from isLoading
+
+    // SOLUTION: Get the string resource here, in the Composable scope
+    val loginErrorCredentialsText = stringResource(id = R.string.login_error_credentials)
+    val backText = stringResource(id = R.string.back)
+    val loginText = stringResource(id = R.string.login)
+    val loginTitleText = stringResource(id = R.string.log_in_title)
+    val emailPlaceholderText = stringResource(id = R.string.email_placeholder)
+    val passwordPlaceholderText = stringResource(id = R.string.password_placeholder)
+    val forgotPasswordPromptText = stringResource(id = R.string.forgot_password_prompt)
+    val clickHereText = stringResource(id = R.string.click_here)
+    // val loginWithGoogleText = stringResource(id = R.string.login_with_google) // If social buttons are used
 
     AuthScreenLayout(
         modifier = modifier,
         topContent = {
-            // ... (topContent remains the same)
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 16.dp, top = 16.dp)) {
@@ -110,7 +112,7 @@ fun LoginScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Navigate back",
+                        contentDescription = backText,
                         tint = TextWhite
                     )
                 }
@@ -132,7 +134,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "LOG IN",
+                    text = loginTitleText,
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
                         color = TextWhite,
@@ -144,7 +146,7 @@ fun LoginScreen(
                 CustomTextField(
                     value = email,
                     onValueChange = { email = it },
-                    placeholder = "Email",
+                    placeholder = emailPlaceholderText,
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = AuthInputBackground,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = androidx.compose.ui.text.input.ImeAction.Next)
@@ -155,7 +157,7 @@ fun LoginScreen(
                 CustomTextField(
                     value = password,
                     onValueChange = { password = it },
-                    placeholder = "Password",
+                    placeholder = passwordPlaceholderText,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = AuthInputBackground,
@@ -167,11 +169,11 @@ fun LoginScreen(
                 ClickableText(
                     text = buildAnnotatedString {
                         withStyle(style = SpanStyle(color = TextWhite.copy(alpha = 0.8f), fontSize = 13.sp)) {
-                            append("Forget your password? ")
+                            append(forgotPasswordPromptText + " ")
                         }
                         pushStringAnnotation(tag = "CLICK_HERE", annotation = "forgot_password")
                         withStyle(style = SpanStyle(color = ClickableLinkText, fontWeight = FontWeight.Bold, fontSize = 13.sp)) {
-                            append("Click here")
+                            append(clickHereText)
                         }
                         pop()
                     },
@@ -191,7 +193,7 @@ fun LoginScreen(
                         if (email.isNotBlank() && password.isNotBlank()) {
                             googleAuthViewModel.loginUser(LoginRequest(email, password))
                         } else {
-                            Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, loginErrorCredentialsText, Toast.LENGTH_SHORT).show()
                         }
                     },
                     shape = CircleShape,
@@ -202,7 +204,7 @@ fun LoginScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Login",
+                        contentDescription = loginText,
                         tint = TextWhite,
                         modifier = Modifier.size(30.dp)
                     )
@@ -210,23 +212,11 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Removed SocialLoginButton for Google
-                // Removed SocialLoginButton for Facebook
-                // Removed SocialLoginButton for X
-                // Removed SocialLoginButton for Apple
-                // Example:
+                // Example if you re-add social login buttons:
                 // SocialLoginButton(
-                //     text = "Login with Google",
-                //     onClick = {
-                //         if (!isLoading) {
-                //             // googleAuthViewModel.startGoogleSignIn() // Removed
-                //             Toast.makeText(context, "Google login not available.", Toast.LENGTH_SHORT).show()
-                //         }
-                //     },
-                //     iconPlaceholder = true,
-                //     enabled = !isLoading,
-                //     backgroundColor = SocialButtonBackgroundLight,
-                //     contentColor = SocialButtonTextDark
+                //     text = loginWithGoogleText,
+                //     onClick = { /* ... */ },
+                //     // ...
                 // )
                 // Spacer(modifier = Modifier.height(12.dp))
 
@@ -242,11 +232,6 @@ fun LoginScreen(
     }
 }
 
-// ... (CustomTextField and SocialLoginButton composables remain the same, though SocialLoginButton might be unused now or adapted)
-// SocialLoginButton might be removed if no social logins are presented. For now, keeping its definition if other parts of app might use it.
-// If truly unused, its definition can be removed as well.
-
-// ...
 @Composable
 fun CustomTextField(
     value: String,
@@ -330,13 +315,12 @@ fun SocialLoginButton(
 fun LoginScreenPreview() {
     BirdlensTheme {
         val navController = rememberNavController()
-        val dummyViewModel = GoogleAuthViewModel(ApplicationProvider.getApplicationContext()) // Pass context
+        val dummyViewModel = GoogleAuthViewModel(ApplicationProvider.getApplicationContext())
         LoginScreen(
             navController = navController,
             googleAuthViewModel = dummyViewModel,
             onNavigateBack = {},
             onForgotPassword = {}
-            // Removed Facebook, X, Apple click handlers from preview call
         )
     }
 }
