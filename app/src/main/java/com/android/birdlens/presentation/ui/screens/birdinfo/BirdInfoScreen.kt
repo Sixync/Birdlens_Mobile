@@ -61,7 +61,7 @@ fun BirdInfoScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
                 }
                 is BirdInfoUiState.Success -> {
-                    BirdDetailsContent(birdData = state.birdData)
+                    BirdDetailsContent(birdData = state.birdData, imageUrl = state.imageUrl)
                 }
                 is BirdInfoUiState.Error -> {
                     Column(
@@ -93,7 +93,7 @@ fun BirdInfoScreen(
 }
 
 @Composable
-fun BirdDetailsContent(birdData: EbirdTaxonomy) {
+fun BirdDetailsContent(birdData: EbirdTaxonomy, imageUrl: String?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -101,15 +101,15 @@ fun BirdDetailsContent(birdData: EbirdTaxonomy) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Placeholder for Bird Image - eBird taxonomy API doesn't provide direct image URLs.
-        // You might integrate with Macaulay Library or another service for images.
-        val placeholderImageUrl = "https://via.placeholder.com/300x200/CCCCCC/FFFFFF?Text=${birdData.commonName.replace(" ", "+")}"
+        val imageToLoad = imageUrl ?: "https://via.placeholder.com/300x200/CCCCCC/FFFFFF?Text=${birdData.commonName.replace(" ", "+")}"
         val imagePainter = rememberAsyncImagePainter(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(placeholderImageUrl) // Replace with actual image URL if available
+                .data(imageToLoad)
                 .crossfade(true)
-                .build(),
-            // You can add a placeholder/error drawable for Coil here
+                // Add placeholder/error for Coil if desired
+                // .placeholder(R.drawable.placeholder_image)
+                // .error(R.drawable.error_image)
+                .build()
         )
 
         Image(
@@ -117,11 +117,12 @@ fun BirdDetailsContent(birdData: EbirdTaxonomy) {
             contentDescription = birdData.commonName,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(200.dp) // You could also use .aspectRatio() if you prefer a consistent shape for the image frame
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.DarkGray.copy(alpha = 0.3f)), // Placeholder background
-            contentScale = ContentScale.Crop
+                .background(Color.DarkGray.copy(alpha = 0.3f)), // Background for the image area, visible with ContentScale.Fit
+            contentScale = ContentScale.Fit // Changed from ContentScale.Crop
         )
+
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -191,16 +192,40 @@ fun BirdInfoScreenPreview_Success() {
         familyCommonName = "Old World Sparrows",
         familyScientificName = "Passeridae"
     )
-    // Mock ViewModel and state for preview
-    // This is a simplified mock. In real complex previews, you might use a fake ViewModel.
+    val dummyImageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Passer_domesticus_female_Hiddensee_P1080333_adjusted.jpg/500px-Passer_domesticus_female_Hiddensee_P1080333_adjusted.jpg"
+
     BirdlensTheme {
         AppScaffold(navController = rememberNavController(), topBar = { SimpleTopAppBar("Bird Information") }) {
             Box(modifier = Modifier.padding(it).fillMaxSize()) {
-                BirdDetailsContent(birdData = dummyBirdData)
+                BirdDetailsContent(birdData = dummyBirdData, imageUrl = dummyImageUrl)
             }
         }
     }
 }
+
+@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
+@Composable
+fun BirdInfoScreenPreview_Success_NoImage() {
+    val dummyBirdData = EbirdTaxonomy(
+        scientificName = "Passer domesticus",
+        commonName = "House Sparrow",
+        speciesCode = "houspa",
+        category = "species",
+        taxonOrder = 29401.0,
+        birdOrder = "Passeriformes",
+        familyCommonName = "Old World Sparrows",
+        familyScientificName = "Passeridae"
+    )
+
+    BirdlensTheme {
+        AppScaffold(navController = rememberNavController(), topBar = { SimpleTopAppBar("Bird Information") }) {
+            Box(modifier = Modifier.padding(it).fillMaxSize()) {
+                BirdDetailsContent(birdData = dummyBirdData, imageUrl = null)
+            }
+        }
+    }
+}
+
 
 @Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
 @Composable
