@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource // Make sure this is imported
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,17 +32,17 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
+import com.android.birdlens.R // Make sure this is imported
 import com.android.birdlens.presentation.navigation.Screen
-import com.android.birdlens.presentation.ui.components.AppScaffold // Import
+import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.ui.theme.*
 
-// --- Data Models (Keep) ---
+// Data Model TourItem remains the same
 data class TourItem(val id: Int, val imageUrl: String, val title: String = "")
-// --- BottomNavItem and BottomNavigationBar removed ---
 
 @Composable
 fun TourScreen(
-    navController: NavHostController, // Changed NavController to NavHostController for consistency
+    navController: NavHostController,
     modifier: Modifier = Modifier,
     onNavigateToAllEvents: () -> Unit,
     onNavigateToAllTours: () -> Unit,
@@ -51,7 +52,7 @@ fun TourScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
-    // Dummy data
+    // Dummy data (remains the same)
     val eventsOfTheYear = listOf(
         TourItem(1, "https://plus.unsplash.com/premium_photo-1673283380436-ac702dc85c64?w=300&auto=format&fit=crop&q=60", "Hoi An Lanterns"),
         TourItem(2, "https://images.unsplash.com/photo-1528181304800-259b08848526?w=300&auto=format&fit=crop&q=60", "Ha Long Bay"),
@@ -65,11 +66,9 @@ fun TourScreen(
     )
 
     AppScaffold(
-        navController = navController, // Pass the navController
+        navController = navController,
         topBar = {
-            // TourScreenHeader is specific to TourScreen, so define or call it here.
-            // Ensure it doesn't include status bar padding if AppScaffold handles it.
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) { // Added vertical padding
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
                 TourScreenHeader(
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it },
@@ -77,23 +76,19 @@ fun TourScreen(
                 )
             }
         },
-        showBottomBar = true, // TourScreen has a bottom navigation bar
-        floatingActionButton = { /* No FAB in TourScreen design, so empty lambda or default {} */ }
-        // currentRoute is now handled internally by AppScaffold
-    ) { innerPadding -> // This is the content slot from AppScaffold
+        showBottomBar = true,
+        floatingActionButton = { }
+    ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
-                .padding(innerPadding) // Apply padding from AppScaffold
+                .padding(innerPadding)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp), // Original horizontal padding for list content
-            contentPadding = PaddingValues(top = 8.dp) // Add padding if TourScreenHeader is complex and outside topBar slot
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 8.dp)
         ) {
-            // The TourScreenHeader is now in the topBar slot of AppScaffold.
-            // If it were meant to scroll with content, it would be an item here.
-
             item {
                 SectionWithHorizontalList(
-                    title = "Events of the year",
+                    titleResId = R.string.tour_screen_events_of_year, // Use ResId
                     items = eventsOfTheYear,
                     onItemClick = { tourItem -> onTourItemClick(tourItem.id) },
                     onSeeAllClick = onNavigateToAllEvents,
@@ -102,14 +97,14 @@ fun TourScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
             item {
-                SectionHeader(title = "Popular Tour", onSeeAllClick = onNavigateToPopularTours)
+                SectionHeader(titleResId = R.string.tour_screen_popular_tour, onSeeAllClick = onNavigateToPopularTours) // Use ResId
                 PopularTourCard(item = popularTour, onClick = { onTourItemClick(popularTour.id) }, isPreviewMode = isPreviewMode)
-                PageIndicator(count = 3, selectedIndex = 0) // Example static indicator
+                PageIndicator(count = 3, selectedIndex = 0)
                 Spacer(modifier = Modifier.height(24.dp))
             }
             item {
                 SectionWithHorizontalList(
-                    title = "All Tours",
+                    titleResId = R.string.tour_screen_all_tours, // Use ResId
                     items = allToursData,
                     onItemClick = { tourItem -> onTourItemClick(tourItem.id) },
                     onSeeAllClick = onNavigateToAllTours,
@@ -121,7 +116,6 @@ fun TourScreen(
     }
 }
 
-// --- Reusable Sub-Components (Keep or move as needed) ---
 @Composable
 fun TourScreenHeader(
     searchQuery: String,
@@ -150,11 +144,19 @@ fun TourScreenHeader(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search", tint = SearchBarPlaceholderText)
+                        Icon(
+                            Icons.Filled.Search,
+                            contentDescription = stringResource(id = R.string.icon_search_description),
+                            tint = SearchBarPlaceholderText
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(modifier = Modifier.weight(1f)) {
                             if (searchQuery.isEmpty()) {
-                                Text("Search something", color = SearchBarPlaceholderText, fontSize = 16.sp)
+                                Text(
+                                    stringResource(id = R.string.search_something),
+                                    color = SearchBarPlaceholderText,
+                                    fontSize = 16.sp
+                                )
                             }
                             innerTextField()
                         }
@@ -170,7 +172,7 @@ fun TourScreenHeader(
         ) {
             Column {
                 Text(
-                    "BIRDLENS",
+                    stringResource(id = R.string.tour_screen_title_birdlens), // Localized
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
                         color = GreenWave2,
@@ -178,7 +180,7 @@ fun TourScreenHeader(
                     )
                 )
                 Text(
-                    "Tours",
+                    stringResource(id = R.string.tour_screen_subtitle_tours), // Localized
                     style = MaterialTheme.typography.titleLarge.copy(
                         color = TextWhite,
                         fontWeight = FontWeight.SemiBold
@@ -186,13 +188,19 @@ fun TourScreenHeader(
                 )
             }
             IconButton(onClick = onNavigateToCart) {
-                Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart", tint = TextWhite, modifier = Modifier.size(28.dp))
+                Icon(
+                    Icons.Filled.ShoppingCart,
+                    contentDescription = stringResource(id = R.string.icon_cart_description),
+                    tint = TextWhite,
+                    modifier = Modifier.size(28.dp)
+                )
             }
         }
     }
 }
+
 @Composable
-fun SectionHeader(title: String, onSeeAllClick: () -> Unit) {
+fun SectionHeader(titleResId: Int, onSeeAllClick: () -> Unit) { // Changed to take titleResId
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -201,11 +209,11 @@ fun SectionHeader(title: String, onSeeAllClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = title,
+            text = stringResource(id = titleResId), // Use stringResource
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold, color = TextWhite)
         )
         Text(
-            text = "See all ->",
+            text = stringResource(id = R.string.see_all), // Use stringResource
             style = MaterialTheme.typography.bodyMedium.copy(color = TextWhite.copy(alpha = 0.8f)),
             modifier = Modifier.clickable(onClick = onSeeAllClick)
         )
@@ -214,14 +222,14 @@ fun SectionHeader(title: String, onSeeAllClick: () -> Unit) {
 
 @Composable
 fun SectionWithHorizontalList(
-    title: String,
+    titleResId: Int, // Changed to take titleResId
     items: List<TourItem>,
     onItemClick: (TourItem) -> Unit,
     onSeeAllClick: () -> Unit,
     isPreviewMode: Boolean
 ) {
     Column {
-        SectionHeader(title = title, onSeeAllClick = onSeeAllClick)
+        SectionHeader(titleResId = titleResId, onSeeAllClick = onSeeAllClick) // Pass ResId
         LazyRow(
             contentPadding = PaddingValues(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -252,24 +260,27 @@ fun TourItemCardSmall(
                     modifier = Modifier.fillMaxSize().background(Color.LightGray.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Preview Img", color = TextWhite.copy(alpha = 0.7f))
+                    Text(
+                        stringResource(id = R.string.tour_screen_preview_image_small), // Localized
+                        color = TextWhite.copy(alpha = 0.7f)
+                    )
                 }
             } else {
                 Image(
                     painter = rememberAsyncImagePainter(model = item.imageUrl),
-                    contentDescription = item.title.ifEmpty { "Tour image" },
+                    contentDescription = item.title.ifEmpty { stringResource(id = R.string.tour_image_description) }, // Localized fallback
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            if (item.title.isNotEmpty()) {
+            if (item.title.isNotEmpty()) { // Dynamic title, not from string resources
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
-                                startY = 300f
+                                startY = 300f // Adjust this value for the gradient's start position
                             )
                         )
                         .padding(8.dp),
@@ -303,24 +314,27 @@ fun PopularTourCard(
                     modifier = Modifier.fillMaxSize().background(Color.LightGray.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Preview Popular Img", color = TextWhite.copy(alpha = 0.7f))
+                    Text(
+                        stringResource(id = R.string.tour_screen_preview_image_popular), // Localized
+                        color = TextWhite.copy(alpha = 0.7f)
+                    )
                 }
             } else {
                 Image(
                     painter = rememberAsyncImagePainter(model = item.imageUrl),
-                    contentDescription = item.title.ifEmpty { "Popular tour image" },
+                    contentDescription = item.title.ifEmpty { stringResource(id = R.string.popular_tour_image_description) }, // Localized fallback
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            if (item.title.isNotEmpty()) {
+            if (item.title.isNotEmpty()) { // Dynamic title
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.1f), Color.Black.copy(alpha = 0.7f)),
-                                startY = 300f
+                                startY = 300f // Adjust for gradient start
                             )
                         )
                         .padding(12.dp),
@@ -332,6 +346,8 @@ fun PopularTourCard(
         }
     }
 }
+
+// PageIndicator remains the same
 
 @Composable
 fun PageIndicator(count: Int, selectedIndex: Int, modifier: Modifier = Modifier) {
@@ -353,7 +369,7 @@ fun PageIndicator(count: Int, selectedIndex: Int, modifier: Modifier = Modifier)
     }
 }
 
-// --- Preview ---
+
 @Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
 @Composable
 fun TourScreenPreview() {

@@ -10,7 +10,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
+// import androidx.compose.foundation.text.BasicTextField // Not used in this version
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -21,10 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
+// import androidx.compose.ui.graphics.SolidColor // Not used in this version
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.res.stringResource // Import this
+// import androidx.compose.ui.text.ExperimentalTextApi // Not strictly needed if not using advanced text features here
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,11 +34,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
+import com.android.birdlens.R // Import this
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.screens.tour.PageIndicator
 import com.android.birdlens.ui.theme.*
 
+// TourDetailData data class remains the same
 data class TourDetailData(
     val id: Int,
     val title: String,
@@ -49,7 +52,7 @@ data class TourDetailData(
     val description: String
 )
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTextApi::class)
+@OptIn(ExperimentalFoundationApi::class) // ExperimentalTextApi might not be needed now
 @Composable
 fun TourDetailScreen(
     navController: NavController,
@@ -58,37 +61,36 @@ fun TourDetailScreen(
     isPreviewMode: Boolean = LocalInspectionMode.current
 ) {
     val tourDetail = remember(tourId) {
-        // In a real app, fetch this data based on tourId from a ViewModel
+        // Dummy data for tour detail
         TourDetailData(
-            id = tourId, title = "Tour #$tourId", // Changed to match design image more closely
+            id = tourId, title = "Tour #$tourId",
             images = listOf(
                 "https://images.unsplash.com/photo-1547295026-2e935c753054?w=800&auto=format&fit=crop&q=60",
                 "https://images.unsplash.com/photo-1589922026997-26049f03cf30?w=800&auto=format&fit=crop&q=60",
                 "https://plus.unsplash.com/premium_photo-1673283380436-ac702dc85c64?w=800&auto=format&fit=crop&q=60"
             ),
-            rating = 4.5f, reviewCount = 77, price = "xxx", storeName = "Official BirdLens Store",
-            description = "pu9ahscouyohspciuhspuichqp9ushcpuiquiwshcpuwihoxuiquhciuiqhbciuiqabnxchaqpihcbh" // Using placeholder from design
+            rating = 4.5f, reviewCount = 77, price = "150", // Example price value
+            storeName = "Official BirdLens Store",
+            description = "Explore the wonders of nature with our guided bird watching tour. This tour takes you through serene landscapes, offering opportunities to spot various bird species in their natural habitat. Suitable for all ages and experience levels."
         )
     }
-    val birdlensGradientBrush = remember { Brush.linearGradient(colors = listOf(BirdlensGradientStart, BirdlensGradientEnd)) }
+    // birdlensGradientBrush is not used in the simplified DetailScreenHeader, can be removed if not used elsewhere.
+    // val birdlensGradientBrush = remember { Brush.linearGradient(colors = listOf(BirdlensGradientStart, BirdlensGradientEnd)) }
+
 
     AppScaffold(
         navController = navController,
         topBar = {
-            DetailScreenHeader(
-                navController = navController,
-                birdlensGradientBrush = birdlensGradientBrush // This gradient might not be used if header is simple
-            )
+            DetailScreenHeader(navController = navController)
         },
-        showBottomBar = true // Design shows bottom bar
+        showBottomBar = true
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-            // .padding(horizontal = 16.dp) // Padding is applied to the content Surface now
         ) {
-            item { Spacer(modifier = Modifier.height(16.dp)) } // Space below header
+            item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item {
                 val pagerState = rememberPagerState(pageCount = { tourDetail.images.size })
@@ -96,70 +98,109 @@ fun TourDetailScreen(
                     state = pagerState,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp) // Add horizontal padding for the pager
+                        .padding(horizontal = 16.dp)
                         .height(250.dp)
                         .clip(RoundedCornerShape(16.dp))
                 ) { pageIndex ->
                     if (isPreviewMode) {
-                        Box(modifier = Modifier.fillMaxSize().background(Color.LightGray.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
-                            Text("Preview Pager Img ${pageIndex + 1}", color = TextWhite)
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(Color.LightGray.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                stringResource(id = R.string.tour_detail_preview_pager_image, pageIndex + 1), // Localized
+                                color = TextWhite
+                            )
                         }
                     } else {
-                        Image(painter = rememberAsyncImagePainter(model = tourDetail.images[pageIndex]), contentDescription = "Tour Image ${pageIndex + 1}", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        Image(
+                            painter = rememberAsyncImagePainter(model = tourDetail.images[pageIndex]),
+                            contentDescription = stringResource(id = R.string.tour_detail_image_description, pageIndex + 1), // Localized
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 PageIndicator(
                     count = tourDetail.images.size,
                     selectedIndex = pagerState.currentPage,
-                    modifier = Modifier.padding(horizontal = 16.dp) // Align indicator with pager
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             item {
                 Surface(
-                    color = AuthCardBackground, // Use the frosted background
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), // Rounded only at the top
+                    color = AuthCardBackground,
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp) // Space between pager/indicator and this card
+                        .padding(top = 8.dp)
                 ) {
-                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp)) { // Added more vertical padding
-                        Text(tourDetail.title, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = TextWhite))
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp)) {
+                        Text( // Dynamic title
+                            tourDetail.title,
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = TextWhite)
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            repeat(5) { index -> Icon(Icons.Filled.Star, contentDescription = "Star", tint = if (index < tourDetail.rating.toInt()) Color.Yellow else TextWhite.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) }
+                            repeat(5) { index ->
+                                Icon(
+                                    Icons.Filled.Star,
+                                    contentDescription = stringResource(id = R.string.rating_star_description), // Localized
+                                    tint = if (index < tourDetail.rating.toInt()) Color.Yellow else TextWhite.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("${tourDetail.reviewCount} Reviews", color = TextWhite.copy(alpha = 0.8f), fontSize = 14.sp)
+                            Text( // Dynamic review count
+                                stringResource(id = R.string.tour_detail_reviews_count, tourDetail.reviewCount),
+                                color = TextWhite.copy(alpha = 0.8f),
+                                fontSize = 14.sp
+                            )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Price: ${tourDetail.price}\$/trip", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = TextWhite))
+                        Text( // Dynamic price
+                            stringResource(id = R.string.tour_detail_price_format, tourDetail.price),
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = TextWhite)
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Placeholder for store icon if any
                             Box(modifier = Modifier.size(24.dp).background(StoreNamePlaceholderCircle, CircleShape))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(tourDetail.storeName, color = TextWhite.copy(alpha = 0.9f), fontSize = 14.sp)
+                            Text(tourDetail.storeName, color = TextWhite.copy(alpha = 0.9f), fontSize = 14.sp) // Dynamic store name
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Description", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, color = TextWhite))
+                        Text(
+                            stringResource(id = R.string.tour_detail_description_label), // Localized
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, color = TextWhite)
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(tourDetail.description, color = TextWhite.copy(alpha = 0.85f), fontSize = 14.sp, lineHeight = 20.sp)
-                        Spacer(modifier = Modifier.height(32.dp)) // Increased space before button
+                        Text( // Dynamic description
+                            tourDetail.description,
+                            color = TextWhite.copy(alpha = 0.85f),
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp
+                        )
+                        Spacer(modifier = Modifier.height(32.dp))
 
-                        // New "Pick your days" button
                         Button(
                             onClick = { navController.navigate(Screen.PickDays.createRoute(tourDetail.id)) },
-                            shape = RoundedCornerShape(50), // Pill shape
-                            colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen), // Use ButtonGreen
+                            shape = RoundedCornerShape(50),
+                            colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp) // Slightly taller button
+                                .height(56.dp)
                         ) {
-                            Text("Pick your days", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextWhite)
+                            Text(
+                                stringResource(id = R.string.tour_detail_pick_days_button), // Localized
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextWhite
+                            )
                         }
-                        Spacer(modifier = Modifier.height(16.dp)) // Space at the bottom of the card
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -167,40 +208,43 @@ fun TourDetailScreen(
     }
 }
 
-@OptIn(ExperimentalTextApi::class)
 @Composable
 fun DetailScreenHeader(
     navController: NavController,
-    birdlensGradientBrush: Brush, // This might be unused if header is simple
+    // birdlensGradientBrush: Brush, // Removed as it's not used in this simplified header
     modifier: Modifier = Modifier
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    // The design uses a simpler header for detail screen, just back arrow and title.
-    // The complex search header is usually for main discovery screens.
-    // For consistency with "Pick Your Days" screen, we'll use a similar header.
+    // Simplified header for detail screens
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 16.dp, start = 4.dp, end = 16.dp), // Adjusted padding
+            .padding(top = 16.dp, start = 4.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = { navController.popBackStack() }) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextWhite)
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(id = R.string.back), // Localized
+                tint = TextWhite
+            )
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            // The title "BIRDLENS" is more prominent in the design than the actual tour title here.
-            // If tour title is needed, it would be in the content usually.
-            "BIRDLENS",
-            style = MaterialTheme.typography.headlineSmall.copy( // Adjusted for size
+            stringResource(id = R.string.tour_screen_title_birdlens), // Using the app title/brand for consistency
+            style = MaterialTheme.typography.headlineSmall.copy(
                 fontWeight = FontWeight.ExtraBold,
-                color = GreenWave2, // Using the bright green from theme
+                color = GreenWave2,
                 letterSpacing = 1.sp
             ),
-            modifier = Modifier.weight(1f) // Pushes cart icon to the end
+            modifier = Modifier.weight(1f)
         )
         IconButton(onClick = { navController.navigate(Screen.Cart.route) }) {
-            Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart", tint = TextWhite, modifier = Modifier.size(28.dp))
+            Icon(
+                Icons.Filled.ShoppingCart,
+                contentDescription = stringResource(id = R.string.icon_cart_description), // Localized
+                tint = TextWhite,
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

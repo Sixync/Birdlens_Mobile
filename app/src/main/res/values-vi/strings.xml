@@ -1,0 +1,173 @@
+<!-- EXE201/app/src/main/res/values-vi/strings.xml -->
+<resources>
+    <string name="app_name">Birdlens</string> <!-- Assuming you want to keep the app name the same -->
+
+    <!-- General -->
+    <string name="retry">Thử lại</string>
+    <string name="loading">Đang tải…</string>
+    <string name="error_network">Lỗi mạng. Vui lòng thử lại.</string>
+    <string name="error_unknown">Đã xảy ra lỗi không xác định.</string>
+    <string name="back">Quay lại</string>
+    <string name="continue_button">Tiếp tục</string>
+    <string name="search_something">Tìm kiếm gì đó…</string>
+    <string name="see_all">Xem tất cả -></string>
+    <string name="confirm">XÁC NHẬN</string>
+    <string name="buy_now">MUA NGAY</string>
+    <string name="all_selected_count">TẤT CẢ (%d)</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_title">Chào mừng</string>
+    <string name="login">Đăng nhập</string>
+    <string name="i_am_new_user">Tôi là người dùng mới</string>
+
+    <!-- Login Screen -->
+    <string name="log_in_title">ĐĂNG NHẬP</string>
+    <string name="email_placeholder">Email</string>
+    <string name="password_placeholder">Mật khẩu</string>
+    <string name="forgot_password_prompt">Quên mật khẩu?</string>
+    <string name="click_here">Nhấn vào đây</string>
+    <string name="login_error_credentials">Vui lòng nhập email và mật khẩu</string>
+    <!-- <string name="login_with_google">Login with Google</string> --> <!-- Kept in English as an example, or translate if needed -->
+
+    <!-- Register Screen -->
+    <string name="create_account_title">TẠO TÀI KHOẢN</string>
+    <string name="first_name_placeholder">Tên</string>
+    <string name="last_name_placeholder">Họ</string>
+    <string name="age_placeholder">Tuổi</string>
+    <string name="username_placeholder">Tên người dùng</string>
+    <string name="retype_password_placeholder">Nhập lại mật khẩu</string>
+    <string name="register_error_all_fields">Tất cả các trường là bắt buộc.</string>
+    <string name="register_error_valid_age">Vui lòng nhập tuổi hợp lệ.</string>
+    <string name="register_error_password_length">Mật khẩu phải có ít nhất 6 ký tự.</string>
+    <string name="register_error_passwords_mismatch">Mật khẩu không khớp.</string>
+    <!-- <string name="signup_with_google">Sign up with Google</string> -->
+
+    <!-- Login Success Screen -->
+    <string name="login_successful_title">Đăng nhập thành công</string>
+    <string name="welcome_to_app">Chào mừng đến với BirdLens</string>
+
+    <!-- Bottom Navigation -->
+    <string name="bottom_nav_settings">Cài đặt</string>
+    <string name="bottom_nav_community">Cộng đồng</string>
+    <string name="bottom_nav_map">Bản đồ</string>
+    <string name="bottom_nav_marketplace">Chợ</string>
+    <string name="bottom_nav_tours">Chuyến đi</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Cài đặt</string>
+    <string name="settings_account">Tài khoản</string>
+    <string name="settings_notifications">Thông báo</string>
+    <string name="settings_privacy_security">Riêng tư &amp; Bảo mật</string>
+    <string name="settings_help_support">Trợ giúp &amp; Hỗ trợ</string>
+    <string name="settings_about">Thông tin</string>
+    <string name="settings_saved">Đã lưu</string>
+    <string name="settings_liked">Đã thích</string>
+    <string name="settings_logout">ĐĂNG XUẤT</string>
+    <string name="settings_language">Ngôn ngữ</string>
+    <string name="settings_select_language">Chọn Ngôn ngữ</string>
+    <string name="language_english">Tiếng Anh</string>
+    <string name="language_vietnamese">Tiếng Việt</string>
+
+    <!-- Account Info Screen -->
+    <string name="account_info_title">Thông tin tài khoản</string>
+    <string name="account_info_username">Tên người dùng</string>
+    <string name="account_info_email">Email</string>
+    <string name="account_info_first_name">Tên</string>
+    <string name="account_info_last_name">Họ</string>
+    <string name="account_info_age">Tuổi</string>
+    <string name="account_info_error_loading">Lỗi: %s</string>
+    <string name="user_avatar_description">Ảnh đại diện</string>
+
+    <!-- Tour Screen -->
+    <string name="tour_screen_title_birdlens">BIRDLENS</string>
+    <string name="tour_screen_subtitle_tours">Chuyến đi</string>
+    <string name="tour_screen_events_of_year">Sự kiện của năm</string>
+    <string name="tour_screen_popular_tour">Chuyến đi nổi bật</string>
+    <string name="tour_screen_all_tours">Tất cả chuyến đi</string>
+    <string name="tour_image_description">Hình ảnh chuyến đi</string>
+    <string name="popular_tour_image_description">Hình ảnh chuyến đi nổi bật</string>
+
+
+    <string name="tour_screen_preview_image_small">Xem trước Tour</string>
+    <string name="tour_screen_preview_image_popular">Xem trước Tour nổi bật</string>
+
+    <!-- All Events/Tours List Screens -->
+    <string name="all_events_title">Tất cả Sự kiện</string>
+    <string name="all_tours_title">Tất cả Chuyến đi</string>
+    <string name="results_found_count">Tìm thấy (%d) kết quả</string>
+    <string name="sort_by">Sắp xếp theo</string>
+    <string name="sort_icon_description">Sắp xếp</string>
+    <string name="preview_image_placeholder">Xem trước hình ảnh</string>
+    <string name="tour_type_icon_description">Loại chuyến đi</string>
+    <string name="free_rental_badge">THUÊ MIỄN PHÍ</string>
+    <string name="rating_star_description">Sao đánh giá</string>
+    <string name="tour_id_prefix">Chuyến #%d</string>
+
+    <!-- Tour Detail Screen Specific -->
+    <string name="tour_detail_preview_pager_image">Xem trước Ảnh Pager %d</string>
+    <string name="tour_detail_image_description">Hình ảnh chuyến đi %d</string>
+    <string name="tour_detail_reviews_count">%d đánh giá</string>
+    <string name="tour_detail_price_format">Giá: %s/chuyến</string>
+    <string name="tour_detail_description_label">Mô tả</string>
+    <string name="tour_detail_pick_days_button">Chọn ngày của bạn</string>
+
+    <!-- Pick Days Screen -->
+    <string name="pick_days_title">CHỌN NGÀY</string>
+    <string name="purchase_success_dialog_title">Mua hàng thành công</string>
+    <string name="purchase_success_icon_description">Thành công</string>
+    <string name="days_of_week_mon">Hai</string>
+    <string name="days_of_week_tue">Ba</string>
+    <string name="days_of_week_wed">Tư</string>
+    <string name="days_of_week_thu">Năm</string>
+    <string name="days_of_week_fri">Sáu</string>
+    <string name="days_of_week_sat">Bảy</string>
+    <string name="days_of_week_sun">CN</string>
+
+    <!-- Cart Screen -->
+    <string name="cart_title">GIỎ HÀNG</string>
+    <string name="cart_item_price_format">Giá %s</string>
+    <string name="cart_decrement_quantity">Giảm</string>
+    <string name="cart_increment_quantity">Tăng</string>
+    <string name="cart_item_image_preview_placeholder">Ảnh</string>
+    <string name="cart_item_image_preview_placeholder_detail">Xem trước ảnh</string>
+
+    <!-- Community Screen -->
+    <string name="community_title">Cộng đồng</string>
+    <string name="community_search_placeholder">Tìm kiếm bài đăng…</string>
+    <string name="community_user_avatar_description">Ảnh đại diện</string>
+    <string name="community_post_image_description">Ảnh bài đăng</string>
+    <string name="community_action_like">Thích</string>
+    <string name="community_action_comment">Bình luận</string>
+    <string name="community_action_share">Chia sẻ</string>
+
+
+    <!-- Map Screen -->
+    <string name="map_screen_title_birdlens">BIRDLENS</string>
+    <string name="map_error_loading">Không thể tải bản đồ. Đảm bảo Dịch vụ Google Play đã được cập nhật và khóa API hợp lệ.</string>
+    <string name="map_action_bird_locations">Vị trí Chim</string>
+    <string name="map_action_bookmarks">Đã lưu</string>
+    <string name="map_action_weather">Thời tiết</string>
+    <string name="map_action_popular_hotspots">Điểm nổi bật</string>
+    <string name="map_action_migration_routes">Đường di cư</string>
+    <string name="map_action_show_bird_locations_toast">Hiển thị vị trí chim</string>
+    <string name="map_action_show_bookmarks_toast">Hiển thị mục đã lưu</string>
+    <string name="map_action_show_weather_toast">Hiển thị thời tiết</string>
+    <string name="map_action_show_hotspots_toast">Hiển thị điểm nổi bật</string>
+    <string name="map_action_show_migration_toast">Hiển thị đường di cư (Chưa triển khai)</string>
+
+    <!-- Marketplace Screen -->
+    <string name="marketplace_title_birdlens">BIRDLENS</string>
+    <string name="marketplace_subtitle">Chợ</string>
+    <string name="marketplace_search_placeholder">Tìm kiếm sản phẩm</string>
+    <string name="marketplace_section_bird_pictures">Ảnh chim</string>
+    <string name="marketplace_section_categories">Danh mục</string>
+    <string name="marketplace_section_deals">Ưu đãi</string>
+    <string name="marketplace_section_rental_services">Dịch vụ cho thuê</string>
+    <string name="marketplace_preview_image_title">Xem trước: %s</string>
+    <string name="marketplace_preview_image_placeholder">Ảnh</string>
+    <string name="marketplace_preview_deal_placeholder">Xem trước ưu đãi</string>
+
+    <!-- Common Icons Description -->
+    <string name="icon_cart_description">Giỏ hàng</string>
+    <string name="icon_search_description">Tìm kiếm</string>
+</resources>

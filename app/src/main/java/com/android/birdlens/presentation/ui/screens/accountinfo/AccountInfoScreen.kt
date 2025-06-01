@@ -168,6 +168,7 @@ fun UserInfoRow(label: String, value: String) {
     }
 }
 
+@SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
 @Composable
 fun AccountInfoScreenPreview_Success() {

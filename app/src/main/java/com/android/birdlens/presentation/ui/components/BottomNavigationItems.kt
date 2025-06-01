@@ -6,44 +6,48 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource // Added
+import com.android.birdlens.R // Added
 import com.android.birdlens.presentation.navigation.Screen
 
 data class BottomNavItemData(
-    val label: String,
+    val labelResId: Int, // Changed to resource ID
     val icon: @Composable () -> Unit,
     val selectedIcon: @Composable () -> Unit,
     val route: String
 )
 
-val globalBottomNavItems = listOf(
-    BottomNavItemData(
-        label = "Settings", // Or "Filter" as in some designs
-        icon = { Icon(Icons.Outlined.Tune, "Settings") },
-        selectedIcon = { Icon(Icons.Filled.Tune, "Settings") },
-        route = Screen.Settings.route
-    ),
-    BottomNavItemData(
-        label = "Community",
-        icon = { Icon(Icons.Outlined.Groups, "Community") },
-        selectedIcon = { Icon(Icons.Filled.Groups, "Community") },
-        route = Screen.Community.route
-    ),
-    BottomNavItemData(
-        label = "Map",
-        icon = { Icon(Icons.Outlined.Map, "Map") },
-        selectedIcon = { Icon(Icons.Filled.Map, "Map") },
-        route = Screen.Map.route
-    ),
-    BottomNavItemData(
-        label = "Marketplace",
-        icon = { Icon(Icons.Outlined.ShoppingCart, "Marketplace") },
-        selectedIcon = { Icon(Icons.Filled.ShoppingCart, "Marketplace") },
-        route = Screen.Marketplace.route // Could also link to Cart as a primary action
-    ),
-    BottomNavItemData(
-        label = "Tours", // Or "Calendar" as in some designs
-        icon = { Icon(Icons.Outlined.CalendarToday, "Tours") },
-        selectedIcon = { Icon(Icons.Filled.CalendarToday, "Tours") },
-        route = Screen.Tour.route // Main/home tab
+val globalBottomNavItems
+    @Composable // Needs to be composable to access stringResource
+    get() = listOf(
+        BottomNavItemData(
+            labelResId = R.string.bottom_nav_settings,
+            icon = { Icon(Icons.Outlined.Tune, stringResource(id = R.string.bottom_nav_settings)) },
+            selectedIcon = { Icon(Icons.Filled.Tune, stringResource(id = R.string.bottom_nav_settings)) },
+            route = Screen.Settings.route
+        ),
+        BottomNavItemData(
+            labelResId = R.string.bottom_nav_community,
+            icon = { Icon(Icons.Outlined.Groups, stringResource(id = R.string.bottom_nav_community)) },
+            selectedIcon = { Icon(Icons.Filled.Groups, stringResource(id = R.string.bottom_nav_community)) },
+            route = Screen.Community.route
+        ),
+        BottomNavItemData(
+            labelResId = R.string.bottom_nav_map,
+            icon = { Icon(Icons.Outlined.Map, stringResource(id = R.string.bottom_nav_map)) },
+            selectedIcon = { Icon(Icons.Filled.Map, stringResource(id = R.string.bottom_nav_map)) },
+            route = Screen.Map.route
+        ),
+        BottomNavItemData(
+            labelResId = R.string.bottom_nav_marketplace,
+            icon = { Icon(Icons.Outlined.ShoppingCart, stringResource(id = R.string.bottom_nav_marketplace)) },
+            selectedIcon = { Icon(Icons.Filled.ShoppingCart, stringResource(id = R.string.bottom_nav_marketplace)) },
+            route = Screen.Marketplace.route // Could also link to Cart as a primary action
+        ),
+        BottomNavItemData(
+            labelResId = R.string.bottom_nav_tours,
+            icon = { Icon(Icons.Outlined.CalendarToday, stringResource(id = R.string.bottom_nav_tours)) },
+            selectedIcon = { Icon(Icons.Filled.CalendarToday, stringResource(id = R.string.bottom_nav_tours)) },
+            route = Screen.Tour.route // Main/home tab
+        )
     )
-)

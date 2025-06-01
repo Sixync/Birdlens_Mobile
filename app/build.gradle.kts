@@ -75,6 +75,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
+        resourceConfigurations.addAll(listOf("en", "vi"))
         buildConfigField("String", "EBIRD_API_KEY", "\"$ebirdApiKey\"")
     }
 
@@ -123,7 +124,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.maps.compose) // Added
     implementation(libs.play.services.maps)
-    implementation(libs.androidx.media3.common.ktx) // Added
+    implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.core.ktx) // Added
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
