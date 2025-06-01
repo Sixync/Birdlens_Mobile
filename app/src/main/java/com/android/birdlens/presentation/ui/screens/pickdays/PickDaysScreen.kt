@@ -39,7 +39,7 @@ import java.util.Locale
 @Composable
 fun PickDaysScreen(
     navController: NavController,
-    tourId: Int,
+    tourId: Long,
     modifier: Modifier = Modifier
 ) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -47,16 +47,13 @@ fun PickDaysScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     val today = LocalDate.now()
 
-    AuthScreenLayout { // Using AuthScreenLayout for the shared background
-        // Top Bar within AuthScreenLayout's main content scope
+    AuthScreenLayout {
         PickDaysHeader(
-            onNavigateBack = { navController.popBackStack() },
-            // Month navigation can be added here if desired
+            onNavigateBack = { navController.popBackStack() }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Calendar Card
         Surface(
             color = AuthCardBackground,
             shape = RoundedCornerShape(24.dp),
@@ -71,7 +68,7 @@ fun PickDaysScreen(
                 Text(
                     text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${currentMonth.year}",
                     style = MaterialTheme.typography.headlineSmall.copy(
-                        color = GreenWave2, // Lime green for month/year
+                        color = GreenWave2,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -93,7 +90,6 @@ fun PickDaysScreen(
                     onClick = {
                         if (selectedDate != null) {
                             showSuccessDialog = true
-                            // In a real app, you might do something with tourId and selectedDate here
                         }
                     },
                     enabled = selectedDate != null,
@@ -103,19 +99,18 @@ fun PickDaysScreen(
                         .fillMaxWidth(0.8f)
                         .height(50.dp)
                 ) {
-                    Text("CONFIRM", color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.confirm), color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f)) // Push card up if content is short
+        Spacer(modifier = Modifier.weight(1f))
 
         if (showSuccessDialog) {
             PurchaseSuccessDialog(
                 onDismissRequest = {
                     showSuccessDialog = false
-                    // Optionally navigate back or to another screen after success
-                    navController.popBackStack() // Example: Go back to TourDetail
+                    navController.popBackStack()
                 }
             )
         }
@@ -131,10 +126,10 @@ fun PickDaysHeader(onNavigateBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onNavigateBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextWhite)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = TextWhite)
         }
         Text(
-            text = "PICK YOUR DAYS",
+            text = stringResource(R.string.pick_days_title),
             style = MaterialTheme.typography.titleLarge.copy(
                 color = TextWhite,
                 fontWeight = FontWeight.Bold
@@ -183,13 +178,11 @@ fun CalendarGrid(
 ) {
     val firstDayOfMonth = yearMonth.atDay(1)
     val daysInMonth = yearMonth.lengthOfMonth()
-    // What day of the week the first day of the month is (1=Monday, 7=Sunday)
     val firstDayOfWeekValue = firstDayOfMonth.dayOfWeek.value
-    // Calculate blank cells needed before the first day
     val leadingEmptyCells = (firstDayOfWeekValue - DayOfWeek.MONDAY.value + 7) % 7
 
     val calendarDays = mutableListOf<LocalDate?>()
-    repeat(leadingEmptyCells) { calendarDays.add(null) } // Empty cells for previous month
+    repeat(leadingEmptyCells) { calendarDays.add(null) }
     (1..daysInMonth).forEach { day ->
         calendarDays.add(yearMonth.atDay(day))
     }
@@ -215,7 +208,7 @@ fun CalendarGrid(
                     onDateSelected = { if (!isPast) onDateSelected(date) }
                 )
             } else {
-                Spacer(Modifier.aspectRatio(1f)) // Placeholder for empty cells
+                Spacer(Modifier.aspectRatio(1f))
             }
         }
     }
@@ -230,11 +223,11 @@ fun DateCell(
     onDateSelected: () -> Unit
 ) {
     val backgroundColor = when {
-        isSelected -> GreenWave2 // Lime green for selected
-        else -> Color.Transparent // Or a very subtle dark overlay like TextWhite.copy(alpha = 0.05f)
+        isSelected -> GreenWave2
+        else -> Color.Transparent
     }
     val textColor = when {
-        isSelected -> VeryDarkGreenBase // Dark text on lime green
+        isSelected -> VeryDarkGreenBase
         isPast -> TextWhite.copy(alpha = 0.4f)
         else -> TextWhite
     }
@@ -243,7 +236,7 @@ fun DateCell(
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .aspectRatio(1f) // Make cells square
+            .aspectRatio(1f)
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
             .clickable(enabled = !isPast, onClick = onDateSelected)
@@ -265,7 +258,7 @@ fun PurchaseSuccessDialog(onDismissRequest: () -> Unit) {
             shape = RoundedCornerShape(24.dp),
             color = AuthCardBackground,
             modifier = Modifier
-                .fillMaxWidth(0.85f) // Control dialog width
+                .fillMaxWidth(0.85f)
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp),
@@ -274,13 +267,13 @@ fun PurchaseSuccessDialog(onDismissRequest: () -> Unit) {
             ) {
                 Icon(
                     imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = "Success",
-                    tint = GreenWave2, // Lime green checkmark
+                    contentDescription = stringResource(R.string.purchase_success_icon_description),
+                    tint = GreenWave2,
                     modifier = Modifier.size(72.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Purchase successfully",
+                    text = stringResource(R.string.purchase_success_dialog_title),
                     style = MaterialTheme.typography.titleLarge.copy(
                         color = TextWhite,
                         fontWeight = FontWeight.SemiBold,
@@ -288,28 +281,26 @@ fun PurchaseSuccessDialog(onDismissRequest: () -> Unit) {
                     )
                 )
                 Spacer(modifier = Modifier.height(24.dp))
-                // Back button (optional, Dialog can be dismissed by tapping outside)
                 Button(
                     onClick = onDismissRequest,
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen.copy(alpha = 0.7f)),
                     modifier = Modifier.fillMaxWidth(0.7f)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextWhite)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = TextWhite)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Back", color = TextWhite)
+                    Text(stringResource(R.string.back), color = TextWhite)
                 }
             }
         }
     }
 }
 
-
 @Preview(showBackground = true, device = "spec:width=360dp,height=780dp,dpi=480")
 @Composable
 fun PickDaysScreenPreview() {
     BirdlensTheme {
-        PickDaysScreen(navController = rememberNavController(), tourId = 1)
+        PickDaysScreen(navController = rememberNavController(), tourId = 1L)
     }
 }
 
@@ -317,7 +308,6 @@ fun PickDaysScreenPreview() {
 @Composable
 fun PurchaseSuccessDialogPreview() {
     BirdlensTheme {
-        // Need a Box with background to see the dialog properly
         Box(modifier = Modifier
             .fillMaxSize()
             .background(VeryDarkGreenBase)) {
