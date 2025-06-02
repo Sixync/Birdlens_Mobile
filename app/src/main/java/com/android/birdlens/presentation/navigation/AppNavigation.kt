@@ -12,7 +12,7 @@ import androidx.navigation.navArgument
 import com.android.birdlens.presentation.ui.screens.accountinfo.AccountInfoScreen
 import com.android.birdlens.presentation.ui.screens.allevents.AllEventsListScreen
 import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
-import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen // New Import
+import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
 import com.android.birdlens.presentation.ui.screens.login.LoginScreen
@@ -26,7 +26,7 @@ import com.android.birdlens.presentation.ui.screens.tour.TourScreen
 import com.android.birdlens.presentation.ui.screens.tourdetail.TourDetailScreen
 import com.android.birdlens.presentation.ui.screens.welcome.WelcomeScreen
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
-import com.android.birdlens.presentation.viewmodel.BirdInfoViewModel // New Import
+import com.android.birdlens.presentation.viewmodel.BirdInfoViewModel
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
 import com.android.birdlens.presentation.viewmodel.MapViewModel
@@ -43,7 +43,6 @@ fun AppNavigation(
         startDestination = Screen.Welcome.route,
         modifier = modifier
     ) {
-        // ... (Welcome, Login, Register, LoginSuccess composables remain the same)
         composable(Screen.Welcome.route) {
             WelcomeScreen(
                 onLoginClicked = { navController.navigate(Screen.Login.route) },
@@ -56,21 +55,16 @@ fun AppNavigation(
                 googleAuthViewModel = googleAuthViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onForgotPassword = { /* TODO */ }
-
             )
         }
         composable(
             route = Screen.HotspotBirdList.route,
-            arguments = listOf(navArgument("hotspotId") {
-                type = NavType.StringType
-                // nullable = true // hotspotId can be non-nullable if you ensure it's always passed
-            })
+            arguments = listOf(navArgument("hotspotId") { type = NavType.StringType })
         ) { backStackEntry ->
             val hotspotId = backStackEntry.arguments?.getString("hotspotId")
-            // Add a check for hotspotId != null if it's critical, or handle null in the screen
             HotspotBirdListScreen(
                 navController = navController,
-                hotspotId = hotspotId ?: "" // Pass an empty string or handle null more gracefully
+                hotspotId = hotspotId ?: ""
             )
         }
         composable(Screen.Register.route) {
@@ -90,46 +84,49 @@ fun AppNavigation(
             )
         }
 
-
         composable(Screen.Tour.route) {
+            // TourScreen still uses its internal dummy TourItem which has Int ID
+            // So, its onTourItemClick lambda provides an Int. We convert it to Long here.
             TourScreen(
                 navController = navController,
                 onNavigateToAllEvents = { navController.navigate(Screen.AllEventsList.route) },
                 onNavigateToAllTours = { navController.navigate(Screen.AllToursList.route) },
                 onNavigateToPopularTours = { navController.navigate(Screen.AllToursList.route) },
-                onTourItemClick = { tourId ->
-                    navController.navigate(Screen.TourDetail.createRoute(tourId))
+                onTourItemClick = { tourIdAsInt -> // tourIdAsInt is Int from TourScreen's dummy data
+                    navController.navigate(Screen.TourDetail.createRoute(tourIdAsInt.toLong()))
                 }
             )
         }
         composable(Screen.AllEventsList.route) {
+            // AllEventsListScreen's onEventItemClick lambda provides a Long (from fetched Tour data)
             AllEventsListScreen(
                 navController = navController,
-                onEventItemClick = { eventId ->
-                    navController.navigate(Screen.TourDetail.createRoute(eventId))
+                onEventItemClick = { eventIdAsLong -> // eventIdAsLong is Long
+                    navController.navigate(Screen.TourDetail.createRoute(eventIdAsLong))
                 }
             )
         }
         composable(Screen.AllToursList.route) {
+            // AllToursListScreen's onTourItemClick lambda provides a Long (from fetched Tour data)
             AllToursListScreen(
                 navController = navController,
-                onTourItemClick = { tourId ->
-                    navController.navigate(Screen.TourDetail.createRoute(tourId))
+                onTourItemClick = { tourIdAsLong -> // tourIdAsLong is Long
+                    navController.navigate(Screen.TourDetail.createRoute(tourIdAsLong))
                 }
             )
         }
         composable(
             route = Screen.TourDetail.route,
-            arguments = listOf(navArgument("tourId") { type = NavType.IntType })
+            arguments = listOf(navArgument("tourId") { type = NavType.LongType }) // Expect Long
         ) { backStackEntry ->
-            val tourId = backStackEntry.arguments?.getInt("tourId") ?: -1
+            val tourId = backStackEntry.arguments?.getLong("tourId") ?: -1L
             TourDetailScreen(navController = navController, tourId = tourId)
         }
         composable(
             route = Screen.PickDays.route,
-            arguments = listOf(navArgument("tourId") { type = NavType.IntType })
+            arguments = listOf(navArgument("tourId") { type = NavType.LongType }) // Expect Long
         ) { backStackEntry ->
-            val tourId = backStackEntry.arguments?.getInt("tourId") ?: -1
+            val tourId = backStackEntry.arguments?.getLong("tourId") ?: -1L
             PickDaysScreen(navController = navController, tourId = tourId)
         }
         composable(Screen.Cart.route) {
@@ -157,10 +154,10 @@ fun AppNavigation(
                 accountInfoViewModel = accountInfoViewModel
             )
         }
-        composable( // New Route for BirdInfoScreen
+        composable(
             route = Screen.BirdInfo.route,
             arguments = listOf(navArgument("speciesCode") { type = NavType.StringType })
-        ) { // NavBackStackEntry is implicitly available to viewModel()
+        ) {
             val birdInfoViewModel: BirdInfoViewModel = viewModel()
             BirdInfoScreen(
                 navController = navController,

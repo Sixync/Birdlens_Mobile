@@ -10,10 +10,10 @@ sealed class Screen(val route: String) {
     data object AllEventsList : Screen("all_events_list_screen")
     data object AllToursList : Screen("all_tours_list_screen")
     data object TourDetail : Screen("tour_detail_screen/{tourId}") { // New with argument
-        fun createRoute(tourId: Int) = "tour_detail_screen/$tourId"
+        fun createRoute(tourId: Long) = "tour_detail_screen/$tourId"
     }
     data object PickDays : Screen("pick_days_screen/{tourId}") { // New Screen
-        fun createRoute(tourId: Int) = "pick_days_screen/$tourId"
+        fun createRoute(tourId: Long) = "pick_days_screen/$tourId"
     }
     data object Cart : Screen("cart_screen")
     data object Marketplace : Screen("marketplace_screen")
