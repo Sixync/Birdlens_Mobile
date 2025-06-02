@@ -1,5 +1,3 @@
-// EXE201/app/build.gradle.kts
-
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -100,9 +98,9 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-    buildFeatures {
-        compose = true
-    }
+    // buildFeatures { // Already defined above, removing duplicate
+    //     compose = true
+    // }
 }
 
 dependencies {
@@ -151,4 +149,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson) // Or Moshi, etc.
     implementation(libs.logging.interceptor) // For logging network requests (optional)
+
+    // Google Mobile Ads SDK (AdMob)
+    implementation("com.google.android.gms:play-services-ads:23.2.0") // Check for the latest version
 }
