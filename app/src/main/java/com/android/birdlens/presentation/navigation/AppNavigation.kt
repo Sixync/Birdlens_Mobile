@@ -29,6 +29,8 @@ import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.presentation.viewmodel.BirdInfoViewModel
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
+import com.android.birdlens.presentation.viewmodel.MapViewModel
+import com.android.birdlens.presentation.viewmodel.HotspotBirdListViewModel
 
 @Composable
 fun AppNavigation(
@@ -156,6 +158,37 @@ fun AppNavigation(
             route = Screen.BirdInfo.route,
             arguments = listOf(navArgument("speciesCode") { type = NavType.StringType })
         ) {
+            val birdInfoViewModel: BirdInfoViewModel = viewModel()
+            BirdInfoScreen(
+                navController = navController,
+                viewModel = birdInfoViewModel
+            )
+        }
+        composable(Screen.Map.route) {
+            val mapViewModel: MapViewModel = viewModel() // Instance per MapScreen
+            MapScreen(navController = navController, mapViewModel = mapViewModel)
+        }
+
+        composable(
+            route = Screen.HotspotBirdList.route,
+            arguments = listOf(navArgument("hotspotId") {
+                type = NavType.StringType
+                // nullable = true // If it can be null, handle in screen and VM
+            })
+        ) { backStackEntry ->
+            // ViewModel will get hotspotId from SavedStateHandle
+            val hotspotBirdListViewModel: HotspotBirdListViewModel = viewModel()
+            HotspotBirdListScreen(
+                navController = navController,
+                hotspotId = backStackEntry.arguments?.getString("hotspotId"), // Pass for initial check, VM uses SavedStateHandle
+                viewModel = hotspotBirdListViewModel
+            )
+        }
+
+        composable( // New Route for BirdInfoScreen
+            route = Screen.BirdInfo.route,
+            arguments = listOf(navArgument("speciesCode") { type = NavType.StringType })
+        ) { // NavBackStackEntry is implicitly available to viewModel()
             val birdInfoViewModel: BirdInfoViewModel = viewModel()
             BirdInfoScreen(
                 navController = navController,
