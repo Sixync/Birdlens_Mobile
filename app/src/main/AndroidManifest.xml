@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Required for AdMob -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
 
     <application
@@ -28,6 +30,12 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${GOOGLE_MAPS_API_KEY}" />
 
+        <!-- AdMob App ID -->
+        <!-- Replace with your actual AdMob App ID -->
+        <!-- Sample AdMob App ID for testing: ca-app-pub-3940256099942544~3347511713 -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-7643061698514707~1593445359"/>
 
 
         <activity
