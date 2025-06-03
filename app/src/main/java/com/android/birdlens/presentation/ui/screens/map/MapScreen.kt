@@ -1,7 +1,9 @@
+// app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
 package com.android.birdlens.presentation.ui.screens.map
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot // Import the new model
+// ...
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.viewmodel.MapUiState
@@ -34,6 +36,7 @@ import com.android.birdlens.presentation.viewmodel.MapViewModel
 import com.android.birdlens.ui.theme.*
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+// ...
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -66,25 +69,54 @@ fun MapScreen(
     )
 
     var mapProperties by remember {
-        mutableStateOf(MapProperties(mapType = MapType.NORMAL))
+        mutableStateOf(MapProperties(mapType = MapType.NORMAL, latLngBoundsForCameraTarget = null))
     }
     var uiSettings by remember {
-        mutableStateOf(MapUiSettings(zoomControlsEnabled = true, mapToolbarEnabled = true))
+        mutableStateOf(MapUiSettings(zoomControlsEnabled = true, mapToolbarEnabled = true, compassEnabled = true))
+    }
+
+    val initialCameraPosition = CameraPosition.fromLatLngZoom(
+        MapViewModel.VIETNAM_INITIAL_CENTER,
+        6.0f // Start with a zoom level that VM considers "overview" or "initial"
+    )
+    val cameraPositionState = rememberCameraPositionState {
+        position = initialCameraPosition
+    }
+
+    LaunchedEffect(Unit) {
+        if (!locationPermissionsState.allPermissionsGranted) {
+            locationPermissionsState.launchMultiplePermissionRequest()
+        }
     }
 
     LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
+        mapProperties = mapProperties.copy(isMyLocationEnabled = locationPermissionsState.allPermissionsGranted)
+        uiSettings = uiSettings.copy(myLocationButtonEnabled = locationPermissionsState.allPermissionsGranted)
         if (locationPermissionsState.allPermissionsGranted) {
-            mapProperties = mapProperties.copy(isMyLocationEnabled = true)
-            uiSettings = uiSettings.copy(myLocationButtonEnabled = true)
-            // You might want to fetch initial hotspots here or based on user location
-        } else {
-            mapProperties = mapProperties.copy(isMyLocationEnabled = false)
-            uiSettings = uiSettings.copy(myLocationButtonEnabled = false)
+            Log.d("MapScreen", "Permissions granted. Map ready state will trigger initial fetch.")
+            // Trigger initial fetch if map is already loaded and permissions just got granted
+            if (cameraPositionState.projection != null) {
+                mapViewModel.requestHotspotsForCurrentView(
+                    cameraPositionState.position.target,
+                    cameraPositionState.position.zoom
+                )
+            }
         }
     }
-    val vietnamCenter = LatLng(16.047079, 108.220825) // Default center
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(vietnamCenter, 6f)
+
+    // This effect listens for camera idle and notifies the ViewModel
+    var mapLoaded by remember { mutableStateOf(false) }
+    LaunchedEffect(cameraPositionState.isMoving, mapLoaded, locationPermissionsState.allPermissionsGranted) {
+        if (!cameraPositionState.isMoving && mapLoaded && locationPermissionsState.allPermissionsGranted) {
+            if (cameraPositionState.projection != null) { // Ensure map is ready
+                val currentTarget = cameraPositionState.position.target
+                val currentZoom = cameraPositionState.position.zoom
+                Log.d("MapScreen", "Camera idle. Target: $currentTarget, Zoom: $currentZoom. Notifying ViewModel.")
+                mapViewModel.requestHotspotsForCurrentView(currentTarget, currentZoom)
+            } else {
+                Log.d("MapScreen", "Camera idle, but map projection is null. Map might not be fully loaded.")
+            }
+        }
     }
 
     val floatingActionItems = listOf(
@@ -92,18 +124,23 @@ fun MapScreen(
             icon = { Icon(Icons.Filled.Refresh, contentDescription = "Refresh Hotspots", tint = TextWhite) },
             contentDescription = "Refresh Hotspots",
             onClick = {
-                // Fetch hotspots for the current camera view center
-                val currentCameraPosition = cameraPositionState.position.target
-                mapViewModel.fetchNearbyHotspots(currentCameraPosition)
-                Toast.makeText(context, "Refreshing hotspots...", Toast.LENGTH_SHORT).show()
-
+                if (cameraPositionState.projection != null && locationPermissionsState.allPermissionsGranted) {
+                    val currentTarget = cameraPositionState.position.target
+                    val currentZoom = cameraPositionState.position.zoom
+                    Log.d("MapScreen", "Refresh button tapped. Re-triggering fetch for current view.")
+                    mapViewModel.requestHotspotsForCurrentView(currentTarget, currentZoom)
+                    Toast.makeText(context, "Refreshing hotspots...", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Map not ready or permissions not granted.", Toast.LENGTH_SHORT).show()
+                }
             }
         ),
+        // ... other items
         FloatingMapActionItem(
             icon = { Icon(Icons.Filled.Info, contentDescription = "Bird Info (Test)", tint = TextWhite) },
             contentDescription = "Bird Info (Test)",
             onClick = {
-                navController.navigate(Screen.BirdInfo.createRoute("houspa"))
+                navController.navigate(Screen.BirdInfo.createRoute("houspa")) // Example species
             }
         ),
         FloatingMapActionItem(icon = { Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Bookmarks", tint = TextWhite) }, contentDescription = "Bookmarks", onClick = { Toast.makeText(context, "Show Bookmarks", Toast.LENGTH_SHORT).show() }),
@@ -111,17 +148,6 @@ fun MapScreen(
         FloatingMapActionItem(icon = { Icon(Icons.Outlined.StarBorder, contentDescription = "Popular Hotspots", tint = TextWhite) }, contentDescription = "Popular Hotspots", onClick = { Toast.makeText(context, "Show Hotspots", Toast.LENGTH_SHORT).show() }),
         FloatingMapActionItem(icon = { Icon(Icons.Filled.Waves, contentDescription = "Migration Routes", tint = TextWhite.copy(alpha = 0.7f)) }, contentDescription = "Migration Routes", onClick = { Toast.makeText(context, "Show Migration (Not Implemented)", Toast.LENGTH_SHORT).show() })
     )
-
-
-
-    // Fetch initial hotspots when map is ready (and permissions granted)
-    LaunchedEffect(locationPermissionsState.allPermissionsGranted, cameraPositionState.isMoving) {
-        if (locationPermissionsState.allPermissionsGranted && !cameraPositionState.isMoving) {
-            // Fetch for the initial view or after camera settles
-            // mapViewModel.fetchNearbyHotspots(cameraPositionState.position.target)
-            // Consider debouncing or fetching on a button press to avoid too many API calls
-        }
-    }
 
     AppScaffold(
         navController = navController,
@@ -145,48 +171,52 @@ fun MapScreen(
                     properties = mapProperties,
                     uiSettings = uiSettings,
                     onMapLoaded = {
+                        Log.d("MapScreen", "GoogleMap onMapLoaded callback. Current map zoom: ${cameraPositionState.position.zoom}")
+                        mapLoaded = true // Set map as loaded
                         showMapError = false
-                        // Fetch initial hotspots for the default camera position
-                        mapViewModel.fetchNearbyHotspots(cameraPositionState.position.target)
+                        // Initial request will be triggered by the LaunchedEffect observing isMoving, mapLoaded, and permissions.
                     },
-                    // onCameraMoveStarted = { reason ->
-                    //     // Potentially fetch new hotspots when camera moves, with debouncing
-                    //     // if (reason == CameraMoveStartedReason.GESTURE) {
-                    //     //    mapViewModel.fetchNearbyHotspots(cameraPositionState.position.target)
-                    //     // }
-                    // }
+                    onPOIClick = { poi ->
+                        Toast.makeText(context, "POI Clicked: ${poi.name}", Toast.LENGTH_SHORT).show()
+                    }
                 ) {
-                    when (val state = mapUiState) {
-                        is MapUiState.Success -> {
-                            state.hotspots.forEach { ebirdHotspot ->
-                                Marker(
-                                    state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
-                                    title = ebirdHotspot.locName,
-                                    snippet = "Species: ${ebirdHotspot.numSpeciesAllTime ?: "N/A"}. Last obs: ${ebirdHotspot.latestObsDt ?: "N/A"}",
-                                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN), // Or a custom bird icon
-                                    onInfoWindowClick = {
-                                        navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
-                                    }
-                                )
+                    (mapUiState as? MapUiState.Success)?.let { successState ->
+                        val currentMapZoom = cameraPositionState.position.zoom
+                        Log.d("MapScreen", "Rendering ${successState.hotspots.size} markers. Current map zoom: $currentMapZoom. Fetched for context zoom: ${successState.zoomLevelContext}")
+
+                        successState.hotspots.forEach { ebirdHotspot ->
+                            // Determine marker color based on current map zoom vs. defined thresholds
+                            val markerHue = if (currentMapZoom <= MapViewModel.OVERVIEW_MAX_ZOOM) {
+                                BitmapDescriptorFactory.HUE_RED // More prominent for overview
+                            } else {
+                                BitmapDescriptorFactory.HUE_AZURE // Standard for detailed
                             }
+
+                            Marker(
+                                state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
+                                title = ebirdHotspot.locName,
+                                snippet = "Species: ${ebirdHotspot.numSpeciesAllTime ?: "N/A"}. Last obs: ${ebirdHotspot.latestObsDt ?: "N/A"}",
+                                icon = BitmapDescriptorFactory.defaultMarker(markerHue),
+                                // Visibility is now implicitly handled by the ViewModel providing the correct list
+                                // No complex alpha logic needed here for showing/hiding
+                                onInfoWindowClick = {
+                                    navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
+                                }
+                            )
                         }
-                        is MapUiState.Error -> {
-                            // Optionally show error on map or as a toast
-                            LaunchedEffect(state.message) { // Ensure toast shows once per message
-                                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
-                            }
-                        }
-                        // Handle Idle, Loading states if needed (e.g. show a global loading indicator)
-                        else -> {}
                     }
                 }
+
                 if (mapUiState is MapUiState.Loading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
                 }
+                (mapUiState as? MapUiState.Error)?.let { errorState ->
+                    LaunchedEffect(errorState.message) {
+                        Toast.makeText(context, errorState.message, Toast.LENGTH_LONG).show()
+                    }
+                }
 
-            } else {
-                // Show UI to request permissions (existing code is fine)
-                // ...
+            } else { // Permissions not granted UI
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -195,7 +225,7 @@ fun MapScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        "Location permission is required to show your current location and enhance map features.",
+                        "Location permission is required to show your current location and relevant map features.",
                         color = TextWhite,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(bottom = 16.dp)
@@ -206,7 +236,7 @@ fun MapScreen(
                     ) {
                         Text("Grant Permissions", color = TextWhite)
                     }
-                    if (locationPermissionsState.shouldShowRationale) {
+                    if (locationPermissionsState.shouldShowRationale && !locationPermissionsState.allPermissionsGranted) {
                         Text(
                             "If you permanently denied permission, you'll need to enable it in app settings.",
                             color = TextWhite.copy(alpha = 0.7f),
@@ -218,13 +248,13 @@ fun MapScreen(
                 }
             }
 
-            if (showMapError && locationPermissionsState.allPermissionsGranted) { // Only show map-specific error if permissions are granted
+            if (showMapError && locationPermissionsState.allPermissionsGranted) {
                 Box(modifier = Modifier.fillMaxSize().background(GreenDeep.copy(alpha = 0.8f)), contentAlignment = Alignment.Center) {
                     Text("Could not load map. Ensure Google Play Services is updated and API key is valid.", color = TextWhite, modifier = Modifier.padding(32.dp), textAlign = TextAlign.Center)
                 }
             }
 
-            // Floating Action Buttons on the left
+            // Floating Action Buttons
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
@@ -242,11 +272,12 @@ fun MapScreen(
     val googlePlayServicesAvailable = com.google.android.gms.common.GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
     if (googlePlayServicesAvailable != com.google.android.gms.common.ConnectionResult.SUCCESS) {
         LaunchedEffect(googlePlayServicesAvailable) {
-            showMapError = true // Set true if Play Services are an issue
+            showMapError = true
         }
     }
 }
 
+// MapScreenHeader and FloatingMapButton remain the same
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreenHeader(
@@ -295,6 +326,7 @@ fun FloatingMapButton(item: FloatingMapActionItem) {
         }
     }
 }
+
 
 @Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
 @Composable
