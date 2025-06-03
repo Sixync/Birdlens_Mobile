@@ -47,11 +47,9 @@ class HotspotBirdListViewModel(
         viewModelScope.launch {
             try {
                 Log.d("HotspotBirdListVM", "Fetching birds for locId: $locId")
-                val response = ebirdApiService.getRecentObservationsForHotspot(locId = locId, maxResults = 200) // Limit results if necessary
+                val response = ebirdApiService.getRecentObservationsForHotspot(locId = locId, maxResults = 200)
                 if (response.isSuccessful && response.body() != null) {
                     val observations = response.body()!!
-                    // Map to BirdSpeciesInfo and remove duplicates by speciesCode, preferring most recent or higher count if needed.
-                    // For simplicity, just taking distinct by speciesCode.
                     val distinctBirds = observations
                         .distinctBy { it.speciesCode }
                         .map { obs ->
@@ -59,16 +57,20 @@ class HotspotBirdListViewModel(
                                 commonName = obs.comName,
                                 speciesCode = obs.speciesCode,
                                 scientificName = obs.sciName,
-                                observationDate = obs.obsDt.split(" ").firstOrNull(), // Just date part
+                                observationDate = obs.obsDt.split(" ").firstOrNull(),
                                 count = obs.howMany
                             )
                         }
                     _uiState.value = HotspotBirdListUiState.Success(distinctBirds)
                     Log.d("HotspotBirdListVM", "Fetched ${distinctBirds.size} distinct bird species for $locId.")
                 } else {
-                    val errorMsg = "Error fetching birds for hotspot $locId: ${response.code()} - ${response.message()}"
+                    val errorMsg = if (response.code() == 404) {
+                        "No recent observations found for this hotspot (ID: $locId), or the ID is invalid."
+                    } else {
+                        "Error fetching birds for hotspot $locId: ${response.code()} - ${response.message()}"
+                    }
                     _uiState.value = HotspotBirdListUiState.Error(errorMsg)
-                    Log.e("HotspotBirdListVM", errorMsg)
+                    Log.e("HotspotBirdListVM", "API Error for $locId: ${response.code()} - ${response.message()} - ${response.errorBody()?.string()}")
                 }
             } catch (e: Exception) {
                 val errorMsg = "Exception fetching birds for hotspot $locId: ${e.localizedMessage}"

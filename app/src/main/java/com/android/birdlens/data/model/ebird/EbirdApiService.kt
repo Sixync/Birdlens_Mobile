@@ -58,14 +58,14 @@ interface EbirdApiService {
      *                This might seem redundant but can be useful if the locId is not strictly a hotspot.
      * @param includeProvisional Include provisional observations (true or false, default false).
      */
-    @GET("v2/product/obs/{locId}/recent")
+    @GET("v2/data/obs/{locId}/recent")
     suspend fun getRecentObservationsForHotspot(
         @Path("locId") locId: String,
-        @Query("back") back: Int = 30,
-        @Query("maxResults") maxResults: Int? = null, // eBird default is all for the period
+        @Query("back") back: Int = 30, // Keeping it within a reasonable default (1-30 is common)
+        @Query("maxResults") maxResults: Int? = null,
         @Query("detail") detail: String = "simple",
-        @Query("hotspot") hotspot: Boolean = true, // Ensure observations are from hotspot
+        @Query("hotspot") hotspot: Boolean = true, // This parameter might be redundant if locId is already a hotspot, but harmless
         @Query("includeProvisional") includeProvisional: Boolean = false,
-        @Query("fmt") format: String = "json"
+        @Query("fmt") format: String = "json" // Though Retrofit handles this, explicit can be good
     ): Response<List<EbirdObservation>>
 }

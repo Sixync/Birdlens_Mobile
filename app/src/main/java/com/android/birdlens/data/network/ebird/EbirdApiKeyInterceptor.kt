@@ -1,8 +1,12 @@
+// Birdlens_Mobile\app\src\main\java\com\android\birdlens\data\network\ebird\EbirdApiKeyInterceptor.kt
 package com.android.birdlens.data.network.ebird
 
-import com.android.birdlens.BuildConfig// Import BuildConfig
+import com.android.birdlens.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.Response
+import okhttp3.Protocol
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.ResponseBody.Companion.toResponseBody
 
 class EbirdApiKeyInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -10,11 +14,16 @@ class EbirdApiKeyInterceptor : Interceptor {
         val apiKey = BuildConfig.EBIRD_API_KEY
 
         if (apiKey.isBlank() || apiKey == "YOUR_EBIRD_API_KEY_MISSING_IN_CONFIG") {
-            // Optionally, you could throw an exception or log a more severe warning
-            // For now, proceed without the header if the key is missing,
-            // which will likely result in an API error from eBird.
-            println("Warning: eBird API key is missing or a placeholder. Requests to eBird API may fail.")
-            return chain.proceed(originalRequest)
+            // Log as an error for more visibility
+            System.err.println("Error: eBird API key is missing or a placeholder. Request to ${originalRequest.url} will be blocked by interceptor.")
+            // Return a synthetic error response instead of proceeding
+            return Response.Builder()
+                .request(originalRequest)
+                .protocol(Protocol.HTTP_1_1)
+                .code(401) // Unauthorized
+                .message("eBird API key is missing or invalid. Please configure it in local.properties.")
+                .body("{\"error\":\"eBird API key not configured or is placeholder\"}".toResponseBody("application/json".toMediaTypeOrNull()))
+                .build()
         }
 
         val newRequest = originalRequest.newBuilder()

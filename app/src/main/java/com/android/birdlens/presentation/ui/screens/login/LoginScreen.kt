@@ -42,6 +42,14 @@ import com.android.birdlens.presentation.ui.screens.accountinfo.ApplicationProvi
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
 
+
+// --- DEVELOPMENT ONLY ---
+// Define developer bypass credentials.
+// WARNING: REMOVE THIS AND THE BYPASS LOGIC BEFORE PRODUCTION.
+private const val DEV_BYPASS_EMAIL = "dev@bypass.local"
+private const val DEV_BYPASS_PASSWORD = "bypass123"
+// --- END DEVELOPMENT ONLY ---
+
 @Composable
 fun LoginScreen(
     navController: NavController,
@@ -190,7 +198,17 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        if (email.isNotBlank() && password.isNotBlank()) {
+                        // --- DEVELOPMENT ONLY BYPASS ---
+                        // WARNING: REMOVE THIS BEFORE PRODUCTION.
+                        if (email == DEV_BYPASS_EMAIL && password == DEV_BYPASS_PASSWORD) {
+                            Toast.makeText(context, "Developer Bypass Active!", Toast.LENGTH_LONG).show()
+                            // Clear any potentially stored tokens from previous sessions if any
+                            com.android.birdlens.data.TokenManager.getInstance(context.applicationContext).clearTokens()
+                            navController.navigate(Screen.LoginSuccess.route) {
+                                popUpTo(Screen.Welcome.route) { inclusive = true }
+                            }
+                            // --- END DEVELOPMENT ONLY BYPASS ---
+                        } else if (email.isNotBlank() && password.isNotBlank()) {
                             googleAuthViewModel.loginUser(LoginRequest(email, password))
                         } else {
                             Toast.makeText(context, loginErrorCredentialsText, Toast.LENGTH_SHORT).show()
