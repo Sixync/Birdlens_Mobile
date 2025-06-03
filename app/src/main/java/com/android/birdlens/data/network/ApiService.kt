@@ -2,6 +2,8 @@
 package com.android.birdlens.data.network
 
 // import com.android.birdlens.data.model.request.GoogleIdTokenRequest // No longer needed
+import com.android.birdlens.data.model.Event
+import com.android.birdlens.data.model.PaginatedEventData // New import
 import com.android.birdlens.data.model.PaginatedToursResponse
 import com.android.birdlens.data.model.Tour
 import com.android.birdlens.data.model.TourCreateRequest
@@ -65,4 +67,16 @@ interface ApiService {
         @Path("tour_id") tourId: Long,
         @Part thumbnail: MultipartBody.Part // Single file
     ): Response<GenericApiResponse<String>> // Backend returns single URL, wrapped
+
+    // Event Endpoints
+    @GET("events") // New endpoint for fetching events
+    suspend fun getEvents(
+        @Query("limit") limit: Int,
+        @Query("offset") offset: Int
+    ): Response<GenericApiResponse<PaginatedEventData>> // Using the new PaginatedEventData
+
+    @GET("events/{event_id}") // Endpoint to get a single event
+    suspend fun getEventById(
+        @Path("event_id") eventId: Long
+    ): Response<GenericApiResponse<Event>> // Ensure Event model matches response
 }
