@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.kapt)
     id("com.google.gms.google-services")
 }
 
@@ -152,4 +153,9 @@ dependencies {
 
     // Google Mobile Ads SDK (AdMob)
     implementation("com.google.android.gms:play-services-ads:23.2.0") // Check for the latest version
+
+    // Room Persistence Library
+    implementation(libs.androidx.room.runtime)
+    kapt(libs.androidx.room.compiler) // For Kotlin annotation processing
+    implementation(libs.androidx.room.ktx)
 }

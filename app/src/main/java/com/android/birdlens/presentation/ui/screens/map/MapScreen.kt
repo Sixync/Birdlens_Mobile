@@ -3,8 +3,12 @@ package com.android.birdlens.presentation.ui.screens.map
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,9 +29,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.android.birdlens.R
 // ...
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
@@ -37,10 +44,43 @@ import com.android.birdlens.ui.theme.*
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 // ...
+import com.google.android.gms.maps.MapsInitializer
+import com.google.android.gms.maps.OnMapsSdkInitializedCallback
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+
+// Helper function to convert vector drawable to BitmapDescriptor
+fun bitmapDescriptorFromVector(
+    context: Context,
+    @DrawableRes vectorResId: Int,
+    tintColor: Int? = null
+): BitmapDescriptor? {
+    return try { // Add try-catch here for safety during BitmapDescriptorFactory interaction
+        ContextCompat.getDrawable(context, vectorResId)?.let { vectorDrawable ->
+            if (tintColor != null) {
+                DrawableCompat.setTint(vectorDrawable, tintColor)
+            }
+            val width = vectorDrawable.intrinsicWidth.takeIf { it > 0 } ?: 72
+            val height = vectorDrawable.intrinsicHeight.takeIf { it > 0 } ?: 72
+            vectorDrawable.setBounds(0, 0, width, height)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            vectorDrawable.draw(canvas)
+            BitmapDescriptorFactory.fromBitmap(bitmap)
+        }
+    } catch (e: NullPointerException) {
+        // This specific catch is for the "IBitmapDescriptorFactory is not initialized" error
+        Log.e("MapScreen", "Error creating BitmapDescriptor: IBitmapDescriptorFactory not initialized or other NPE.", e)
+        null
+    } catch (e: Exception) {
+        Log.e("MapScreen", "Generic error creating BitmapDescriptor.", e)
+        null
+    }
+}
+
 
 data class FloatingMapActionItem(
     val icon: @Composable () -> Unit,
@@ -61,6 +101,33 @@ fun MapScreen(
     var showMapError by remember { mutableStateOf(false) }
     val mapUiState by mapViewModel.uiState.collectAsState()
 
+    // State for the custom marker icon
+    var customHotspotIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var mapsSdkInitialized by remember { mutableStateOf(false) }
+
+    // Explicitly initialize Maps SDK and create the icon in the callback
+    LaunchedEffect(Unit) {
+        try {
+            MapsInitializer.initialize(context.applicationContext, MapsInitializer.Renderer.LATEST, object : OnMapsSdkInitializedCallback {
+                override fun onMapsSdkInitialized(renderer: MapsInitializer.Renderer) {
+                    Log.d("MapScreen", "Maps SDK Initialized with renderer: $renderer")
+                    // It's safer to create BitmapDescriptor here, after SDK initialization is confirmed.
+                    customHotspotIcon = bitmapDescriptorFromVector(context, R.drawable.ic_map_pin)
+                    if (customHotspotIcon == null) {
+                        Log.e("MapScreen", "Failed to create customHotspotIcon even after SDK initialization.")
+                        // Optionally set showMapError or use a default icon
+                    }
+                    mapsSdkInitialized = true // Set this true only after successful initialization and icon creation attempt
+                }
+            })
+        } catch (e: Exception) {
+            Log.e("MapScreen", "Error during MapsInitializer.initialize", e)
+            showMapError = true
+            mapsSdkInitialized = false // Ensure this is false if init fails
+        }
+    }
+
+
     val locationPermissionsState = rememberMultiplePermissionsState(
         permissions = listOf(
             Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -77,7 +144,7 @@ fun MapScreen(
 
     val initialCameraPosition = CameraPosition.fromLatLngZoom(
         MapViewModel.VIETNAM_INITIAL_CENTER,
-        6.0f // Start with a zoom level that VM considers "overview" or "initial"
+        6.0f
     )
     val cameraPositionState = rememberCameraPositionState {
         position = initialCameraPosition
@@ -89,26 +156,26 @@ fun MapScreen(
         }
     }
 
-    LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
-        mapProperties = mapProperties.copy(isMyLocationEnabled = locationPermissionsState.allPermissionsGranted)
-        uiSettings = uiSettings.copy(myLocationButtonEnabled = locationPermissionsState.allPermissionsGranted)
-        if (locationPermissionsState.allPermissionsGranted) {
-            Log.d("MapScreen", "Permissions granted. Map ready state will trigger initial fetch.")
-            // Trigger initial fetch if map is already loaded and permissions just got granted
-            if (cameraPositionState.projection != null) {
-                mapViewModel.requestHotspotsForCurrentView(
-                    cameraPositionState.position.target,
-                    cameraPositionState.position.zoom
-                )
+    LaunchedEffect(locationPermissionsState.allPermissionsGranted, mapsSdkInitialized) {
+        if (mapsSdkInitialized) { // Only update map properties if SDK is ready
+            mapProperties = mapProperties.copy(isMyLocationEnabled = locationPermissionsState.allPermissionsGranted)
+            uiSettings = uiSettings.copy(myLocationButtonEnabled = locationPermissionsState.allPermissionsGranted)
+            if (locationPermissionsState.allPermissionsGranted) {
+                Log.d("MapScreen", "Permissions granted & SDK initialized. Map ready state will trigger initial fetch.")
+                if (cameraPositionState.projection != null) {
+                    mapViewModel.requestHotspotsForCurrentView(
+                        cameraPositionState.position.target,
+                        cameraPositionState.position.zoom
+                    )
+                }
             }
         }
     }
 
-    // This effect listens for camera idle and notifies the ViewModel
     var mapLoaded by remember { mutableStateOf(false) }
-    LaunchedEffect(cameraPositionState.isMoving, mapLoaded, locationPermissionsState.allPermissionsGranted) {
-        if (!cameraPositionState.isMoving && mapLoaded && locationPermissionsState.allPermissionsGranted) {
-            if (cameraPositionState.projection != null) { // Ensure map is ready
+    LaunchedEffect(cameraPositionState.isMoving, mapLoaded, locationPermissionsState.allPermissionsGranted, mapsSdkInitialized) {
+        if (!cameraPositionState.isMoving && mapLoaded && locationPermissionsState.allPermissionsGranted && mapsSdkInitialized) {
+            if (cameraPositionState.projection != null) {
                 val currentTarget = cameraPositionState.position.target
                 val currentZoom = cameraPositionState.position.zoom
                 Log.d("MapScreen", "Camera idle. Target: $currentTarget, Zoom: $currentZoom. Notifying ViewModel.")
@@ -124,18 +191,18 @@ fun MapScreen(
             icon = { Icon(Icons.Filled.Refresh, contentDescription = "Refresh Hotspots", tint = TextWhite) },
             contentDescription = "Refresh Hotspots",
             onClick = {
-                if (cameraPositionState.projection != null && locationPermissionsState.allPermissionsGranted) {
+                if (mapsSdkInitialized && cameraPositionState.projection != null && locationPermissionsState.allPermissionsGranted) {
                     val currentTarget = cameraPositionState.position.target
                     val currentZoom = cameraPositionState.position.zoom
                     Log.d("MapScreen", "Refresh button tapped. Re-triggering fetch for current view.")
                     mapViewModel.requestHotspotsForCurrentView(currentTarget, currentZoom)
                     Toast.makeText(context, "Refreshing hotspots...", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(context, "Map not ready or permissions not granted.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Map not ready, SDK not initialized, or permissions not granted.", Toast.LENGTH_SHORT).show()
                 }
             }
         ),
-        // ... other items
+        // ...
         FloatingMapActionItem(
             icon = { Icon(Icons.Filled.Info, contentDescription = "Bird Info (Test)", tint = TextWhite) },
             contentDescription = "Bird Info (Test)",
@@ -164,46 +231,57 @@ fun MapScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            if (locationPermissionsState.allPermissionsGranted) {
+            if (!mapsSdkInitialized && !showMapError) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
+            } else if (locationPermissionsState.allPermissionsGranted && mapsSdkInitialized) {
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,
                     properties = mapProperties,
                     uiSettings = uiSettings,
                     onMapLoaded = {
-                        Log.d("MapScreen", "GoogleMap onMapLoaded callback. Current map zoom: ${cameraPositionState.position.zoom}")
-                        mapLoaded = true // Set map as loaded
+                        Log.d("MapScreen", "GoogleMap onMapLoaded callback.")
+                        mapLoaded = true
+                        if (customHotspotIcon == null && mapsSdkInitialized) { // Ensure SDK was init
+                            Log.w("MapScreen", "customHotspotIcon is still null in onMapLoaded, attempting to create again.")
+                            customHotspotIcon = bitmapDescriptorFromVector(context, R.drawable.ic_map_pin)
+                            if(customHotspotIcon == null) {
+                                Log.e("MapScreen", "Failed to create custom marker icon even in onMapLoaded.")
+                                // Consider showing an error or using a default if this fails persistently
+                            }
+                        }
                         showMapError = false
-                        // Initial request will be triggered by the LaunchedEffect observing isMoving, mapLoaded, and permissions.
                     },
                     onPOIClick = { poi ->
                         Toast.makeText(context, "POI Clicked: ${poi.name}", Toast.LENGTH_SHORT).show()
                     }
                 ) {
-                    (mapUiState as? MapUiState.Success)?.let { successState ->
-                        val currentMapZoom = cameraPositionState.position.zoom
-                        Log.d("MapScreen", "Rendering ${successState.hotspots.size} markers. Current map zoom: $currentMapZoom. Fetched for context zoom: ${successState.zoomLevelContext}")
-
-                        successState.hotspots.forEach { ebirdHotspot ->
-                            // Determine marker color based on current map zoom vs. defined thresholds
-                            val markerHue = if (currentMapZoom <= MapViewModel.OVERVIEW_MAX_ZOOM) {
-                                BitmapDescriptorFactory.HUE_RED // More prominent for overview
-                            } else {
-                                BitmapDescriptorFactory.HUE_AZURE // Standard for detailed
+                    if (customHotspotIcon != null) {
+                        (mapUiState as? MapUiState.Success)?.let { successState ->
+                            Log.d("MapScreen", "Rendering ${successState.hotspots.size} markers with custom icon. Fetched for context zoom: ${successState.zoomLevelContext}")
+                            successState.hotspots.forEach { ebirdHotspot ->
+                                Marker(
+                                    state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
+                                    title = ebirdHotspot.locName,
+                                    snippet = "Species: ${ebirdHotspot.numSpeciesAllTime ?: "N/A"}. Last obs: ${ebirdHotspot.latestObsDt ?: "N/A"}",
+                                    icon = customHotspotIcon,
+                                    onInfoWindowClick = {
+                                        navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
+                                    }
+                                )
                             }
-
-                            Marker(
-                                state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
-                                title = ebirdHotspot.locName,
-                                snippet = "Species: ${ebirdHotspot.numSpeciesAllTime ?: "N/A"}. Last obs: ${ebirdHotspot.latestObsDt ?: "N/A"}",
-                                icon = BitmapDescriptorFactory.defaultMarker(markerHue),
-                                // Visibility is now implicitly handled by the ViewModel providing the correct list
-                                // No complex alpha logic needed here for showing/hiding
-                                onInfoWindowClick = {
-                                    navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
-                                }
-                            )
                         }
+                    } else {
+                        // This log helps diagnose if icon creation failed or is delayed
+                        Log.w("MapScreen", "Custom hotspot icon is null; markers relying on it won't be rendered or will use default.")
+                        // If you want to show default markers while custom icon is loading/failed:
+                        // (mapUiState as? MapUiState.Success)?.hotspots?.forEach { ebirdHotspot ->
+                        //     Marker(
+                        //         state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
+                        //         title = ebirdHotspot.locName,
+                        //         // icon = BitmapDescriptorFactory.defaultMarker() // Fallback
+                        //     )
+                        // }
                     }
                 }
 
@@ -216,7 +294,7 @@ fun MapScreen(
                     }
                 }
 
-            } else { // Permissions not granted UI
+            } else if (!locationPermissionsState.allPermissionsGranted && mapsSdkInitialized) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -248,22 +326,23 @@ fun MapScreen(
                 }
             }
 
-            if (showMapError && locationPermissionsState.allPermissionsGranted) {
+            if (showMapError) {
                 Box(modifier = Modifier.fillMaxSize().background(GreenDeep.copy(alpha = 0.8f)), contentAlignment = Alignment.Center) {
-                    Text("Could not load map. Ensure Google Play Services is updated and API key is valid.", color = TextWhite, modifier = Modifier.padding(32.dp), textAlign = TextAlign.Center)
+                    Text("Could not load map. Ensure Google Play Services is updated, API key is valid, and Maps SDK initialized correctly.", color = TextWhite, modifier = Modifier.padding(32.dp), textAlign = TextAlign.Center)
                 }
             }
 
-            // Floating Action Buttons
-            Column(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 16.dp, top = 16.dp)
-                    .wrapContentHeight(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                floatingActionItems.forEach { item ->
-                    FloatingMapButton(item = item)
+            if(mapsSdkInitialized && locationPermissionsState.allPermissionsGranted) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 16.dp, top = 16.dp)
+                        .wrapContentHeight(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    floatingActionItems.forEach { item ->
+                        FloatingMapButton(item = item)
+                    }
                 }
             }
         }
@@ -272,7 +351,9 @@ fun MapScreen(
     val googlePlayServicesAvailable = com.google.android.gms.common.GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
     if (googlePlayServicesAvailable != com.google.android.gms.common.ConnectionResult.SUCCESS) {
         LaunchedEffect(googlePlayServicesAvailable) {
+            Toast.makeText(context, "Google Play Services is not available or outdated. Map functionality may be limited.", Toast.LENGTH_LONG).show()
             showMapError = true
+            mapsSdkInitialized = false // Crucial: if Play Services aren't OK, SDK won't init properly
         }
     }
 }
