@@ -3,8 +3,8 @@ package com.android.birdlens
 
 import android.content.Context
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+// import android.os.Handler // No longer needed for fixed timer
+// import android.os.Looper // No longer needed for fixed timer
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,20 +32,21 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val googleAuthViewModel: GoogleAuthViewModel by viewModels()
-    private val accountInfoViewModel: AccountInfoViewModel by viewModels() // Added
+    private val accountInfoViewModel: AccountInfoViewModel by viewModels()
     private lateinit var adManager: AdManager
-    private val adHandler = Handler(Looper.getMainLooper())
-    private lateinit var adDisplayRunnable: Runnable
+    // private val adHandler = Handler(Looper.getMainLooper()) // Removed: Timer-based handler
+    // private lateinit var adDisplayRunnable: Runnable // Removed: Timer-based runnable
 
     // State to control ad visibility based on subscription
     // Default to true (show ads) until subscription status is confirmed.
+    // If confirmed as "ExBird", this will be set to false.
     private val _shouldShowAds = MutableStateFlow(true)
-    private val shouldShowAds: StateFlow<Boolean> get() = _shouldShowAds.asStateFlow()
+    val shouldShowAds: StateFlow<Boolean> get() = _shouldShowAds.asStateFlow()
 
 
     companion object {
-        private const val AD_DISPLAY_INTERVAL_MS = 5 * 60 * 1000L
-        // private const val AD_DISPLAY_INTERVAL_MS = 15 * 1000L // For testing
+        // Removed: AD_DISPLAY_INTERVAL_MS as fixed timer is gone
+        // private const val AD_DISPLAY_INTERVAL_MS = 5 * 60 * 1000L
         private const val TAG_ADS = "MainActivityAds"
     }
 
@@ -57,27 +58,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        adManager = AdManager(applicationContext)
+        adManager = AdManager(applicationContext) // AdManager loads an ad on init
 
-        adDisplayRunnable = Runnable {
-            Log.d(TAG_ADS, "Ad timer fired. Current shouldShowAds state: ${_shouldShowAds.value}")
-            if (_shouldShowAds.value && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                Log.d(TAG_ADS, "Attempting to show ad as per subscription status.")
-                adManager.showInterstitialAd(this@MainActivity) {
-                    // This callback is invoked when the ad is closed or failed to show.
-                    Log.d(TAG_ADS, "Ad flow finished. Re-evaluating timer based on current ad policy.")
-                    if (_shouldShowAds.value && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                        startAdTimer() // Restart timer only if ads are still allowed
-                    } else {
-                        Log.d(TAG_ADS, "Ads are now disabled or activity not resumed. Not restarting timer.")
-                    }
-                }
-            } else {
-                Log.d(TAG_ADS, "Ad timer fired, but ads are currently disabled by subscription or activity state. Not showing ad.")
-                // If ads are disabled, and the timer fired, it means _shouldShowAds was true when timer was last set.
-                // No need to explicitly stop timer here, as startAdTimer checks _shouldShowAds.
-            }
-        }
+        // Removed: adDisplayRunnable initialization and timer logic
+        // adDisplayRunnable = Runnable { ... }
 
         // Observe user's subscription status
         lifecycleScope.launch {
@@ -88,45 +72,41 @@ class MainActivity : ComponentActivity() {
                     when (state) {
                         is AccountInfoUiState.Success -> {
                             val subscriptionName = state.user.subscription
+                            // Key logic: Disable ads if user has "ExBird" subscription
                             _shouldShowAds.value = subscriptionName != "ExBird"
                             Log.d(TAG_ADS, "User subscription: '$subscriptionName'. Ads enabled: ${_shouldShowAds.value}")
                         }
                         is AccountInfoUiState.Error -> {
-                            _shouldShowAds.value = true // Show ads if profile fetch fails
+                            _shouldShowAds.value = true // Default to showing ads if profile fetch fails
                             Log.w(TAG_ADS, "Error fetching user profile: ${state.message}. Ads enabled by default.")
                         }
                         is AccountInfoUiState.Idle, is AccountInfoUiState.Loading -> {
-                            // While loading or idle (before first fetch), keep current ad policy.
-                            // Default is true, so ads will be prepared. If fetch determines ExBird, they'll be stopped.
+                            // While loading or idle (before first fetch), maintain current ad policy.
+                            // If default is 'true', ads might be prepared.
+                            // If fetching user status takes time, an ad *could* be shown if triggered *before* status is confirmed.
+                            // This is why event-driven triggers are better than an immediate startup timer.
+                            // For initial load, consider _shouldShowAds = false until status is confirmed,
+                            // or ensure no ad trigger happens before confirmation.
+                            // For now, we stick to the default of true, and rely on event-driven triggers not firing too early.
                             Log.d(TAG_ADS, "User profile state: ${state::class.java.simpleName}. Current ads policy: ${_shouldShowAds.value}")
-                            // If it's the very first load and state becomes Idle/Loading after being Error, ensure ads are on.
-                            if (state is AccountInfoUiState.Idle && previousShouldShowAds == false) {
+                            if (state is AccountInfoUiState.Idle && !previousShouldShowAds) {
+                                // This case: If user was ExBird (ads off), then logs out (Idle state from ViewModel), turn ads back on.
                                 _shouldShowAds.value = true
+                                Log.d(TAG_ADS, "User logged out or session expired. Ads policy reset to true.")
                             }
                         }
                     }
 
-                    // If the ad policy changed OR if the activity is resumed and ads should be shown
-                    if (previousShouldShowAds != _shouldShowAds.value ||
-                        (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && _shouldShowAds.value && previousShouldShowAds) // handles onResume when ads were already on
-                    ) {
-                        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                            if (_shouldShowAds.value) {
-                                Log.d(TAG_ADS, "Ad policy allows ads. Ensuring timer is (re)started.")
-                                startAdTimer()
-                            } else {
-                                Log.d(TAG_ADS, "Ad policy disallows ads. Ensuring timer is stopped.")
-                                stopAdTimer()
-                            }
-                        } else {
-                            Log.d(TAG_ADS, "Ad policy updated, but activity not resumed. Timer will be handled by onResume/onPause.")
-                        }
+                    // This section originally managed the timer.
+                    // Now, it just logs the policy change. The actual ad showing is event-driven.
+                    if (previousShouldShowAds != _shouldShowAds.value) {
+                        Log.d(TAG_ADS, "Ad policy changed. Ads enabled: ${_shouldShowAds.value}")
+                        // If ads were just disabled, any currently showing ad will complete. Future ads won't show.
+                        // If ads were just enabled, they will only show when triggered by an event.
                     }
                 }
             }
         }
-        // Note: AccountInfoViewModel's init block calls fetchCurrentUser(), so no need to call it explicitly here
-        // unless you want to force a refresh at a specific point.
 
         setContent {
             BirdlensTheme {
@@ -138,44 +118,51 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(
                         navController = navController,
                         googleAuthViewModel = googleAuthViewModel
+                        // Pass 'this' (MainActivity instance) or a callback to trigger ads if needed by deeper screens
+                        // e.g., mainActivity = this
                     )
                 }
             }
         }
     }
 
-    private fun startAdTimer() {
-        // Always check the latest shouldShowAds state before actually starting
-        if (!_shouldShowAds.value) {
-            Log.d(TAG_ADS, "startAdTimer called, but shouldShowAds is currently false. Stopping timer instead.")
-            stopAdTimer() // Ensure it's stopped if policy changed
-            return
+    /**
+     * Call this method from various points in your application (e.g., after specific user actions,
+     * navigating from certain screens) to attempt showing an interstitial ad.
+     * The ad will only be shown if the user is not subscribed ("ExBird") and an ad is loaded.
+     */
+    fun triggerInterstitialAd() {
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            if (_shouldShowAds.value) {
+                Log.d(TAG_ADS, "Interstitial ad triggered. Ads are currently enabled. Attempting to show.")
+                adManager.showInterstitialAd(this@MainActivity) {
+                    // This callback is invoked when the ad is closed or failed to show.
+                    // AdManager's internal logic already calls loadAd() to preload the next one.
+                    Log.d(TAG_ADS, "Ad flow finished for triggered ad.")
+                }
+            } else {
+                Log.d(TAG_ADS, "Interstitial ad trigger ignored: Ads are disabled (e.g., ExBird subscription).")
+            }
+        } else {
+            Log.d(TAG_ADS, "Interstitial ad trigger ignored: Activity not in resumed state.")
         }
-        adHandler.removeCallbacks(adDisplayRunnable) // Remove existing to prevent duplicates
-        adHandler.postDelayed(adDisplayRunnable, AD_DISPLAY_INTERVAL_MS)
-        Log.d(TAG_ADS, "Ad timer (re)started for ${AD_DISPLAY_INTERVAL_MS / 1000} seconds.")
     }
 
-    private fun stopAdTimer() {
-        adHandler.removeCallbacks(adDisplayRunnable)
-        Log.d(TAG_ADS, "Ad timer stopped.")
-    }
+
+    // Removed: startAdTimer() and stopAdTimer() as they were tied to the fixed interval timer.
+    // The AdManager handles preloading ads. Showing ads is now event-driven via triggerInterstitialAd().
 
     override fun onResume() {
         super.onResume()
-        // When activity resumes, re-evaluate ad timer based on current known policy
-        Log.d(TAG_ADS, "onResume: Current shouldShowAds state: ${_shouldShowAds.value}")
-        if (_shouldShowAds.value) {
-            startAdTimer()
-        } else {
-            stopAdTimer() // Ensure timer remains stopped if ads are disabled
-        }
+        // No timer to restart here. AdManager handles its own preloading.
+        // You might want to log or check ad readiness if specific onResume ad display is ever needed.
+        Log.d(TAG_ADS, "onResume: Current shouldShowAds state: ${_shouldShowAds.value}. Ad display is event-driven.")
     }
 
     override fun onPause() {
         super.onPause()
-        Log.d(TAG_ADS, "onPause: Stopping ad display timer.")
-        stopAdTimer() // Always stop timer when activity is paused
+        // No timer to stop here.
+        Log.d(TAG_ADS, "onPause: Ad display is event-driven.")
     }
 
     fun recreateActivity() {
