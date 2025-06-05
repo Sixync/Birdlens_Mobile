@@ -1,11 +1,11 @@
-// app/src/main/java/com/android/birdlens/data/model/response/UserResponse.kt
+// EXE201/app/src/main/java/com/android/birdlens/data/model/response/UserResponse.kt
 package com.android.birdlens.data.model.response
 
 import com.google.gson.annotations.SerializedName
 
 data class UserResponse(
     @SerializedName("id")
-    val id: Long,
+    val id: Long?, // Assuming id might not always be in every UserResponse context
     @SerializedName("username")
     val username: String,
     @SerializedName("first_name")
@@ -17,6 +17,7 @@ data class UserResponse(
     @SerializedName("age")
     val age: Int,
     @SerializedName("avatar_url")
-    val avatarUrl: String?
-    // Add other fields if your backend User struct has more and you need them
+    val avatarUrl: String?,
+    @SerializedName("subscription") // This field is key
+    val subscription: String?    // Nullable, as it's not present if user hasn't subscribed
 )

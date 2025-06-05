@@ -16,6 +16,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.android.birdlens.presentation.ui.screens.accountinfo.AccountInfoScreen
+import com.android.birdlens.presentation.ui.screens.admin.subscriptions.AdminSubscriptionListScreen
+import com.android.birdlens.presentation.ui.screens.admin.subscriptions.CreateSubscriptionScreen
 import com.android.birdlens.presentation.ui.screens.allevents.AllEventsListScreen
 import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
 import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen
@@ -37,6 +39,7 @@ import com.android.birdlens.presentation.viewmodel.BirdInfoViewModel
 import com.android.birdlens.presentation.viewmodel.EventViewModel
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
+import com.android.birdlens.presentation.viewmodel.AdminSubscriptionViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModelFactory
 import com.android.birdlens.presentation.viewmodel.MapViewModel
@@ -218,6 +221,21 @@ fun AppNavigation(
                 navController = navController,
                 hotspotId = hotspotId,
                 viewModel = hotspotBirdListViewModel
+            )
+        }
+        // Admin Subscription Routes
+        composable(Screen.AdminSubscriptionList.route) {
+            val adminSubscriptionViewModel: AdminSubscriptionViewModel = viewModel()
+            AdminSubscriptionListScreen(
+                navController = navController,
+                adminSubscriptionViewModel = adminSubscriptionViewModel
+            )
+        }
+        composable(Screen.AdminCreateSubscription.route) {
+            val adminSubscriptionViewModel: AdminSubscriptionViewModel = viewModel()
+            CreateSubscriptionScreen(
+                navController = navController,
+                adminSubscriptionViewModel = adminSubscriptionViewModel
             )
         }
     }

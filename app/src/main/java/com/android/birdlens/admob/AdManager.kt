@@ -1,3 +1,4 @@
+// EXE201/app/src/main/java/com/android/birdlens/admob/AdManager.kt
 package com.android.birdlens.admob
 
 import android.app.Activity
@@ -68,14 +69,13 @@ class AdManager(private val applicationContext: Context) {
     /**
      * Shows the interstitial ad if it's loaded.
      * @param activity The current activity.
-     * @param onAdClosedOrFailed A callback invoked when the ad is closed, fails to show,
-     *                           or if an ad is already showing. This is crucial for restarting
-     *                           the ad display timer.
+     * @param onAdFlowComplete A callback invoked when the ad is closed or fails to show.
+     *                           This allows the caller (MainActivity) to decide if the timer should restart.
      */
-    fun showInterstitialAd(activity: Activity, onAdClosedOrFailed: () -> Unit) {
+    fun showInterstitialAd(activity: Activity, onAdFlowComplete: () -> Unit) { // Renamed callback
         if (isAdShowing) {
             Log.d(TAG, "An ad is already showing. Skipping new ad request.")
-            onAdClosedOrFailed() // Allow timer to restart immediately
+            onAdFlowComplete() // Signal completion so timer logic can be re-evaluated by caller
             return
         }
 
@@ -88,7 +88,7 @@ class AdManager(private val applicationContext: Context) {
                     mInterstitialAd = null // The ad is used, clear its reference.
                     isAdShowing = false
                     loadAd() // Preload the next ad.
-                    onAdClosedOrFailed() // Signal that the ad flow is complete for this instance.
+                    onAdFlowComplete() // Signal that the ad flow is complete for this instance.
                 }
 
                 override fun onAdFailedToShowFullScreenContent(adError: AdError) {
@@ -97,7 +97,7 @@ class AdManager(private val applicationContext: Context) {
                     mInterstitialAd = null
                     isAdShowing = false
                     loadAd() // Attempt to load a new ad.
-                    onAdClosedOrFailed() // Signal that the ad flow is complete for this instance.
+                    onAdFlowComplete() // Signal that the ad flow is complete for this instance.
                 }
 
                 override fun onAdShowedFullScreenContent() {
@@ -120,7 +120,7 @@ class AdManager(private val applicationContext: Context) {
         } else {
             Log.d(TAG, "Interstitial ad wasn't ready. Attempting to load.")
             loadAd() // Try to load an ad if it's not available for the next cycle.
-            onAdClosedOrFailed() // Still call this to allow the timer to restart.
+            onAdFlowComplete() // Still call this to allow the timer to be re-evaluated by caller.
         }
     }
 }

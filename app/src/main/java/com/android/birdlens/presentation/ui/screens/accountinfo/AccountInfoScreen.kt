@@ -9,6 +9,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -19,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,6 +31,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.android.birdlens.R
 import com.android.birdlens.data.model.response.UserResponse
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
@@ -38,7 +42,7 @@ import com.android.birdlens.ui.theme.*
 @Composable
 fun AccountInfoScreen(
     navController: NavController,
-    accountInfoViewModel: AccountInfoViewModel = viewModel() // Default ViewModel instance
+    accountInfoViewModel: AccountInfoViewModel = viewModel()
 ) {
     val uiState by accountInfoViewModel.uiState.collectAsState()
 
@@ -46,11 +50,11 @@ fun AccountInfoScreen(
         navController = navController,
         topBar = {
             SimpleTopAppBar(
-                title = "Account Information",
+                title = stringResource(id = R.string.account_info_title), // Localized
                 onNavigateBack = { navController.popBackStack() }
             )
         },
-        showBottomBar = false // Typically, detail screens like this don't need the main bottom bar
+        showBottomBar = false
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -58,7 +62,7 @@ fun AccountInfoScreen(
                 .fillMaxSize()
         ) {
             when (val state = uiState) {
-                is AccountInfoUiState.Loading -> {
+                is AccountInfoUiState.Idle, is AccountInfoUiState.Loading -> { // Combined Idle and Loading
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
                 }
                 is AccountInfoUiState.Success -> {
@@ -72,13 +76,16 @@ fun AccountInfoScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Error: ${state.message}", color = TextWhite.copy(alpha = 0.8f))
+                        Text(
+                            stringResource(id = R.string.account_info_error_loading, state.message), // Localized
+                            color = TextWhite.copy(alpha = 0.8f)
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = { accountInfoViewModel.fetchCurrentUser() },
                             colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
                         ) {
-                            Text("Retry", color = TextWhite)
+                            Text(stringResource(R.string.retry), color = TextWhite)
                         }
                     }
                 }
@@ -100,34 +107,43 @@ fun AccountDetails(user: UserResponse) {
 
         val avatarPainter = rememberAsyncImagePainter(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(user.avatarUrl ?: "https://via.placeholder.com/150/CCCCCC/FFFFFF?Text=User") // Placeholder if null
+                .data(user.avatarUrl ?: "https://via.placeholder.com/150/CCCCCC/FFFFFF?Text=User")
                 .crossfade(true)
                 .build()
-            // You can add a placeholder/error drawable here if needed via .placeholder() .error()
         )
         Image(
             painter = avatarPainter,
-            contentDescription = "User Avatar",
+            contentDescription = stringResource(id = R.string.user_avatar_description), // Localized
             modifier = Modifier
                 .size(120.dp)
                 .clip(CircleShape)
-                .background(Color.Gray), // Background for the circle if image loading fails or is transparent
+                .background(Color.Gray),
             contentScale = ContentScale.Crop
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         UserInfoCard {
-            UserInfoRow(label = "Username", value = user.username)
-            UserInfoRow(label = "Email", value = user.email)
-            UserInfoRow(label = "First Name", value = user.firstName)
-            UserInfoRow(label = "Last Name", value = user.lastName)
-            UserInfoRow(label = "Age", value = user.age.toString())
-            // Add more fields as needed
+            UserInfoRow(label = stringResource(id = R.string.account_info_username), value = user.username)
+            UserInfoRow(label = stringResource(id = R.string.account_info_email), value = user.email)
+            UserInfoRow(label = stringResource(id = R.string.account_info_first_name), value = user.firstName)
+            UserInfoRow(label = stringResource(id = R.string.account_info_last_name), value = user.lastName)
+            UserInfoRow(label = stringResource(id = R.string.account_info_age), value = user.age.toString())
+
+            // Subscription Tier Display
+            val subscriptionText = if (!user.subscription.isNullOrBlank()) {
+                user.subscription
+            } else {
+                stringResource(id = R.string.subscription_tier_standard) // Localized for "Standard User" or "No Plan"
+            }
+            UserInfoRow(
+                label = stringResource(id = R.string.subscription_tier_label), // "Current Plan" or "Subscription"
+                value = subscriptionText,
+                icon = if (!user.subscription.isNullOrBlank()) Icons.Filled.WorkspacePremium else null, // Optional icon
+                iconColor = if (!user.subscription.isNullOrBlank()) GreenWave2 else TextWhite.copy(alpha = 0.7f)
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
-        // Add edit button or other actions if needed
-        // Button(onClick = { /* TODO: Navigate to edit profile */ }) { Text("Edit Profile") }
     }
 }
 
@@ -135,7 +151,7 @@ fun AccountDetails(user: UserResponse) {
 fun UserInfoCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = CardBackground.copy(alpha = 0.5f), // Slightly transparent card
+        color = CardBackground.copy(alpha = 0.5f),
         modifier = Modifier.fillMaxWidth(),
         tonalElevation = 2.dp
     ) {
@@ -147,21 +163,38 @@ fun UserInfoCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-fun UserInfoRow(label: String, value: String) {
+fun UserInfoRow(
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null, // Optional icon
+    iconColor: Color = TextWhite // Default icon color
+) {
     Column(modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 8.dp)) {
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            color = TextWhite.copy(alpha = 0.7f),
-            fontWeight = FontWeight.Medium
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            icon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = label, // Icon related to the label
+                    tint = iconColor,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                color = TextWhite.copy(alpha = 0.7f),
+                fontWeight = FontWeight.Medium
+            )
+        }
         Text(
             text = value,
             fontSize = 18.sp,
             color = TextWhite,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(start = if (icon != null) 26.dp else 0.dp) // Indent value if icon is present
         )
         Spacer(modifier = Modifier.height(4.dp))
         HorizontalDivider(color = DividerColor.copy(alpha = 0.5f), thickness = 0.5.dp)
@@ -171,56 +204,47 @@ fun UserInfoRow(label: String, value: String) {
 @SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
 @Composable
-fun AccountInfoScreenPreview_Success() {
+fun AccountInfoScreenPreview_Success_WithSubscription() {
     BirdlensTheme {
         val dummyUser = UserResponse(
-            id = 1,
-            username = "birdwatcher_pro",
-            firstName = "Alex",
-            lastName = "Smith",
-            email = "alex.smith@example.com",
-            age = 32,
-            avatarUrl = null // "https://example.com/avatar.jpg"
+            id = 1, username = "birdwatcher_pro", firstName = "Alex", lastName = "Smith",
+            email = "alex.smith@example.com", age = 32, avatarUrl = null,
+            subscription = "ExBird" // Has subscription
         )
-        // Simulate ViewModel and state for preview
         val mockViewModel = AccountInfoViewModel(ApplicationProvider.getApplicationContext())
         mockViewModel._uiState.value = AccountInfoUiState.Success(dummyUser)
 
         AppScaffold(navController = rememberNavController(), topBar = { SimpleTopAppBar("Account Info")}) {
-            AccountDetails(user = dummyUser)
+            Box(Modifier.padding(it)) { AccountDetails(user = dummyUser) }
         }
     }
 }
 
-// Dummy Application class for preview context (if needed by ViewModel for preview)
-// In a real app, you might have a proper Application class or use Hilt for previews.
-class ApplicationProvider {
+@SuppressLint("ViewModelConstructorInComposable", "StateFlowValueCalledInComposition")
+@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
+@Composable
+fun AccountInfoScreenPreview_Success_NoSubscription() {
+    BirdlensTheme {
+        val dummyUser = UserResponse(
+            id = 1, username = "free_user", firstName = "Jane", lastName = "Doe",
+            email = "jane.doe@example.com", age = 28, avatarUrl = null,
+            subscription = null // No subscription
+        )
+        val mockViewModel = AccountInfoViewModel(ApplicationProvider.getApplicationContext())
+        mockViewModel._uiState.value = AccountInfoUiState.Success(dummyUser)
+
+        AppScaffold(navController = rememberNavController(), topBar = { SimpleTopAppBar("Account Info")}) {
+            Box(Modifier.padding(it)) { AccountDetails(user = dummyUser) }
+        }
+    }
+}
+// ... other previews (Loading, Error) remain the same ...
+
+class ApplicationProvider { // Keep this for previews
     companion object {
         @Composable
         fun getApplicationContext(): android.app.Application {
             return LocalContext.current.applicationContext as android.app.Application
         }
-    }
-}
-
-@SuppressLint("ViewModelConstructorInComposable", "StateFlowValueCalledInComposition")
-@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
-@Composable
-fun AccountInfoScreenPreview_Loading() {
-    BirdlensTheme {
-        val mockViewModel = AccountInfoViewModel(ApplicationProvider.getApplicationContext())
-        mockViewModel._uiState.value = AccountInfoUiState.Loading
-        AccountInfoScreen(navController = rememberNavController(), accountInfoViewModel = mockViewModel)
-    }
-}
-
-@SuppressLint("ViewModelConstructorInComposable", "StateFlowValueCalledInComposition")
-@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
-@Composable
-fun AccountInfoScreenPreview_Error() {
-    BirdlensTheme {
-        val mockViewModel = AccountInfoViewModel(ApplicationProvider.getApplicationContext())
-        mockViewModel._uiState.value = AccountInfoUiState.Error("Failed to load user information. Please try again.")
-        AccountInfoScreen(navController = rememberNavController(), accountInfoViewModel = mockViewModel)
     }
 }

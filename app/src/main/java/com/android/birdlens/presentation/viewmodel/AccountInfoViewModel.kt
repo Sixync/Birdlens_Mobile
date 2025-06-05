@@ -14,7 +14,8 @@ import kotlinx.coroutines.launch
 
 class AccountInfoViewModel(application: Application) : AndroidViewModel(application) {
 
-    val _uiState = MutableStateFlow<AccountInfoUiState>(AccountInfoUiState.Loading)
+    // Make _uiState internal for preview if needed, but typically private
+    internal val _uiState = MutableStateFlow<AccountInfoUiState>(AccountInfoUiState.Idle) // Start with Idle
     val uiState: StateFlow<AccountInfoUiState> = _uiState.asStateFlow()
 
     private val apiService = RetrofitInstance.api(application.applicationContext)
@@ -50,7 +51,8 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
 }
 
 sealed class AccountInfoUiState {
-    object Loading : AccountInfoUiState()
+    data object Idle : AccountInfoUiState() // Added Idle state
+    data object Loading : AccountInfoUiState()
     data class Success(val user: UserResponse) : AccountInfoUiState()
     data class Error(val message: String) : AccountInfoUiState()
 }

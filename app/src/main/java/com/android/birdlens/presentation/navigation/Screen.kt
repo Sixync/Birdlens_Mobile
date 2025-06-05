@@ -30,5 +30,7 @@ sealed class Screen(val route: String) {
     data object HotspotBirdList : Screen("hotspot_bird_list_screen/{hotspotId}") {
         fun createRoute(hotspotId: String) = "hotspot_bird_list_screen/$hotspotId"
     }
-    // ...
+    // Admin Screens
+    data object AdminSubscriptionList : Screen("admin_subscription_list_screen")
+    data object AdminCreateSubscription : Screen("admin_create_subscription_screen")
 }

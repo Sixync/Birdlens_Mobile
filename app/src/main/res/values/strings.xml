@@ -168,4 +168,12 @@
     <string name="icon_cart_description">Cart</string>
     <string name="icon_search_description">Search</string>
 
+<!--    admin management-->
+    <string name="admin_manage_subscriptions">Manage Subscriptions</string>
+<!--    subscriptions-->
+    <string name="subscription_tier_label">Current Plan</string>
+    <string name="subscription_tier_standard">Standard User</string>
+    <string name="subscription_tier_unknown">Unknown</string>
+    <string name="loading_ellipsis">Loading…</string>
+    <string name="settings_my_subscription">My Subscription</string>
 </resources>

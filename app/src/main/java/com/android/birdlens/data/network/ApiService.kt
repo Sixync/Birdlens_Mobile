@@ -2,9 +2,11 @@
 package com.android.birdlens.data.network
 
 // import com.android.birdlens.data.model.request.GoogleIdTokenRequest // No longer needed
+import com.android.birdlens.data.model.CreateSubscriptionRequest
 import com.android.birdlens.data.model.Event
 import com.android.birdlens.data.model.PaginatedEventData // New import
 import com.android.birdlens.data.model.PaginatedToursResponse
+import com.android.birdlens.data.model.Subscription
 import com.android.birdlens.data.model.Tour
 import com.android.birdlens.data.model.TourCreateRequest
 import com.android.birdlens.data.model.request.LoginRequest
@@ -79,4 +81,12 @@ interface ApiService {
     suspend fun getEventById(
         @Path("event_id") eventId: Long
     ): Response<GenericApiResponse<Event>> // Ensure Event model matches response
+
+    @GET("subscriptions") // Requires auth (handled by AuthInterceptor)
+    suspend fun getSubscriptions(): Response<GenericApiResponse<List<Subscription>>>
+
+    @POST("subscriptions") // Requires auth (handled by AuthInterceptor)
+    suspend fun createSubscription(
+        @Body createSubscriptionRequest: CreateSubscriptionRequest
+    ): Response<GenericApiResponse<Subscription>> // Backend returns the created subscription
 }

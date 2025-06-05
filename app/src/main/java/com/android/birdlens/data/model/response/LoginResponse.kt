@@ -33,7 +33,8 @@ data class LoginResponse(
             lastName = lastName,
             email = email,
             age = age,
-            avatarUrl = avatarUrl
+            avatarUrl = avatarUrl,
+            subscription = null
         )
     }
 }

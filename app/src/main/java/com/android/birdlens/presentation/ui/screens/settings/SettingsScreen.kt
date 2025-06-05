@@ -36,6 +36,8 @@ import com.android.birdlens.data.LanguageManager
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
+import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
+import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
 
@@ -51,46 +53,73 @@ data class SettingsItem(
 fun SettingsScreen(
     navController: NavController,
     googleAuthViewModel: GoogleAuthViewModel,
+    accountInfoViewModel: AccountInfoViewModel = viewModel(), // Add AccountInfoViewModel
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val context = LocalContext.current
     var showLanguageDialog by remember { mutableStateOf(false) }
 
-    // This state will hold the currently selected language NAME for display.
-    // It uses LocalContext.current, so when the Activity is recreated and
-    // LocalContext.current provides the new locale-aware context, this will re-evaluate
-    // and fetch the correct string resource.
+    val accountState by accountInfoViewModel.uiState.collectAsState()
+
     val currentLanguageName by remember {
         derivedStateOf {
             val currentLangCode = LanguageManager.getLanguagePreference(context)
             when (currentLangCode) {
                 LanguageManager.LANGUAGE_VIETNAMESE -> context.getString(R.string.language_vietnamese)
                 LanguageManager.LANGUAGE_ENGLISH -> context.getString(R.string.language_english)
-                else -> context.getString(R.string.language_english) // Fallback
+                else -> context.getString(R.string.language_english)
             }
         }
     }
+
+    val currentSubscriptionTier by remember(accountState) {
+        derivedStateOf {
+            when (val state = accountState) {
+                is AccountInfoUiState.Success -> state.user.subscription ?: context.getString(R.string.subscription_tier_standard)
+                is AccountInfoUiState.Error -> context.getString(R.string.subscription_tier_unknown) // Or "Error"
+                else -> context.getString(R.string.loading_ellipsis) // "Loading..."
+            }
+        }
+    }
+
 
     val settingsItemsSection1 = listOf(
         SettingsItem(R.string.settings_account, Icons.Outlined.AccountCircle, {
             navController.navigate(Screen.AccountInfo.route)
         }),
         SettingsItem(
+            titleResId = R.string.settings_my_subscription, // New String Resource
+            icon = Icons.Outlined.WorkspacePremium,
+            onClick = { navController.navigate(Screen.AccountInfo.route) }, // Or a dedicated subscription page
+            subText = currentSubscriptionTier
+        ),
+        SettingsItem(
             titleResId = R.string.settings_language,
             icon = Icons.Outlined.Language,
             onClick = { showLanguageDialog = true },
-            subText = currentLanguageName // Pass the derived current language name
+            subText = currentLanguageName
         ),
-        SettingsItem(R.string.settings_notifications, Icons.Outlined.Notifications, { /* TODO: Navigate to Notifications settings */ }),
-        SettingsItem(R.string.settings_privacy_security, Icons.Outlined.Lock, { /* TODO: Navigate to Privacy settings */ }),
-        SettingsItem(R.string.settings_help_support, Icons.AutoMirrored.Filled.HelpOutline, { /* TODO: Navigate to Help/Support */ }, isExternalLink = true),
-        SettingsItem(R.string.settings_about, Icons.Outlined.Info, { /* TODO: Navigate to About screen */ }, isExternalLink = true)
+        SettingsItem(R.string.settings_notifications, Icons.Outlined.Notifications, { /* TODO */ }),
+        SettingsItem(R.string.settings_privacy_security, Icons.Outlined.Lock, { /* TODO */ }),
+        SettingsItem(R.string.settings_help_support, Icons.AutoMirrored.Filled.HelpOutline, { /* TODO */ }, isExternalLink = true),
+        SettingsItem(R.string.settings_about, Icons.Outlined.Info, { /* TODO */ }, isExternalLink = true)
     )
     val settingsItemsSection2 = listOf(
-        SettingsItem(R.string.settings_saved, Icons.Outlined.BookmarkBorder, { /* TODO: Navigate to Saved items */ }),
-        SettingsItem(R.string.settings_liked, Icons.Outlined.FavoriteBorder, { /* TODO: Navigate to Liked items */ })
+        SettingsItem(R.string.settings_saved, Icons.Outlined.BookmarkBorder, { /* TODO */ }),
+        SettingsItem(R.string.settings_liked, Icons.Outlined.FavoriteBorder, { /* TODO */ })
     )
+
+    val adminSettingsItems = listOf(
+        SettingsItem(
+            titleResId = R.string.admin_manage_subscriptions,
+            icon = Icons.Outlined.AdminPanelSettings,
+            onClick = { navController.navigate(Screen.AdminSubscriptionList.route) }
+        )
+    )
+
+    // ... (AppScaffold and rest of the UI structure remains mostly the same) ...
+    // The key change is passing `currentSubscriptionTier` to the relevant `SettingsItem`.
 
     AppScaffold(
         navController = navController,
@@ -100,29 +129,28 @@ fun SettingsScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         },
-        showBottomBar = true // Settings screen is part of the main navigation flow with a bottom bar
+        showBottomBar = true
     ) { innerPadding ->
         Surface(
-            color = CardBackground.copy(alpha = 0.7f), // Using a themed background color
+            color = CardBackground.copy(alpha = 0.7f),
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             modifier = Modifier
-                .padding(innerPadding) // Apply padding from AppScaffold
-                .padding(top = 8.dp) // Additional top padding if needed
+                .padding(innerPadding)
+                .padding(top = 8.dp)
                 .fillMaxSize()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp) // Horizontal padding for the content inside the Surface
+                    .padding(horizontal = 16.dp)
             ) {
                 LazyColumn(
-                    modifier = Modifier.weight(1f) // Makes the LazyColumn take available space, pushing logout button down
+                    modifier = Modifier.weight(1f)
                 ) {
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
-                        // Search Bar
                         Surface(
-                            shape = RoundedCornerShape(50), // Circular ends
+                            shape = RoundedCornerShape(50),
                             color = SearchBarBackground,
                             modifier = Modifier.fillMaxWidth().height(50.dp)
                         ) {
@@ -144,7 +172,7 @@ fun SettingsScreen(
                                             tint = SearchBarPlaceholderText
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Box(modifier = Modifier.weight(1f)) { // Ensure placeholder and text field align
+                                        Box(modifier = Modifier.weight(1f)) {
                                             if (searchQuery.isEmpty()) {
                                                 Text(
                                                     stringResource(id = R.string.search_something),
@@ -161,7 +189,6 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                     }
 
-                    // Settings Items Section 1
                     items(settingsItemsSection1.size) { index ->
                         val item = settingsItemsSection1[index]
                         SettingsListItem(item = item)
@@ -174,9 +201,8 @@ fun SettingsScreen(
                         }
                     }
 
-                    item { Spacer(modifier = Modifier.height(24.dp)) } // Spacer between sections
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                    // Settings Items Section 2
                     items(settingsItemsSection2.size) { index ->
                         val item = settingsItemsSection2[index]
                         SettingsListItem(item = item)
@@ -188,25 +214,44 @@ fun SettingsScreen(
                             )
                         }
                     }
-                } // End of LazyColumn
 
-                // Logout Button
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
+                    item {
+                        Text(
+                            "Admin Area",
+                            style = MaterialTheme.typography.titleMedium.copy(color = TextWhite.copy(alpha = 0.7f)),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    items(adminSettingsItems.size) { index ->
+                        val item = adminSettingsItems[index]
+                        SettingsListItem(item = item)
+                        if (index < adminSettingsItems.size - 1) {
+                            HorizontalDivider(
+                                color = DividerColor,
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                }
+
                 Button(
                     onClick = {
                         googleAuthViewModel.signOut(context)
-                        // Navigate to Welcome and clear back stack
                         navController.navigate(Screen.Welcome.route) {
                             popUpTo(navController.graph.startDestinationId) {
                                 inclusive = true
                             }
-                            launchSingleTop = true // Avoid multiple instances of WelcomeScreen
+                            launchSingleTop = true
                         }
                     },
-                    shape = RoundedCornerShape(50), // Pill shape
+                    shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = LogoutButtonGreen),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp) // Padding around the button
+                        .padding(vertical = 24.dp)
                         .height(50.dp)
                 ) {
                     Text(
@@ -216,28 +261,22 @@ fun SettingsScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp)) // Ensure content doesn't stick to edge if no bottom bar padding
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 
     if (showLanguageDialog) {
         LanguageSelectionDialog(
-            currentLanguageCode = LanguageManager.getLanguagePreference(context), // Pass current for radio selection
+            currentLanguageCode = LanguageManager.getLanguagePreference(context),
             onLanguageSelected = { newLangCode ->
                 val currentLangCode = LanguageManager.getLanguagePreference(context)
                 if (newLangCode != currentLangCode) {
-                    LanguageManager.changeLanguage(context, newLangCode) // Save preference
-                    // Activity recreation will apply the change
+                    LanguageManager.changeLanguage(context, newLangCode)
                     val activity = context as? MainActivity
-                    if (activity != null) {
-                        activity.recreateActivity()
-                    } else {
-                        // This case should ideally not happen if context is from an Activity
-                        Log.e("SettingsScreen", "Cannot recreate: Context is not MainActivity instance.")
-                    }
+                    activity?.recreateActivity()
                 }
-                showLanguageDialog = false // Dismiss dialog
+                showLanguageDialog = false
             },
             onDismissRequest = { showLanguageDialog = false }
         )

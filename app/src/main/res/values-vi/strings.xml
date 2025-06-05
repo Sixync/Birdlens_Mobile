@@ -170,4 +170,12 @@
     <!-- Common Icons Description -->
     <string name="icon_cart_description">Giỏ hàng</string>
     <string name="icon_search_description">Tìm kiếm</string>
+<!--  admin management  -->
+    <string name="admin_manage_subscriptions">Quản lý Gói đăng ký</string>
+<!-- subscriptions -->
+    <string name="subscription_tier_label">Gói Hiện Tại</string>
+    <string name="subscription_tier_standard">Người Dùng Tiêu Chuẩn</string>
+    <string name="subscription_tier_unknown">Không xác định</string>
+    <string name="loading_ellipsis">Đang tải…</string>
+    <string name="settings_my_subscription">Gói Của Tôi</string>
 </resources>
