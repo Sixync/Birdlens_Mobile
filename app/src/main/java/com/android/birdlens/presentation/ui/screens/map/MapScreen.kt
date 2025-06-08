@@ -115,7 +115,6 @@ fun MapScreen(
                     customHotspotIcon = bitmapDescriptorFromVector(context, R.drawable.ic_map_pin)
                     if (customHotspotIcon == null) {
                         Log.e("MapScreen", "Failed to create customHotspotIcon even after SDK initialization.")
-                        // Optionally set showMapError or use a default icon
                     }
                     mapsSdkInitialized = true // Set this true only after successful initialization and icon creation attempt
                 }
@@ -160,29 +159,17 @@ fun MapScreen(
         if (mapsSdkInitialized) { // Only update map properties if SDK is ready
             mapProperties = mapProperties.copy(isMyLocationEnabled = locationPermissionsState.allPermissionsGranted)
             uiSettings = uiSettings.copy(myLocationButtonEnabled = locationPermissionsState.allPermissionsGranted)
-            if (locationPermissionsState.allPermissionsGranted) {
-                Log.d("MapScreen", "Permissions granted & SDK initialized. Map ready state will trigger initial fetch.")
-                if (cameraPositionState.projection != null) {
-                    mapViewModel.requestHotspotsForCurrentView(
-                        cameraPositionState.position.target,
-                        cameraPositionState.position.zoom
-                    )
-                }
-            }
         }
     }
 
     var mapLoaded by remember { mutableStateOf(false) }
-    LaunchedEffect(cameraPositionState.isMoving, mapLoaded, locationPermissionsState.allPermissionsGranted, mapsSdkInitialized) {
-        if (!cameraPositionState.isMoving && mapLoaded && locationPermissionsState.allPermissionsGranted && mapsSdkInitialized) {
-            if (cameraPositionState.projection != null) {
-                val currentTarget = cameraPositionState.position.target
-                val currentZoom = cameraPositionState.position.zoom
-                Log.d("MapScreen", "Camera idle. Target: $currentTarget, Zoom: $currentZoom. Notifying ViewModel.")
-                mapViewModel.requestHotspotsForCurrentView(currentTarget, currentZoom)
-            } else {
-                Log.d("MapScreen", "Camera idle, but map projection is null. Map might not be fully loaded.")
-            }
+    LaunchedEffect(cameraPositionState.isMoving, mapLoaded) {
+        // When camera movement stops and the map is loaded, notify the ViewModel.
+        if (!cameraPositionState.isMoving && mapLoaded) {
+            val currentTarget = cameraPositionState.position.target
+            val currentZoom = cameraPositionState.position.zoom
+            Log.d("MapScreen", "Camera idle. Target: $currentTarget, Zoom: $currentZoom. Notifying ViewModel.")
+            mapViewModel.requestHotspotsForCurrentView(currentTarget, currentZoom)
         }
     }
 
@@ -191,18 +178,18 @@ fun MapScreen(
             icon = { Icon(Icons.Filled.Refresh, contentDescription = "Refresh Hotspots", tint = TextWhite) },
             contentDescription = "Refresh Hotspots",
             onClick = {
-                if (mapsSdkInitialized && cameraPositionState.projection != null && locationPermissionsState.allPermissionsGranted) {
+                if (mapsSdkInitialized && cameraPositionState.projection != null) {
                     val currentTarget = cameraPositionState.position.target
                     val currentZoom = cameraPositionState.position.zoom
                     Log.d("MapScreen", "Refresh button tapped. Re-triggering fetch for current view.")
                     mapViewModel.requestHotspotsForCurrentView(currentTarget, currentZoom)
                     Toast.makeText(context, "Refreshing hotspots...", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(context, "Map not ready, SDK not initialized, or permissions not granted.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Map not ready or SDK not initialized.", Toast.LENGTH_SHORT).show()
                 }
             }
         ),
-        // ...
+// ...
         FloatingMapActionItem(
             icon = { Icon(Icons.Filled.Info, contentDescription = "Bird Info (Test)", tint = TextWhite) },
             contentDescription = "Bird Info (Test)",
@@ -242,14 +229,6 @@ fun MapScreen(
                     onMapLoaded = {
                         Log.d("MapScreen", "GoogleMap onMapLoaded callback.")
                         mapLoaded = true
-                        if (customHotspotIcon == null && mapsSdkInitialized) { // Ensure SDK was init
-                            Log.w("MapScreen", "customHotspotIcon is still null in onMapLoaded, attempting to create again.")
-                            customHotspotIcon = bitmapDescriptorFromVector(context, R.drawable.ic_map_pin)
-                            if(customHotspotIcon == null) {
-                                Log.e("MapScreen", "Failed to create custom marker icon even in onMapLoaded.")
-                                // Consider showing an error or using a default if this fails persistently
-                            }
-                        }
                         showMapError = false
                     },
                     onPOIClick = { poi ->
@@ -258,12 +237,12 @@ fun MapScreen(
                 ) {
                     if (customHotspotIcon != null) {
                         (mapUiState as? MapUiState.Success)?.let { successState ->
-                            Log.d("MapScreen", "Rendering ${successState.hotspots.size} markers with custom icon. Fetched for context zoom: ${successState.zoomLevelContext}")
+                            Log.d("MapScreen", "Rendering ${successState.hotspots.size} markers with custom icon.")
                             successState.hotspots.forEach { ebirdHotspot ->
                                 Marker(
                                     state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
                                     title = ebirdHotspot.locName,
-                                    snippet = "Species: ${ebirdHotspot.numSpeciesAllTime ?: "N/A"}. Last obs: ${ebirdHotspot.latestObsDt ?: "N/A"}",
+                                    snippet = "Species: ${ebirdHotspot.numSpeciesAllTime ?: "N/A"}",
                                     icon = customHotspotIcon,
                                     onInfoWindowClick = {
                                         navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
@@ -272,16 +251,7 @@ fun MapScreen(
                             }
                         }
                     } else {
-                        // This log helps diagnose if icon creation failed or is delayed
                         Log.w("MapScreen", "Custom hotspot icon is null; markers relying on it won't be rendered or will use default.")
-                        // If you want to show default markers while custom icon is loading/failed:
-                        // (mapUiState as? MapUiState.Success)?.hotspots?.forEach { ebirdHotspot ->
-                        //     Marker(
-                        //         state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
-                        //         title = ebirdHotspot.locName,
-                        //         // icon = BitmapDescriptorFactory.defaultMarker() // Fallback
-                        //     )
-                        // }
                     }
                 }
 
@@ -357,7 +327,6 @@ fun MapScreen(
         }
     }
 }
-
 // MapScreenHeader and FloatingMapButton remain the same
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
