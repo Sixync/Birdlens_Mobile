@@ -9,11 +9,18 @@ import com.android.birdlens.data.model.PaginatedToursResponse
 import com.android.birdlens.data.model.Subscription
 import com.android.birdlens.data.model.Tour
 import com.android.birdlens.data.model.TourCreateRequest
+import com.android.birdlens.data.model.post.CommentResponse
+import com.android.birdlens.data.model.post.CreateCommentRequest
+import com.android.birdlens.data.model.post.PaginatedCommentsResponse
+import com.android.birdlens.data.model.post.PaginatedPostsResponse
+import com.android.birdlens.data.model.post.PostResponse
+import com.android.birdlens.data.model.post.ReactionResponseData // Changed
 import com.android.birdlens.data.model.request.LoginRequest
 import com.android.birdlens.data.model.request.RegisterRequest
 import com.android.birdlens.data.model.response.GenericApiResponse
 import com.android.birdlens.data.model.response.UserResponse
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -31,10 +38,6 @@ interface ApiService {
 
     @POST("auth/login")
     suspend fun loginUser(@Body loginRequest: LoginRequest): Response<GenericApiResponse<String>>
-
-    // Removed: signInWithGoogleToken as the backend /auth/google endpoint is not used.
-    // @POST("auth/google")
-    // suspend fun signInWithGoogleToken(@Body googleTokenRequest: GoogleIdTokenRequest): Response<GenericApiResponse<String>>
 
     @GET("users/me") // New endpoint to get current user
     suspend fun getCurrentUser(): Response<GenericApiResponse<UserResponse>>
@@ -89,4 +92,42 @@ interface ApiService {
     suspend fun createSubscription(
         @Body createSubscriptionRequest: CreateSubscriptionRequest
     ): Response<GenericApiResponse<Subscription>> // Backend returns the created subscription
+    // Post Endpoints
+    @GET("posts")
+    suspend fun getPosts(
+        @Query("limit") limit: Int,
+        @Query("offset") offset: Int
+    ): Response<GenericApiResponse<PaginatedPostsResponse>> // Corrected
+
+    @Multipart
+    @POST("posts")
+    suspend fun createPost(
+        @Part("content") content: RequestBody,
+        @Part("location_name") locationName: RequestBody?,
+        @Part("latitude") latitude: RequestBody?,
+        @Part("longitude") longitude: RequestBody?, // Corrected from logitude
+        @Part("privacy_level") privacyLevel: RequestBody,
+        @Part("type") type: RequestBody?,
+        @Part("is_featured") isFeatured: RequestBody,
+        @Part mediaFiles: List<MultipartBody.Part>
+    ): Response<GenericApiResponse<PostResponse>> // Expecting the created PostResponse structure
+
+    @GET("posts/{post_id}/comments")
+    suspend fun getComments(
+        @Path("post_id") postId: String, // Assuming post_id is String, adjust if Long
+        @Query("limit") limit: Int,
+        @Query("offset") offset: Int
+    ): Response<GenericApiResponse<PaginatedCommentsResponse>> // Corrected
+
+    @POST("posts/{post_id}/comments")
+    suspend fun createComment(
+        @Path("post_id") postId: String, // Assuming post_id is String
+        @Body commentRequest: CreateCommentRequest
+    ): Response<GenericApiResponse<CommentResponse>> // Corrected
+
+    @POST("posts/{post_id}/reactions")
+    suspend fun addReaction(
+        @Path("post_id") postId: String, // Assuming post_id is String
+        @Query("reaction_type") reactionType: String
+    ): Response<GenericApiResponse<ReactionResponseData?>> // Backend returns nil in data, message in outer layer
 }

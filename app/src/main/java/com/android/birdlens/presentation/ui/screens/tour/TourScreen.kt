@@ -106,12 +106,14 @@ fun TourScreen(
                         }
                     }
                     is EventUIState.Success -> {
-                        if (state.data.items.isNotEmpty()) {
+                        // Use ?.let to handle nullable items and provide an empty list if null
+                        val currentEventItems = state.data.items ?: emptyList()
+                        if (currentEventItems.isNotEmpty()) {
                             LazyRow(
                                 contentPadding = PaddingValues(vertical = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(state.data.items, key = { "event_year_${it.id}" }) { event ->
+                                items(currentEventItems, key = { "event_year_${it.id}" }) { event ->
                                     EventItemCardSmall( // New Composable for Event
                                         event = event,
                                         onClick = { onEventItemClick(event.id) },

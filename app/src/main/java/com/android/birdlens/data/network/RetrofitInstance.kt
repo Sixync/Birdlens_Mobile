@@ -9,7 +9,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitInstance {
-    private const val BASE_URL = "http://10.0.2.2/" // Or your deployed backend URL
+    private const val BASE_URL = "http://10.0.2.2/"  // Or your deployed backend URL
         //http://20.191.153.166/
         //http://10.0.2.2/ localhost
     private val loggingInterceptor = HttpLoggingInterceptor().apply {

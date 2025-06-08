@@ -249,7 +249,6 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp))
     }
 }
-
 @Composable
 fun CustomTextField(
     value: String,
@@ -258,11 +257,12 @@ fun CustomTextField(
     modifier: Modifier = Modifier,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    backgroundColor: Color = AuthInputBackground
+    backgroundColor: Color = AuthInputBackground,
+    leadingIcon: (@Composable () -> Unit)? = null // Added leadingIcon
 ) {
     Surface(
         color = backgroundColor,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(16.dp), // Or 50 for more rounded like search
         modifier = modifier.height(56.dp)
     ) {
         BasicTextField(
@@ -270,18 +270,30 @@ fun CustomTextField(
             onValueChange = onValueChange,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp), // Adjusted padding if icon is present
             textStyle = TextStyle(color = TextWhite, fontSize = 16.sp),
             cursorBrush = SolidColor(TextWhite),
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             singleLine = true,
             decorationBox = { innerTextField ->
-                Box(contentAlignment = Alignment.CenterStart) {
-                    if (value.isEmpty()) {
-                        Text(placeholder, color = TextFieldPlaceholder, fontSize = 16.sp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    leadingIcon?.invoke() // Render leading icon if provided
+                    if (leadingIcon != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                    innerTextField()
+                    Box(
+                        contentAlignment = Alignment.CenterStart,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (value.isEmpty()) {
+                            Text(placeholder, color = TextFieldPlaceholder, fontSize = 16.sp)
+                        }
+                        innerTextField()
+                    }
                 }
             }
         )
