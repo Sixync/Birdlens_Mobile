@@ -15,12 +15,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
-// Add 'out' to make T covariant
 sealed class TourUIState<out T> {
-    data object Idle : TourUIState<Nothing>() // Now correctly considered a subtype
-    data object Loading : TourUIState<Nothing>() // Now correctly considered a subtype
-    data class Success<T>(val data: T) : TourUIState<T>() // T here refers to the T of the specific Success instance
-    data class Error(val message: String) : TourUIState<Nothing>() // Now correctly considered a subtype
+    data object Idle : TourUIState<Nothing>()
+    data object Loading : TourUIState<Nothing>()
+    data class Success<T>(val data: T) : TourUIState<T>()
+    data class Error(val message: String) : TourUIState<Nothing>()
 }
 
 class TourViewModel(application: Application) : AndroidViewModel(application) {
@@ -41,6 +40,12 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uploadThumbnailState = MutableStateFlow<TourUIState<String>>(TourUIState.Idle)
     val uploadThumbnailState: StateFlow<TourUIState<String>> = _uploadThumbnailState.asStateFlow()
+
+    private val _popularTourState = MutableStateFlow<TourUIState<Tour?>>(TourUIState.Idle)
+    val popularTourState: StateFlow<TourUIState<Tour?>> = _popularTourState.asStateFlow()
+
+    private val _horizontalToursState = MutableStateFlow<TourUIState<PaginatedToursResponse>>(TourUIState.Idle)
+    val horizontalToursState: StateFlow<TourUIState<PaginatedToursResponse>> = _horizontalToursState.asStateFlow()
 
 
     fun fetchTours(limit: Int = 10, offset: Int = 0) {
@@ -81,6 +86,48 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (e: Exception) {
                 _tourDetailState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
+            }
+        }
+    }
+
+    fun fetchPopularTour() {
+        viewModelScope.launch {
+            _popularTourState.value = TourUIState.Loading
+            try {
+                val response = tourRepository.getTours(limit = 1, offset = 0)
+                if (response.isSuccessful && response.body() != null) {
+                    val genericResponse = response.body()!!
+                    if (!genericResponse.error && genericResponse.data != null) {
+                        _popularTourState.value = TourUIState.Success(genericResponse.data.items?.firstOrNull())
+                    } else {
+                        _popularTourState.value = TourUIState.Error(genericResponse.message ?: "Failed to load popular tour")
+                    }
+                } else {
+                    _popularTourState.value = TourUIState.Error("Error: ${response.code()} - ${response.message()}")
+                }
+            } catch (e: Exception) {
+                _popularTourState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
+            }
+        }
+    }
+
+    fun fetchHorizontalTours(limit: Int = 5) {
+        viewModelScope.launch {
+            _horizontalToursState.value = TourUIState.Loading
+            try {
+                val response = tourRepository.getTours(limit = limit, offset = 0)
+                if (response.isSuccessful && response.body() != null) {
+                    val genericResponse = response.body()!!
+                    if (!genericResponse.error && genericResponse.data != null) {
+                        _horizontalToursState.value = TourUIState.Success(genericResponse.data)
+                    } else {
+                        _horizontalToursState.value = TourUIState.Error(genericResponse.message ?: "Failed to load horizontal tours")
+                    }
+                } else {
+                    _horizontalToursState.value = TourUIState.Error("Error: ${response.code()} - ${response.message()}")
+                }
+            } catch (e: Exception) {
+                _horizontalToursState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
             }
         }
     }

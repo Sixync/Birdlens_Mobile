@@ -1,4 +1,3 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/Screen.kt
 package com.android.birdlens.presentation.navigation
 
 sealed class Screen(val route: String) {
@@ -30,6 +29,8 @@ sealed class Screen(val route: String) {
     data object HotspotBirdList : Screen("hotspot_bird_list_screen/{hotspotId}") {
         fun createRoute(hotspotId: String) = "hotspot_bird_list_screen/$hotspotId"
     }
+
+    data object BirdIdentifier : Screen("bird_identifier_screen")
     // Admin Screens
     data object AdminSubscriptionList : Screen("admin_subscription_list_screen")
     data object AdminCreateSubscription : Screen("admin_create_subscription_screen")

@@ -5,15 +5,13 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.birdlens.data.model.ebird.EbirdObservation // Keep this if it's used, otherwise remove
 import com.android.birdlens.data.model.ebird.EbirdRetrofitInstance
-import kotlinx.coroutines.Job // Import Job
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// BirdSpeciesInfo data class (ensure it's here or imported)
 data class BirdSpeciesInfo(
     val commonName: String,
     val speciesCode: String,
@@ -22,9 +20,8 @@ data class BirdSpeciesInfo(
     val count: Int?
 )
 
-// HotspotBirdListUiState sealed class (ensure it's here or imported)
 sealed class HotspotBirdListUiState {
-    object Loading : HotspotBirdListUiState()
+    data object Loading : HotspotBirdListUiState()
     data class Success(val birds: List<BirdSpeciesInfo>) : HotspotBirdListUiState()
     data class Error(val message: String) : HotspotBirdListUiState()
 }
@@ -46,29 +43,29 @@ class HotspotBirdListViewModel(
 
     init {
         initialLocId = savedStateHandle.get<String>("hotspotId")
+        Log.d(TAG, "ViewModel initialized. Attempting to retrieve hotspotId.")
         if (initialLocId.isNullOrBlank()) {
-            Log.e(TAG, "INIT_ERROR: Hotspot ID (locId) is missing or blank from SavedStateHandle.")
+            Log.e(TAG, "INIT_ERROR: Hotspot ID (locId) is null or blank from SavedStateHandle.")
             _uiState.value = HotspotBirdListUiState.Error("Hotspot ID not provided. Cannot load bird list.")
         } else {
-            Log.i(TAG, "INIT_SUCCESS: Valid Hotspot ID '$initialLocId' received. Fetching birds.")
+            Log.i(TAG, "INIT_SUCCESS: Valid Hotspot ID '$initialLocId' received. Triggering fetch for bird observations.")
             fetchBirdsForHotspot(initialLocId)
         }
     }
 
     private fun fetchBirdsForHotspot(locIdToFetch: String) {
-        if (_uiState.value !is HotspotBirdListUiState.Error) {
-            _uiState.value = HotspotBirdListUiState.Loading
-        } else {
-            Log.w(TAG, "FETCH_SKIP: Attempted to fetch but already in error state from init for locId: $locIdToFetch")
+        // Ensure we don't restart loading if already in a definitive error state from init
+        if (_uiState.value is HotspotBirdListUiState.Error && initialLocId.isNullOrBlank()) {
+            Log.w(TAG, "FETCH_SKIP: ViewModel is in an initial error state due to missing locId. Skipping fetch for '$locIdToFetch'.")
             return
         }
 
+        _uiState.value = HotspotBirdListUiState.Loading
+        Log.i(TAG, "FETCH_START: Attempting to fetch bird observations for locId: '$locIdToFetch'")
+
         viewModelScope.launch {
             try {
-                Log.i(TAG, "FETCH_START: Fetching birds for locId: $locIdToFetch")
-                // IMPORTANT CHANGE: Reduce maxResults for testing
-                val response = ebirdApiService.getRecentObservationsForHotspot(locId = locIdToFetch, maxResults = 15) // Test with a very small list
-
+                val response = ebirdApiService.getRecentObservationsForHotspot(locId = locIdToFetch, maxResults = 15) // Kept maxResults small
 
                 if (response.isSuccessful) {
                     val observations = response.body()
@@ -79,19 +76,15 @@ class HotspotBirdListViewModel(
                                 .filterNotNull()
                                 .mapNotNull { obs ->
                                     try {
-                                        if (obs.speciesCode.isBlank()) {
-                                            Log.w(TAG, "TRANSFORM_WARN: Skipping observation due to blank speciesCode: $obs")
-                                            return@mapNotNull null
-                                        }
-                                        if (obs.comName.isBlank()) {
-                                            Log.w(TAG, "TRANSFORM_WARN: Skipping observation due to blank commonName: $obs")
+                                        if (obs.speciesCode.isBlank() || obs.comName.isBlank()) {
+                                            Log.w(TAG, "TRANSFORM_WARN: Skipping observation due to blank speciesCode or commonName: $obs")
                                             return@mapNotNull null
                                         }
                                         BirdSpeciesInfo(
                                             commonName = obs.comName,
                                             speciesCode = obs.speciesCode,
                                             scientificName = obs.sciName,
-                                            observationDate = obs.obsDt.split(" ").firstOrNull(),
+                                            observationDate = obs.obsDt.split(" ").firstOrNull(), // Basic date formatting
                                             count = obs.howMany
                                         )
                                     } catch (mappingEx: Exception) {
@@ -114,18 +107,18 @@ class HotspotBirdListViewModel(
                 } else {
                     val errorBody = response.errorBody()?.string() ?: response.message()
                     val errorMsg = if (response.code() == 404) {
-                        "No recent observations found for hotspot '$locIdToFetch', or ID invalid."
+                        "No recent observations found for hotspot '$locIdToFetch', or the ID is invalid."
                     } else {
-                        "API Error (${response.code()}) for hotspot '$locIdToFetch': $errorBody"
+                        "API Error fetching observations (${response.code()}) for hotspot '$locIdToFetch': $errorBody"
                     }
                     _uiState.value = HotspotBirdListUiState.Error(errorMsg)
                     Log.e(TAG, "FETCH_API_FAILURE: $errorMsg")
                 }
             } catch (e: Exception) {
                 if (kotlin.coroutines.coroutineContext[Job]?.isCancelled == true) {
-                    Log.i(TAG, "FETCH_CANCELLED: Job for locId '$locIdToFetch' cancelled.")
+                    Log.i(TAG, "FETCH_CANCELLED: Job for fetching observations for locId '$locIdToFetch' was cancelled.")
                 } else {
-                    val errorMsg = "Network/Exception for hotspot '$locIdToFetch': ${e.localizedMessage}"
+                    val errorMsg = "Network/Exception fetching observations for hotspot '$locIdToFetch': ${e.javaClass.simpleName} - ${e.localizedMessage}"
                     _uiState.value = HotspotBirdListUiState.Error(errorMsg)
                     Log.e(TAG, "FETCH_EXCEPTION: $errorMsg", e)
                 }
@@ -135,11 +128,14 @@ class HotspotBirdListViewModel(
 
     fun refreshBirdsForHotspot() {
         if (!initialLocId.isNullOrBlank()) {
-            Log.i(TAG, "REFRESH_TRIGGERED: Refreshing for initialLocId: '$initialLocId'")
+            Log.i(TAG, "REFRESH_TRIGGERED: Refreshing observations for initialLocId: '$initialLocId'")
             fetchBirdsForHotspot(initialLocId)
         } else {
-            Log.e(TAG, "REFRESH_FAIL: initialLocId missing or blank.")
-            _uiState.value = HotspotBirdListUiState.Error("Cannot refresh: Hotspot ID invalid.")
+            Log.e(TAG, "REFRESH_FAIL: Cannot refresh, initialLocId is missing or blank.")
+            // _uiState.value is likely already Error from init, or should be set if somehow it wasn't
+            if (_uiState.value !is HotspotBirdListUiState.Error) {
+                _uiState.value = HotspotBirdListUiState.Error("Cannot refresh: Hotspot ID is invalid.")
+            }
         }
     }
 }

@@ -23,10 +23,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.res.stringResource // Make sure this is imported
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,16 +35,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
-import com.android.birdlens.R // Make sure this is imported for R.string access
-import com.android.birdlens.data.model.Event // Using the existing Event model
+import com.android.birdlens.R
+import com.android.birdlens.data.model.Event
+import com.android.birdlens.data.model.Tour
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.viewmodel.EventUIState
 import com.android.birdlens.presentation.viewmodel.EventViewModel
+import com.android.birdlens.presentation.viewmodel.TourUIState
+import com.android.birdlens.presentation.viewmodel.TourViewModel
 import com.android.birdlens.ui.theme.*
-
-// Data Model TourItem remains the same for other parts of this screen
-data class TourItem(val id: Int, val imageUrl: String, val title: String = "")
 
 @Composable
 fun TourScreen(
@@ -52,28 +53,28 @@ fun TourScreen(
     onNavigateToAllEvents: () -> Unit,
     onNavigateToAllTours: () -> Unit,
     onNavigateToPopularTours: () -> Unit,
-    onTourItemClick: (Int) -> Unit, // For existing tour items
-    onEventItemClick: (Long) -> Unit, // New: For event items
-    eventViewModel: EventViewModel = viewModel(), // Inject EventViewModel
+    onTourItemClick: (Long) -> Unit,
+    onEventItemClick: (Long) -> Unit,
+    eventViewModel: EventViewModel = viewModel(),
+    tourViewModel: TourViewModel = viewModel(),
     isPreviewMode: Boolean = LocalInspectionMode.current
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val eventsState by eventViewModel.eventsState.collectAsState()
+    val popularTourState by tourViewModel.popularTourState.collectAsState()
+    val horizontalToursState by tourViewModel.horizontalToursState.collectAsState()
 
-    // Fetch events when the screen is composed or if the state is idle/error
     LaunchedEffect(Unit) {
         if (eventsState is EventUIState.Idle || eventsState is EventUIState.Error) {
-            eventViewModel.fetchEvents(limit = 5) // Fetch a few events for "Events of the year"
+            eventViewModel.fetchEvents(limit = 5)
+        }
+        if (popularTourState is TourUIState.Idle || popularTourState is TourUIState.Error) {
+            tourViewModel.fetchPopularTour()
+        }
+        if (horizontalToursState is TourUIState.Idle || horizontalToursState is TourUIState.Error) {
+            tourViewModel.fetchHorizontalTours(limit = 5)
         }
     }
-
-    // Dummy data for other sections (remains the same)
-    val popularTour = TourItem(4, "https://images.unsplash.com/photo-1567020009789-972f00d0f1f0?w=800&auto=format&fit=crop&q=60", "Night Market")
-    val allToursData = listOf(
-        TourItem(5, "https://images.unsplash.com/photo-1567020009789-972f00d0f1f0?w=300&auto=format&fit=crop&q=60", "Ancient Town"),
-        TourItem(6, "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=300&auto=format&fit=crop&q=60", "Beach Sunset"),
-        TourItem(7, "https://images.unsplash.com/photo-1483728642387-6c351bEC1d69?w=300&auto=format&fit=crop&q=60", "Mountain Peak")
-    )
 
     AppScaffold(
         navController = navController,
@@ -97,16 +98,12 @@ fun TourScreen(
             contentPadding = PaddingValues(top = 8.dp)
         ) {
             item {
-                // "Events of the year" section now uses EventViewModel
                 SectionHeader(titleResId = R.string.tour_screen_events_of_year, onSeeAllClick = onNavigateToAllEvents)
                 when (val state = eventsState) {
                     is EventUIState.Loading -> {
-                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = TextWhite)
-                        }
+                        LoadingIndicator()
                     }
                     is EventUIState.Success -> {
-                        // Use ?.let to handle nullable items and provide an empty list if null
                         val currentEventItems = state.data.items ?: emptyList()
                         if (currentEventItems.isNotEmpty()) {
                             LazyRow(
@@ -114,7 +111,7 @@ fun TourScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(currentEventItems, key = { "event_year_${it.id}" }) { event ->
-                                    EventItemCardSmall( // New Composable for Event
+                                    EventItemCardSmall(
                                         event = event,
                                         onClick = { onEventItemClick(event.id) },
                                         isPreviewMode = isPreviewMode
@@ -122,46 +119,95 @@ fun TourScreen(
                                 }
                             }
                         } else {
-                            Text("No events found for this year yet.", color = TextWhite.copy(alpha = 0.7f), modifier = Modifier.padding(vertical = 8.dp))
+                            EmptyStateText("No events found for this year yet.")
                         }
                     }
                     is EventUIState.Error -> {
-                        Text("Error: ${state.message}", color = TextWhite.copy(alpha = 0.7f), modifier = Modifier.padding(vertical = 8.dp))
+                        ErrorStateText(state.message)
                     }
                     is EventUIState.Idle -> {
-                        // Placeholder or shimmer for idle state before loading
-                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            Text("Loading events...", color = TextWhite.copy(alpha = 0.7f))
-                        }
+                        LoadingPlaceholder()
                     }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
             item {
-                SectionHeader(titleResId = R.string.tour_screen_popular_tour, onSeeAllClick = onNavigateToPopularTours) // Use ResId
-                PopularTourCard(item = popularTour, onClick = { onTourItemClick(popularTour.id) }, isPreviewMode = isPreviewMode)
-                PageIndicator(count = 3, selectedIndex = 0)
+                SectionHeader(titleResId = R.string.tour_screen_popular_tour, onSeeAllClick = onNavigateToPopularTours)
+                when (val state = popularTourState) {
+                    is TourUIState.Loading -> LoadingIndicator()
+                    is TourUIState.Success -> {
+                        state.data?.let { popularTour ->
+                            PopularTourCard(
+                                tour = popularTour,
+                                onClick = { onTourItemClick(popularTour.id) },
+                                isPreviewMode = isPreviewMode
+                            )
+                            PageIndicator(count = 1, selectedIndex = 0) // Assuming one popular tour for now
+                        } ?: EmptyStateText("No popular tour available.")
+                    }
+                    is TourUIState.Error -> ErrorStateText(state.message)
+                    is TourUIState.Idle -> LoadingPlaceholder()
+                }
                 Spacer(modifier = Modifier.height(24.dp))
             }
             item {
-                SectionWithHorizontalList( // This still uses TourItem
-                    titleResId = R.string.tour_screen_all_tours,
-                    items = allToursData,
-                    onItemClick = { tourItem -> onTourItemClick(tourItem.id) },
-                    onSeeAllClick = onNavigateToAllTours,
-                    isPreviewMode = isPreviewMode
-                )
+                SectionHeader(titleResId = R.string.tour_screen_all_tours, onSeeAllClick = onNavigateToAllTours)
+                when (val state = horizontalToursState) {
+                    is TourUIState.Loading -> LoadingIndicator()
+                    is TourUIState.Success -> {
+                        val tourItems = state.data.items ?: emptyList()
+                        if (tourItems.isNotEmpty()) {
+                            LazyRow(
+                                contentPadding = PaddingValues(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(tourItems, key = { "all_tours_${it.id}" }) { tour ->
+                                    TourItemCardSmall(
+                                        tour = tour,
+                                        onClick = { onTourItemClick(tour.id) },
+                                        isPreviewMode = isPreviewMode
+                                    )
+                                }
+                            }
+                        } else {
+                            EmptyStateText("No tours available at the moment.")
+                        }
+                    }
+                    is TourUIState.Error -> ErrorStateText(state.message)
+                    is TourUIState.Idle -> LoadingPlaceholder()
+                }
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
-// ... TourScreenHeader, SectionHeader, PopularTourCard, PageIndicator remain the same ...
-// ... SectionWithHorizontalList (for TourItem) and TourItemCardSmall remain the same ...
+@Composable
+private fun LoadingIndicator() {
+    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = TextWhite)
+    }
+}
 
 @Composable
-fun EventItemCardSmall( // New Composable for displaying Event in a small card format
+private fun EmptyStateText(message: String) {
+    Text(message, color = TextWhite.copy(alpha = 0.7f), modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(), textAlign = TextAlign.Center)
+}
+
+@Composable
+private fun ErrorStateText(message: String) {
+    Text("Error: $message", color = TextWhite.copy(alpha = 0.7f), modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(), textAlign = TextAlign.Center)
+}
+
+@Composable
+private fun LoadingPlaceholder() {
+    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+        Text("Loading...", color = TextWhite.copy(alpha = 0.7f))
+    }
+}
+
+@Composable
+fun EventItemCardSmall(
     event: Event,
     onClick: () -> Unit,
     isPreviewMode: Boolean
@@ -172,10 +218,11 @@ fun EventItemCardSmall( // New Composable for displaying Event in a small card f
             .size(width = 150.dp, height = 200.dp)
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.3f)) // Slightly different background for events?
+        colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.3f))
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (isPreviewMode && event.coverPhotoUrl.isNullOrBlank()) {
+            val imageUrl = event.coverPhotoUrl
+            if (isPreviewMode && imageUrl.isNullOrBlank()) {
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.DarkGray.copy(alpha = 0.4f)),
                     contentAlignment = Alignment.Center
@@ -188,13 +235,12 @@ fun EventItemCardSmall( // New Composable for displaying Event in a small card f
                 }
             } else {
                 Image(
-                    painter = rememberAsyncImagePainter(model = event.coverPhotoUrl),
+                    painter = rememberAsyncImagePainter(model = imageUrl),
                     contentDescription = event.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            // Gradient and Title
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -212,7 +258,8 @@ fun EventItemCardSmall( // New Composable for displaying Event in a small card f
                     color = TextWhite,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -220,12 +267,8 @@ fun EventItemCardSmall( // New Composable for displaying Event in a small card f
 }
 
 
-// ... (TourScreenHeader, SectionHeader, TourItemCardSmall, PopularTourCard, PageIndicator, SectionWithHorizontalList for TourItem) ...
-// Keep these existing Composables from the original TourScreen.kt as they are used for tour items.
-// The ones below are exact copies from your provided TourScreen.kt, ensure they are present.
-
 @Composable
-fun TourScreenHeader( // Copied from original for completeness
+fun TourScreenHeader(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onNavigateToCart: () -> Unit
@@ -280,7 +323,7 @@ fun TourScreenHeader( // Copied from original for completeness
         ) {
             Column {
                 Text(
-                    stringResource(id = R.string.tour_screen_title_birdlens), // Localized
+                    stringResource(id = R.string.tour_screen_title_birdlens),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
                         color = GreenWave2,
@@ -288,7 +331,7 @@ fun TourScreenHeader( // Copied from original for completeness
                     )
                 )
                 Text(
-                    stringResource(id = R.string.tour_screen_subtitle_tours), // Localized
+                    stringResource(id = R.string.tour_screen_subtitle_tours),
                     style = MaterialTheme.typography.titleLarge.copy(
                         color = TextWhite,
                         fontWeight = FontWeight.SemiBold
@@ -308,7 +351,7 @@ fun TourScreenHeader( // Copied from original for completeness
 }
 
 @Composable
-fun SectionHeader(titleResId: Int, onSeeAllClick: () -> Unit) { // Copied from original
+fun SectionHeader(titleResId: Int, onSeeAllClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -317,11 +360,11 @@ fun SectionHeader(titleResId: Int, onSeeAllClick: () -> Unit) { // Copied from o
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = stringResource(id = titleResId), // Use stringResource
+            text = stringResource(id = titleResId),
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold, color = TextWhite)
         )
         Text(
-            text = stringResource(id = R.string.see_all), // Use stringResource
+            text = stringResource(id = R.string.see_all),
             style = MaterialTheme.typography.bodyMedium.copy(color = TextWhite.copy(alpha = 0.8f)),
             modifier = Modifier.clickable(onClick = onSeeAllClick)
         )
@@ -329,29 +372,8 @@ fun SectionHeader(titleResId: Int, onSeeAllClick: () -> Unit) { // Copied from o
 }
 
 @Composable
-fun SectionWithHorizontalList( // For TourItem
-    titleResId: Int,
-    items: List<TourItem>,
-    onItemClick: (TourItem) -> Unit,
-    onSeeAllClick: () -> Unit,
-    isPreviewMode: Boolean
-) {
-    Column {
-        SectionHeader(titleResId = titleResId, onSeeAllClick = onSeeAllClick)
-        LazyRow(
-            contentPadding = PaddingValues(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(items, key = { it.id }) { item ->
-                TourItemCardSmall(item = item, onClick = { onItemClick(item) }, isPreviewMode = isPreviewMode)
-            }
-        }
-    }
-}
-
-@Composable
-fun TourItemCardSmall( // For TourItem
-    item: TourItem,
+fun TourItemCardSmall(
+    tour: Tour,
     onClick: () -> Unit,
     isPreviewMode: Boolean
 ) {
@@ -365,7 +387,8 @@ fun TourItemCardSmall( // For TourItem
 
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (isPreviewMode) {
+            val imageUrl = tour.thumbnailUrl ?: tour.imagesUrl?.firstOrNull()
+            if (isPreviewMode && imageUrl.isNullOrBlank()) {
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.LightGray.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
@@ -377,13 +400,13 @@ fun TourItemCardSmall( // For TourItem
                 }
             } else {
                 Image(
-                    painter = rememberAsyncImagePainter(model = item.imageUrl),
-                    contentDescription = item.title.ifEmpty { stringResource(id = R.string.tour_image_description) },
+                    painter = rememberAsyncImagePainter(model = imageUrl),
+                    contentDescription = tour.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            if (item.title.isNotEmpty()) {
+            if (tour.name.isNotEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -396,7 +419,7 @@ fun TourItemCardSmall( // For TourItem
                         .padding(8.dp),
                     contentAlignment = Alignment.BottomStart
                 ) {
-                    Text(item.title, color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                    Text(tour.name, color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -404,8 +427,8 @@ fun TourItemCardSmall( // For TourItem
 }
 
 @Composable
-fun PopularTourCard( // For TourItem
-    item: TourItem,
+fun PopularTourCard(
+    tour: Tour,
     onClick: () -> Unit,
     isPreviewMode: Boolean
 ) {
@@ -419,7 +442,8 @@ fun PopularTourCard( // For TourItem
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (isPreviewMode) {
+            val imageUrl = tour.thumbnailUrl ?: tour.imagesUrl?.firstOrNull()
+            if (isPreviewMode && imageUrl.isNullOrBlank()) {
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.LightGray.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
@@ -431,13 +455,13 @@ fun PopularTourCard( // For TourItem
                 }
             } else {
                 Image(
-                    painter = rememberAsyncImagePainter(model = item.imageUrl),
-                    contentDescription = item.title.ifEmpty { stringResource(id = R.string.popular_tour_image_description) },
+                    painter = rememberAsyncImagePainter(model = imageUrl),
+                    contentDescription = tour.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            if (item.title.isNotEmpty()) {
+            if (tour.name.isNotEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -450,7 +474,7 @@ fun PopularTourCard( // For TourItem
                         .padding(12.dp),
                     contentAlignment = Alignment.BottomStart
                 ) {
-                    Text(item.title, color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(tour.name, color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -458,7 +482,7 @@ fun PopularTourCard( // For TourItem
 }
 
 @Composable
-fun PageIndicator(count: Int, selectedIndex: Int, modifier: Modifier = Modifier) { // Copied
+fun PageIndicator(count: Int, selectedIndex: Int, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -488,7 +512,7 @@ fun TourScreenPreview() {
             onNavigateToAllTours = {},
             onNavigateToPopularTours = {},
             onTourItemClick = {},
-            onEventItemClick = {}, // Added for preview
+            onEventItemClick = {},
             isPreviewMode = true
         )
     }

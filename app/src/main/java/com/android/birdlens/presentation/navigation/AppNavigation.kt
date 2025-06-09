@@ -20,6 +20,7 @@ import com.android.birdlens.presentation.ui.screens.admin.subscriptions.AdminSub
 import com.android.birdlens.presentation.ui.screens.admin.subscriptions.CreateSubscriptionScreen
 import com.android.birdlens.presentation.ui.screens.allevents.AllEventsListScreen
 import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
+import com.android.birdlens.presentation.ui.screens.birdidentifier.BirdIdentifierScreen
 import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
@@ -40,6 +41,7 @@ import com.android.birdlens.presentation.viewmodel.EventViewModel
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
 import com.android.birdlens.presentation.viewmodel.AdminSubscriptionViewModel
+import com.android.birdlens.presentation.viewmodel.BirdIdentifierViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModelFactory
 import com.android.birdlens.presentation.viewmodel.MapViewModel
@@ -222,6 +224,10 @@ fun AppNavigation(
                 hotspotId = hotspotId,
                 viewModel = hotspotBirdListViewModel
             )
+        }
+        composable(Screen.BirdIdentifier.route) {
+            val birdIdentifierViewModel: BirdIdentifierViewModel = viewModel()
+            BirdIdentifierScreen(navController = navController, viewModel = birdIdentifierViewModel)
         }
         // Admin Subscription Routes
         composable(Screen.AdminSubscriptionList.route) {

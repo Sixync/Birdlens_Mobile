@@ -1,12 +1,14 @@
+// EXE201/app/src/main/java/com/android/birdlens/presentation/viewmodel/MapViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
-import  android.app.Application
+import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
 import com.android.birdlens.data.repository.HotspotRepository
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,176 +17,108 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+
 sealed class MapUiState {
-    object Idle : MapUiState()
-    object Loading : MapUiState()
-    data class Success(val hotspots: List<EbirdNearbyHotspot>, val zoomLevelContext: Float) : MapUiState()
+    data object Idle : MapUiState()
+    data object Loading : MapUiState()
+    data class Success(val hotspots: List<EbirdNearbyHotspot>, val zoomLevelContext: Float, val fetchedCenter: LatLng, val fetchedRadiusKm: Int) : MapUiState()
     data class Error(val message: String) : MapUiState()
 }
 
-class MapViewModel(application: Application) : AndroidViewModel(application) { // Changed constructor
+class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow<MapUiState>(MapUiState.Idle)
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
 
-    // private val ebirdApiService = EbirdRetrofitInstance.api // Replaced by repository
-    private val hotspotRepository = HotspotRepository(application.applicationContext) // Added
+    private val hotspotRepository = HotspotRepository(application.applicationContext)
 
     companion object {
-        const val OVERVIEW_MAX_ZOOM = 7.5f
-        const val DETAILED_MIN_ZOOM = 9.5f
+        // A single zoom level to determine if hotspots should be shown.
+        // Above this level, we are "zoomed in". Below, we are "zoomed out".
+        const val SHOW_HOTSPOTS_MIN_ZOOM_LEVEL = 9.0f
 
+        // The user requested a radius of "around 100km". The eBird API's maximum radius is 50km.
+        // We will use 50km, which covers a diameter of 100km.
+        const val HOTSPOT_FETCH_RADIUS_KM = 50
+
+        // Default camera position
         val VIETNAM_INITIAL_CENTER = LatLng(16.047079, 108.220825)
-        const val VIETNAM_INITIAL_RADIUS_KM = 500 // Keep large for initial wide view
-        const val VIETNAM_INITIAL_MAX_HOTSPOTS = 30 // Limit initial fetch for performance
 
-        const val OVERVIEW_RADIUS_KM = 100
-        const val OVERVIEW_MAX_HOTSPOTS_TARGET = 50
-
-        const val DETAILED_RADIUS_KM = 25 // Increased slightly for better detailed view
-
-        private const val CAMERA_IDLE_DEBOUNCE_MS = 700L // Increased slightly
+        private const val CAMERA_IDLE_DEBOUNCE_MS = 750L
+        private const val SIGNIFICANT_PAN_THRESHOLD_DEGREES = 0.25 // Approx 27.5km, ~half of the fetch radius
         const val COUNTRY_CODE_VIETNAM = "VN"
-        private const val TAG = "MapViewModel" // Added for logging
+        private const val TAG = "MapViewModel"
     }
 
-    private var currentHotspots = listOf<EbirdNearbyHotspot>()
-    private var lastFetchedZoomCategory: String = "none"
-    private var lastFetchedCenter: LatLng? = null
     private var fetchJob: Job? = null
-    private var isInitialLoadComplete = false
+    private var lastFetchedCenter: LatLng? = null
+    private var areHotspotsVisible = false
 
     fun requestHotspotsForCurrentView(center: LatLng, zoom: Float) {
-        Log.d(TAG, "Request received for center: $center, zoom: $zoom. InitialLoadComplete: $isInitialLoadComplete")
-        if (!isInitialLoadComplete) {
-            fetchHotspotsInternal(VIETNAM_INITIAL_CENTER, zoom, "initial", true)
-        } else {
-            fetchHotspotsInternal(center, zoom, determineZoomCategory(zoom), false)
-        }
-    }
-
-    private fun determineZoomCategory(zoom: Float): String {
-        return when {
-            zoom <= OVERVIEW_MAX_ZOOM -> "overview"
-            zoom >= DETAILED_MIN_ZOOM -> "detailed"
-            else -> lastFetchedZoomCategory.let { if (it == "none" || it == "initial") "overview" else it }
-        }
-    }
-
-    private fun isCenterChangeSignificant(newCenter: LatLng, oldCenter: LatLng, zoom: Float): Boolean {
-        val latDiff = abs(newCenter.latitude - oldCenter.latitude)
-        val lngDiff = abs(newCenter.longitude - oldCenter.longitude)
-
-        val threshold = when {
-            zoom >= DETAILED_MIN_ZOOM + 1f -> 0.10 // Approx 11km (very zoomed in, allow more panning)
-            zoom >= DETAILED_MIN_ZOOM -> 0.15  // Approx 16.5km (detailed view)
-            zoom <= OVERVIEW_MAX_ZOOM - 1f-> 0.6 // Approx 66km (overview, more sensitive to pan)
-            zoom <= OVERVIEW_MAX_ZOOM -> 0.4  // Approx 44km (overview)
-            else -> 0.3 // Approx 33km (transition zone)
-        }
-        return latDiff > threshold || lngDiff > threshold
-    }
-
-    private fun fetchHotspotsInternal(center: LatLng, zoomForContext: Float, category: String, forceFetch: Boolean) {
         fetchJob?.cancel()
         fetchJob = viewModelScope.launch {
             delay(CAMERA_IDLE_DEBOUNCE_MS)
 
-            val currentCategory = if (category == "initial" && isInitialLoadComplete) {
-                determineZoomCategory(zoomForContext)
-            } else {
-                category
-            }
-
-            val centerChangedSignificantly = lastFetchedCenter == null ||
-                    isCenterChangeSignificant(center, lastFetchedCenter!!, zoomForContext)
-
-            if (!forceFetch && currentCategory == lastFetchedZoomCategory && !centerChangedSignificantly && _uiState.value is MapUiState.Success) {
-                Log.d(TAG, "Skipping fetch: Conditions not met. Category: $currentCategory, CenterChanged: $centerChangedSignificantly")
-                (_uiState.value as? MapUiState.Success)?.let {
-                    if (it.zoomLevelContext != zoomForContext) {
-                        _uiState.value = MapUiState.Success(it.hotspots, zoomForContext)
-                    }
+            if (zoom < SHOW_HOTSPOTS_MIN_ZOOM_LEVEL) {
+                // Zoomed out: Hide hotspots
+                if (areHotspotsVisible) {
+                    _uiState.value = MapUiState.Success(emptyList(), zoom)
+                    areHotspotsVisible = false
+                    lastFetchedCenter = null // Reset to force a refetch on the next zoom-in
+                    Log.d(TAG, "Zoom level ($zoom) is below threshold. Hiding hotspots.")
                 }
                 return@launch
             }
 
-            _uiState.value = MapUiState.Loading
-            Log.d(TAG, "Fetching for category: $currentCategory, center: $center, zoomContext: $zoomForContext")
+            // Zoomed in: Show hotspots if needed
+            val centerChangedSignificantly = lastFetchedCenter == null || isCenterChangeSignificant(center, lastFetchedCenter!!)
 
-            val radiusKm: Int
-            var maxHotspotsTarget: Int? = null // For applying limit after fetching all in radius
+            if (!areHotspotsVisible || centerChangedSignificantly) {
+                _uiState.value = MapUiState.Loading
+                Log.d(TAG, "Zoom level ($zoom) is sufficient. Fetching hotspots. New view required: ${!areHotspotsVisible}, Center changed: $centerChangedSignificantly")
+                try {
+                    val fetchedHotspots = hotspotRepository.getNearbyHotspots(
+                        center = center,
+                        radiusKm = HOTSPOT_FETCH_RADIUS_KM,
+                        countryCodeFilter = COUNTRY_CODE_VIETNAM
+                    ).sortedByDescending { it.numSpeciesAllTime ?: 0 }
 
-            when (currentCategory) {
-                "initial" -> {
-                    radiusKm = VIETNAM_INITIAL_RADIUS_KM
-                    maxHotspotsTarget = VIETNAM_INITIAL_MAX_HOTSPOTS
+                    _uiState.value = MapUiState.Success(fetchedHotspots, zoom)
+                    areHotspotsVisible = true
+                    lastFetchedCenter = center
+                    Log.d(TAG, "Fetch successful. Showing ${fetchedHotspots.size} hotspots.")
+
+                } catch (e: Exception) {
+                    if (kotlin.coroutines.coroutineContext[Job]?.isCancelled == true) {
+                        Log.d(TAG, "Fetch job cancelled for zoom $zoom.")
+                        return@launch
+                    }
+                    val errorMsg = "Exception fetching hotspots: ${e.localizedMessage}"
+                    _uiState.value = MapUiState.Error(errorMsg)
+                    Log.e(TAG, errorMsg, e)
                 }
-                "overview" -> {
-                    radiusKm = OVERVIEW_RADIUS_KM
-                    maxHotspotsTarget = OVERVIEW_MAX_HOTSPOTS_TARGET
+            } else {
+                Log.d(TAG, "View has not changed enough. Not re-fetching.")
+                // Update zoom context even if not fetching, to keep UI state fresh
+                (_uiState.value as? MapUiState.Success)?.let {
+                    _uiState.value = it.copy(zoomLevelContext = zoom)
                 }
-                "detailed" -> {
-                    radiusKm = DETAILED_RADIUS_KM
-                    // No specific max target for detailed, let API decide or set a higher one if needed.
-                    // Or repository can filter based on density if too many are returned for a small radius.
-                }
-                else -> {
-                    Log.e(TAG, "Unknown fetch category: $currentCategory")
-                    _uiState.value = MapUiState.Error("Internal error: Unknown map category.")
-                    return@launch
-                }
-            }
-
-            try {
-                // Use repository to fetch hotspots
-                var fetchedHotspots = hotspotRepository.getNearbyHotspots(
-                    center = center,
-                    radiusKm = radiusKm,
-                    countryCodeFilter = COUNTRY_CODE_VIETNAM // Apply country filter in repository call
-                )
-                Log.d(TAG, "Repository returned ${fetchedHotspots.size} hotspots for '$currentCategory'.")
-
-
-                // Sorting and limiting logic (if still needed after repository, though repository can also handle it)
-                fetchedHotspots = fetchedHotspots.sortedByDescending { it.numSpeciesAllTime ?: 0 }
-
-                if (maxHotspotsTarget != null && fetchedHotspots.size > maxHotspotsTarget) {
-                    fetchedHotspots = fetchedHotspots.take(maxHotspotsTarget)
-                    Log.d(TAG, "Trimmed $currentCategory hotspots to ${fetchedHotspots.size}")
-                }
-
-                currentHotspots = fetchedHotspots
-                lastFetchedCenter = center
-                lastFetchedZoomCategory = currentCategory
-                _uiState.value = MapUiState.Success(currentHotspots, zoomForContext)
-                Log.d(TAG, "Success: ${currentHotspots.size} hotspots for '$currentCategory', zoomContext: $zoomForContext")
-
-                if (currentCategory == "initial" && !isInitialLoadComplete) {
-                    isInitialLoadComplete = true
-                    Log.d(TAG, "Initial load marked as complete.")
-                }
-
-            } catch (e: Exception) {
-                if (kotlin.coroutines.coroutineContext[Job]?.isCancelled == true) {
-                    Log.d(TAG, "Fetch job cancelled for $currentCategory.")
-                    return@launch
-                }
-                val errorMsg = "Exception fetching/processing hotspots for $currentCategory: ${e.localizedMessage}"
-                _uiState.value = MapUiState.Error(errorMsg)
-                Log.e(TAG, "Exception for $currentCategory: $errorMsg", e)
             }
         }
     }
 
-    // Call this from settings or a debug menu if you want to clear the cache
+    private fun isCenterChangeSignificant(newCenter: LatLng, oldCenter: LatLng): Boolean {
+        val latDiff = abs(newCenter.latitude - oldCenter.latitude)
+        val lngDiff = abs(newCenter.longitude - oldCenter.longitude)
+        return latDiff > SIGNIFICANT_PAN_THRESHOLD_DEGREES || lngDiff > SIGNIFICANT_PAN_THRESHOLD_DEGREES
+    }
+
     fun clearHotspotCache() {
         viewModelScope.launch {
             hotspotRepository.clearAllHotspotsCache()
-            // Optionally, trigger a fresh fetch after clearing
-            lastFetchedCenter?.let { center ->
-                val currentZoom = (_uiState.value as? MapUiState.Success)?.zoomLevelContext ?: VIETNAM_INITIAL_CENTER.longitude.toFloat() // Fallback zoom
-                requestHotspotsForCurrentView(center, currentZoom)
-            }
+            // Invalidate last fetch to trigger a new one on next camera idle
+            lastFetchedCenter = null
+            areHotspotsVisible = false
+            Log.i(TAG, "Hotspot cache cleared.")
         }
     }
 }
