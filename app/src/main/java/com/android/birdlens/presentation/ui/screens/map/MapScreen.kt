@@ -152,27 +152,17 @@ fun MapScreen(
         if (mapsSdkInitialized) {
             mapProperties = mapProperties.copy(isMyLocationEnabled = locationPermissionsState.allPermissionsGranted)
             uiSettings = uiSettings.copy(myLocationButtonEnabled = locationPermissionsState.allPermissionsGranted)
-            if (locationPermissionsState.allPermissionsGranted) {
-                Log.d("MapScreen", "Permissions granted & SDK initialized. Initial fetch will be triggered by camera idle.")
-            }
         }
     }
 
     var mapLoaded by remember { mutableStateOf(false) }
-
-    // Effect to call ViewModel when camera is idle and map is ready
-    LaunchedEffect(cameraPositionState.isMoving, mapLoaded, locationPermissionsState.allPermissionsGranted, mapsSdkInitialized) {
-        if (!cameraPositionState.isMoving && mapLoaded && locationPermissionsState.allPermissionsGranted && mapsSdkInitialized) {
-            val currentProjection = cameraPositionState.projection
-            if (currentProjection != null) {
-                val currentTarget = cameraPositionState.position.target
-                val currentZoom = cameraPositionState.position.zoom
-                val visibleRegion = currentProjection.visibleRegion
-                Log.d("MapScreen", "Camera idle. Target: $currentTarget, Zoom: $currentZoom. Notifying ViewModel.")
-                mapViewModel.onCameraIdle(currentTarget, currentZoom, visibleRegion.latLngBounds)
-            } else {
-                Log.d("MapScreen", "Camera idle, but map projection is null. Map might not be fully loaded.")
-            }
+    LaunchedEffect(cameraPositionState.isMoving, mapLoaded) {
+        // When camera movement stops and the map is loaded, notify the ViewModel.
+        if (!cameraPositionState.isMoving && mapLoaded) {
+            val currentTarget = cameraPositionState.position.target
+            val currentZoom = cameraPositionState.position.zoom
+            Log.d("MapScreen", "Camera idle. Target: $currentTarget, Zoom: $currentZoom. Notifying ViewModel.")
+            mapViewModel.requestHotspotsForCurrentView(currentTarget, currentZoom)
         }
     }
 
@@ -181,29 +171,23 @@ fun MapScreen(
             icon = { Icon(Icons.Filled.Refresh, contentDescription = "Refresh Hotspots", tint = TextWhite) },
             contentDescription = "Refresh Hotspots",
             onClick = {
-                if (mapsSdkInitialized && locationPermissionsState.allPermissionsGranted && mapLoaded) {
-                    val currentProjection = cameraPositionState.projection
-                    if (currentProjection != null) {
-                        val currentTarget = cameraPositionState.position.target
-                        val currentZoom = cameraPositionState.position.zoom
-                        val visibleRegion = currentProjection.visibleRegion
-                        Log.d("MapScreen", "Refresh button tapped. Re-triggering fetch for current view.")
-                        mapViewModel.onCameraIdle(currentTarget, currentZoom, visibleRegion.latLngBounds) // Re-trigger with current state
-                        Toast.makeText(context, "Refreshing hotspots...", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "Map projection not yet available for refresh.", Toast.LENGTH_SHORT).show()
-                    }
+                if (mapsSdkInitialized && cameraPositionState.projection != null) {
+                    val currentTarget = cameraPositionState.position.target
+                    val currentZoom = cameraPositionState.position.zoom
+                    Log.d("MapScreen", "Refresh button tapped. Re-triggering fetch for current view.")
+                    mapViewModel.requestHotspotsForCurrentView(currentTarget, currentZoom)
+                    Toast.makeText(context, "Refreshing hotspots...", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(context, "Map not ready or SDK not initialized.", Toast.LENGTH_SHORT).show()
                 }
             }
         ),
+// ...
         FloatingMapActionItem(
-            icon = { Icon(Icons.Filled.LayersClear, contentDescription = "Clear Cache", tint = TextWhite) },
-            contentDescription = "Clear Cache & Refresh",
+            icon = { Icon(Icons.Filled.CameraAlt, contentDescription = "Identify Bird", tint = TextWhite) },
+            contentDescription = "Identify Bird",
             onClick = {
-                mapViewModel.clearHotspotCacheAndRefresh()
-                Toast.makeText(context, "Cache cleared. Refreshing...", Toast.LENGTH_SHORT).show()
+                navController.navigate(Screen.BirdIdentifier.route)
             }
         ),
         FloatingMapActionItem(
@@ -242,13 +226,6 @@ fun MapScreen(
                     onMapLoaded = {
                         Log.d("MapScreen", "GoogleMap onMapLoaded callback.")
                         mapLoaded = true
-                        if (customHotspotIcon == null && mapsSdkInitialized) {
-                            Log.w("MapScreen", "customHotspotIcon is still null in onMapLoaded, attempting to create again.")
-                            customHotspotIcon = bitmapDescriptorFromVector(context, R.drawable.ic_map_pin)
-                            if(customHotspotIcon == null) {
-                                Log.e("MapScreen", "Failed to create custom marker icon even in onMapLoaded.")
-                            }
-                        }
                         showMapError = false
                     },
                     onPOIClick = { poi ->
@@ -257,7 +234,7 @@ fun MapScreen(
                 ) {
                     if (customHotspotIcon != null) {
                         (mapUiState as? MapUiState.Success)?.let { successState ->
-                            Log.d("MapScreen", "Rendering ${successState.hotspots.size} markers. Zoom context: ${successState.zoomLevelContext}")
+                            Log.d("MapScreen", "Rendering ${successState.hotspots.size} markers with custom icon.")
                             successState.hotspots.forEach { ebirdHotspot ->
                                 Marker(
                                     state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
