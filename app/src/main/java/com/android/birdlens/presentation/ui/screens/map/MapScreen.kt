@@ -191,10 +191,10 @@ fun MapScreen(
         ),
 // ...
         FloatingMapActionItem(
-            icon = { Icon(Icons.Filled.Info, contentDescription = "Bird Info (Test)", tint = TextWhite) },
-            contentDescription = "Bird Info (Test)",
+            icon = { Icon(Icons.Filled.CameraAlt, contentDescription = "Identify Bird", tint = TextWhite) },
+            contentDescription = "Identify Bird",
             onClick = {
-                navController.navigate(Screen.BirdInfo.createRoute("houspa")) // Example species
+                navController.navigate(Screen.BirdIdentifier.route)
             }
         ),
         FloatingMapActionItem(icon = { Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Bookmarks", tint = TextWhite) }, contentDescription = "Bookmarks", onClick = { Toast.makeText(context, "Show Bookmarks", Toast.LENGTH_SHORT).show() }),
@@ -327,7 +327,7 @@ fun MapScreen(
         }
     }
 }
-// MapScreenHeader and FloatingMapButton remain the same
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreenHeader(

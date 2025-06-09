@@ -15,7 +15,7 @@ val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties") // Path relative to project root
 var googleMapsApiKeyFromProperties = "YOUR_API_KEY_MISSING_IN_LOCAL_PROPERTIES" // Default/fallback value
 var ebirdApiKeyFromProperties = "YOUR_EBIRD_API_KEY_MISSING" // Default/fallback for eBird
-
+var geminiApiKeyFromProperties = "YOUR_GEMINI_API_KEY_MISSING"
 
 if (localPropertiesFile.exists()) {
     try {
@@ -23,6 +23,7 @@ if (localPropertiesFile.exists()) {
             localProperties.load(fis)
             googleMapsApiKeyFromProperties = localProperties.getProperty("MAPS_API_KEY")
             ebirdApiKeyFromProperties = localProperties.getProperty("EBIRD_API_KEY") // Get eBird API key
+            geminiApiKeyFromProperties = localProperties.getProperty("GEMINI_API_KEY")
 
             if (googleMapsApiKeyFromProperties != null) {
                 println("Successfully loaded MAPS_API_KEY from local.properties.")
@@ -33,6 +34,11 @@ if (localPropertiesFile.exists()) {
                 println("Successfully loaded EBIRD_API_KEY from local.properties.")
             } else {
                 println("Warning: EBIRD_API_KEY not found in local.properties.")
+            }
+            if (geminiApiKeyFromProperties != null) {
+                println("Successfully loaded GEMINI_API_KEY from local.properties.")
+            } else {
+                println("Warning: GEMINI_API_KEY not found in local.properties.")
             }
         }
     } catch (e: Exception) {
@@ -49,11 +55,16 @@ val ebirdApiKey = if (ebirdApiKeyFromProperties.isNullOrBlank() || ebirdApiKeyFr
 } else {
     ebirdApiKeyFromProperties!!
 }
-
+val geminiApiKey = if (geminiApiKeyFromProperties.isNullOrBlank() || geminiApiKeyFromProperties == "YOUR_GEMINI_API_KEY_MISSING") {
+    println("Using default/fallback Gemini API Key because value from local.properties was null, blank, or placeholder.")
+    "YOUR_GEMINI_API_KEY_MISSING_IN_CONFIG" // A distinct fallback
+} else {
+    geminiApiKeyFromProperties!!
+}
 
 val googleMapsApiKey = if (googleMapsApiKeyFromProperties.isNullOrBlank()) {
     println("Using default/fallback API Key because value from local.properties was null or blank.")
-    "YOUR_API_KEY_MISSING_OR_BLANK" // A distinct fallback
+    "YOUR_API_KEY_MISSING_OR_BLANK"
 } else {
     googleMapsApiKeyFromProperties!!
 }
@@ -76,11 +87,12 @@ android {
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
         resourceConfigurations.addAll(listOf("en", "vi"))
         buildConfigField("String", "EBIRD_API_KEY", "\"$ebirdApiKey\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildFeatures {
         compose = true
-        buildConfig = true // This line enables the BuildConfig class generation
+        buildConfig = true
     }
 
     buildTypes {
@@ -99,9 +111,7 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-    // buildFeatures { // Already defined above, removing duplicate
-    //     compose = true
-    // }
+
 }
 
 dependencies {
@@ -121,12 +131,13 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     // Coil
     implementation(libs.coil.compose)
-    implementation(libs.maps.compose) // Added
+    implementation(libs.maps.compose)
     implementation(libs.play.services.maps)
     implementation(libs.androidx.media3.common.ktx)
-    implementation(libs.core.ktx) // Added
+    implementation(libs.core.ktx)
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+    implementation(libs.generativeai)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -158,4 +169,5 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     kapt(libs.androidx.room.compiler) // For Kotlin annotation processing
     implementation(libs.androidx.room.ktx)
+    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
 }
