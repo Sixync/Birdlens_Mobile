@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/android/birdlens/ui/theme/Color.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/theme/Color.kt
 package com.android.birdlens.ui.theme
 
 import androidx.compose.ui.graphics.Color
@@ -33,7 +33,7 @@ val SocialButtonTextDark = Color.Black.copy(alpha = 0.85f)
 
 val ClickableLinkText = Color(0xFF90EE90)
 
-val BottomNavGreen = Color(0xFF00821B) // Updated Color
+val BottomNavGreen = Color(0xFF00821B)
 val SearchBarBackground = Color.White.copy(alpha = 0.15f)
 val SearchBarPlaceholderText = TextWhite.copy(alpha = 0.6f)
 val PageIndicatorInactive = Color.White.copy(alpha = 0.4f)
@@ -49,3 +49,6 @@ val CardBackground = Color.Black.copy(alpha = 0.25f)
 
 val LogoutButtonGreen = Color(0xFF50B062)
 val DividerColor = TextWhite.copy(alpha = 0.2f)
+
+// Added for image scrim
+val ImageScrimColor = Color.Black.copy(alpha = 0.4f)

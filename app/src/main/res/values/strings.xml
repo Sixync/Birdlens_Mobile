@@ -13,6 +13,9 @@
     <string name="confirm">CONFIRM</string>
     <string name="buy_now">BUY NOW</string>
     <string name="all_selected_count">ALL (%d)</string> <!-- %d for count -->
+    <string name="initializing">Initializing…</string>
+    <string name="error_title">Error</string>
+
 
     <!-- Welcome Screen -->
     <string name="welcome_title">Welcome</string>
@@ -98,12 +101,12 @@
     <string name="tour_type_icon_description">Tour Type</string>
     <string name="free_rental_badge">FREE RENTAL</string>
     <string name="rating_star_description">Rating Star</string>
-    <string name="tour_id_prefix">Tour #%d</string> <!-- %d for tour id, assuming item.id % 100 is for display -->
+    <string name="tour_id_prefix">Tour #%d</string>
     <!-- Tour Detail Screen Specific -->
-    <string name="tour_detail_preview_pager_image">Preview Pager Img %d</string> <!-- %d for page index -->
-    <string name="tour_detail_image_description">Tour Image %d</string> <!-- %d for image index -->
-    <string name="tour_detail_reviews_count">%d Reviews</string> <!-- %d for review count -->
-    <string name="tour_detail_price_format">Price: %s/trip</string> <!-- %s for price, note: removed $ for easier localization if needed -->
+    <string name="tour_detail_preview_pager_image">Preview Pager Img %d</string>
+    <string name="tour_detail_image_description">Tour Image %d</string>
+    <string name="tour_detail_reviews_count">%d Reviews</string>
+    <string name="tour_detail_price_format">Price: %s/trip</string>
     <string name="tour_detail_description_label">Description</string>
     <string name="tour_detail_pick_days_button">Pick your days</string>
 
@@ -122,7 +125,7 @@
 
     <!-- Cart Screen -->
     <string name="cart_title">YOUR CART</string>
-    <string name="cart_item_price_format">Price %s</string> <!-- %s for price -->
+    <string name="cart_item_price_format">Price %s</string>
     <string name="cart_decrement_quantity">Decrement</string>
     <string name="cart_increment_quantity">Increment</string>
     <string name="cart_item_image_preview_placeholder">Img</string>
@@ -133,13 +136,13 @@
     <string name="community_search_placeholder">Search community posts…</string>
     <string name="community_user_avatar_description">User Avatar</string>
     <string name="community_post_image_description">Post Image</string>
-    <string name="community_action_like">Like</string> <!-- For accessibility if icons alone aren't enough -->
+    <string name="community_action_like">Like</string>
     <string name="community_action_comment">Comment</string>
     <string name="community_action_share">Share</string>
 
 
     <!-- Map Screen -->
-    <string name="map_screen_title_birdlens">BIRDLENS</string> <!-- Header title -->
+    <string name="map_screen_title_birdlens">BIRDLENS</string>
     <string name="map_error_loading">Could not load map. Ensure Google Play Services is updated and API key is valid.</string>
     <string name="map_action_bird_locations">Bird Locations</string>
     <string name="map_action_bookmarks">Bookmarks</string>
@@ -151,16 +154,29 @@
     <string name="map_action_show_weather_toast">Show Weather</string>
     <string name="map_action_show_hotspots_toast">Show Hotspots</string>
     <string name="map_action_show_migration_toast">Show Migration (Not Implemented)</string>
+    <string name="map_action_home">Go to Home Location</string>
+    <string name="map_action_refresh_hotspots">Refresh Hotspots</string>
+    <string name="map_action_identify_bird">Identify Bird</string>
+    <string name="map_toast_refreshing_hotspots">Refreshing hotspots…</string>
+    <string name="map_toast_map_not_ready">Map not ready or SDK not initialized.</string>
+    <string name="map_toast_poi_clicked">POI Clicked: %1$s</string>
+    <string name="map_toast_play_services_unavailable">Google Play Services is not available or outdated. Map functionality may be limited.</string>
+    <string name="map_permission_required_message">Location permission is required to show your current location and relevant map features.</string>
+    <string name="map_grant_permissions_button">Grant Permissions</string>
+    <string name="map_permission_denied_rationale">If you permanently denied permission, you\'ll need to enable it in app settings.</string>
+    <string name="map_error_loading_detailed">Could not load map. Ensure Google Play Services is updated, API key is valid, and Maps SDK initialized correctly.</string>
+    <string name="map_marker_snippet_species">Species: %1$s</string>
+
 
     <!-- Marketplace Screen -->
-    <string name="marketplace_title_birdlens">BIRDLENS</string> <!-- Header title -->
+    <string name="marketplace_title_birdlens">BIRDLENS</string>
     <string name="marketplace_subtitle">Marketplace</string>
     <string name="marketplace_search_placeholder">Search something</string>
     <string name="marketplace_section_bird_pictures">Bird pictures</string>
     <string name="marketplace_section_categories">Categories</string>
     <string name="marketplace_section_deals">Deals</string>
     <string name="marketplace_section_rental_services">Rental Services</string>
-    <string name="marketplace_preview_image_title">Preview: %s</string> <!-- %s for title -->
+    <string name="marketplace_preview_image_title">Preview: %s</string>
     <string name="marketplace_preview_image_placeholder">Img</string>
     <string name="marketplace_preview_deal_placeholder">Preview Deal</string>
 
@@ -168,9 +184,34 @@
     <string name="icon_cart_description">Cart</string>
     <string name="icon_search_description">Search</string>
 
-<!--    admin management-->
+    <!-- Bird Info Screen -->
+    <string name="bird_info_characteristics_title">Characteristics</string>
+    <string name="bird_info_common_name">Common Name</string>
+    <string name="bird_info_scientific_name">Scientific Name</string>
+    <string name="bird_info_species_code">Species Code</string>
+    <string name="bird_info_category">Category</string>
+    <string name="bird_info_order">Order</string>
+    <string name="bird_info_family_common">Family (Common)</string>
+    <string name="bird_info_family_scientific">Family (Scientific)</string>
+    <string name="bird_info_taxon_order">Taxon Order</string>
+    <string name="bookmark">Bookmark</string>
+    <string name="bird_image_description">Image of %1$s</string>
+    <string name="error_loading_bird_info">Error: %1$s</string>
+
+    <!-- Hotspot Bird List Screen -->
+    <string name="hotspot_birds_title">Birds at Hotspot</string>
+    <string name="error_hotspot_id_missing">Error: Hotspot ID is missing.</string>
+    <string name="error_species_code_unavailable">Species code not available for %1$s</string>
+    <string name="hotspot_no_birds_found">No bird observations found for hotspot \'%1$s\'.</string>
+    <string name="bird_status_recent">Recent</string>
+    <string name="bird_status_historical">Historical</string>
+    <string name="bird_seen_on">Seen: %1$s</string>
+    <string name="bird_count">Count: %1$d</string>
+
+
+    <!-- admin management-->
     <string name="admin_manage_subscriptions">Manage Subscriptions</string>
-<!--    subscriptions-->
+    <!-- subscriptions -->
     <string name="subscription_tier_label">Current Plan</string>
     <string name="subscription_tier_standard">Standard User</string>
     <string name="subscription_tier_unknown">Unknown</string>

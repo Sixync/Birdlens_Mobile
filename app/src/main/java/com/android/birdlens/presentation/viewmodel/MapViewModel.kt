@@ -1,4 +1,4 @@
-// app/src/main/java/com/android/birdlens/presentation/viewmodel/MapViewModel.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/viewmodel/MapViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
 import android.app.Application
@@ -21,7 +21,12 @@ import kotlin.math.abs
 sealed class MapUiState {
     data object Idle : MapUiState()
     data object Loading : MapUiState()
-    data class Success(val hotspots: List<EbirdNearbyHotspot>, val zoomLevelContext: Float, val fetchedCenter: LatLng, val fetchedRadiusKm: Int) : MapUiState()
+    data class Success(
+        val hotspots: List<EbirdNearbyHotspot>,
+        val zoomLevelContext: Float,
+        val fetchedCenter: LatLng,
+        val fetchedRadiusKm: Int
+    ) : MapUiState()
     data class Error(val message: String) : MapUiState()
 }
 
@@ -32,19 +37,15 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val hotspotRepository = HotspotRepository(application.applicationContext)
 
     companion object {
-        // A single zoom level to determine if hotspots should be shown.
-        // Above this level, we are "zoomed in". Below, we are "zoomed out".
-        const val SHOW_HOTSPOTS_MIN_ZOOM_LEVEL = 9.0f
+        // Adjusted zoom level: Hotspots will show if zoom is 7.5f or greater.
+        const val SHOW_HOTSPOTS_MIN_ZOOM_LEVEL = 7.5f
 
-        // The user requested a radius of "around 100km". The eBird API's maximum radius is 50km.
-        // We will use 50km, which covers a diameter of 100km.
         const val HOTSPOT_FETCH_RADIUS_KM = 50
-
-        // Default camera position
         val VIETNAM_INITIAL_CENTER = LatLng(16.047079, 108.220825)
-
+        // Define the zoom level for the "Home" button
+        const val HOME_BUTTON_ZOOM_LEVEL = 6.0f // Can be same as initial or different
         private const val CAMERA_IDLE_DEBOUNCE_MS = 750L
-        private const val SIGNIFICANT_PAN_THRESHOLD_DEGREES = 0.25 // Approx 27.5km, ~half of the fetch radius
+        private const val SIGNIFICANT_PAN_THRESHOLD_DEGREES = 0.25
         const val COUNTRY_CODE_VIETNAM = "VN"
         private const val TAG = "MapViewModel"
     }
@@ -59,17 +60,22 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             delay(CAMERA_IDLE_DEBOUNCE_MS)
 
             if (zoom < SHOW_HOTSPOTS_MIN_ZOOM_LEVEL) {
-                // Zoomed out: Hide hotspots
                 if (areHotspotsVisible) {
-                    _uiState.value = MapUiState.Success(emptyList(), zoom)
+                    _uiState.value = MapUiState.Success(emptyList(), zoom, center, 0)
                     areHotspotsVisible = false
-                    lastFetchedCenter = null // Reset to force a refetch on the next zoom-in
-                    Log.d(TAG, "Zoom level ($zoom) is below threshold. Hiding hotspots.")
+                    lastFetchedCenter = null
+                    Log.d(TAG, "Zoom level ($zoom) is below threshold ($SHOW_HOTSPOTS_MIN_ZOOM_LEVEL). Hiding hotspots.")
+                } else {
+                    // If hotspots are already hidden, just update the context if needed
+                    (_uiState.value as? MapUiState.Success)?.let {
+                        if (it.hotspots.isEmpty()) { // Ensure we are in a "hidden" success state
+                            _uiState.value = it.copy(zoomLevelContext = zoom, fetchedCenter = center, fetchedRadiusKm = 0)
+                        }
+                    }
                 }
                 return@launch
             }
 
-            // Zoomed in: Show hotspots if needed
             val centerChangedSignificantly = lastFetchedCenter == null || isCenterChangeSignificant(center, lastFetchedCenter!!)
 
             if (!areHotspotsVisible || centerChangedSignificantly) {
@@ -79,10 +85,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     val fetchedHotspots = hotspotRepository.getNearbyHotspots(
                         center = center,
                         radiusKm = HOTSPOT_FETCH_RADIUS_KM,
+                        currentBounds = null,
                         countryCodeFilter = COUNTRY_CODE_VIETNAM
                     ).sortedByDescending { it.numSpeciesAllTime ?: 0 }
 
-                    _uiState.value = MapUiState.Success(fetchedHotspots, zoom)
+                    _uiState.value = MapUiState.Success(fetchedHotspots, zoom, center, HOTSPOT_FETCH_RADIUS_KM)
                     areHotspotsVisible = true
                     lastFetchedCenter = center
                     Log.d(TAG, "Fetch successful. Showing ${fetchedHotspots.size} hotspots.")
@@ -98,7 +105,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } else {
                 Log.d(TAG, "View has not changed enough. Not re-fetching.")
-                // Update zoom context even if not fetching, to keep UI state fresh
                 (_uiState.value as? MapUiState.Success)?.let {
                     _uiState.value = it.copy(zoomLevelContext = zoom)
                 }
@@ -115,10 +121,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     fun clearHotspotCache() {
         viewModelScope.launch {
             hotspotRepository.clearAllHotspotsCache()
-            // Invalidate last fetch to trigger a new one on next camera idle
             lastFetchedCenter = null
             areHotspotsVisible = false
             Log.i(TAG, "Hotspot cache cleared.")
+            // Optionally, trigger a refetch for the current view if appropriate
+            // For example, if _uiState.value is Success, call requestHotspotsForCurrentView with its parameters.
         }
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -42,6 +43,7 @@ import com.android.birdlens.presentation.viewmodel.MapViewModel
 import com.android.birdlens.ui.theme.*
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.OnMapsSdkInitializedCallback
 import com.google.android.gms.maps.model.BitmapDescriptor
@@ -49,6 +51,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.launch
 
 fun bitmapDescriptorFromVector(
     context: Context,
@@ -80,7 +83,7 @@ fun bitmapDescriptorFromVector(
 
 data class FloatingMapActionItem(
     val icon: @Composable () -> Unit,
-    val contentDescription: String,
+    val contentDescriptionResId: Int, // Changed to resource ID
     val onClick: () -> Unit,
     val badgeCount: Int? = null
 )
@@ -96,6 +99,7 @@ fun MapScreen(
     val context = LocalContext.current
     var showMapError by remember { mutableStateOf(false) }
     val mapUiState by mapViewModel.uiState.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     var customHotspotIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var mapsSdkInitialized by remember { mutableStateOf(false) }
@@ -136,7 +140,7 @@ fun MapScreen(
 
     val initialCameraPosition = CameraPosition.fromLatLngZoom(
         MapViewModel.VIETNAM_INITIAL_CENTER,
-        6.0f // Start a bit zoomed out
+        MapViewModel.HOME_BUTTON_ZOOM_LEVEL // Use defined home zoom for consistency
     )
     val cameraPositionState = rememberCameraPositionState {
         position = initialCameraPosition
@@ -157,7 +161,6 @@ fun MapScreen(
 
     var mapLoaded by remember { mutableStateOf(false) }
     LaunchedEffect(cameraPositionState.isMoving, mapLoaded) {
-        // When camera movement stops and the map is loaded, notify the ViewModel.
         if (!cameraPositionState.isMoving && mapLoaded) {
             val currentTarget = cameraPositionState.position.target
             val currentZoom = cameraPositionState.position.zoom
@@ -168,43 +171,52 @@ fun MapScreen(
 
     val floatingActionItems = listOf(
         FloatingMapActionItem(
-            icon = { Icon(Icons.Filled.Refresh, contentDescription = "Refresh Hotspots", tint = TextWhite) },
-            contentDescription = "Refresh Hotspots",
+            icon = { Icon(Icons.Filled.Home, contentDescription = stringResource(R.string.map_action_home), tint = TextWhite) },
+            contentDescriptionResId = R.string.map_action_home,
             onClick = {
-                if (mapsSdkInitialized && cameraPositionState.projection != null) {
+                coroutineScope.launch {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(
+                            MapViewModel.VIETNAM_INITIAL_CENTER,
+                            MapViewModel.HOME_BUTTON_ZOOM_LEVEL
+                        ),
+                        durationMs = 1000 // Animation duration
+                    )
+                }
+                // Optionally trigger a hotspot fetch for the home location if desired
+                // mapViewModel.requestHotspotsForCurrentView(MapViewModel.VIETNAM_INITIAL_CENTER, MapViewModel.HOME_BUTTON_ZOOM_LEVEL)
+            }
+        ),
+        FloatingMapActionItem(
+            icon = { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.map_action_refresh_hotspots), tint = TextWhite) },
+            contentDescriptionResId = R.string.map_action_refresh_hotspots,
+            onClick = {
+                if (mapsSdkInitialized && mapLoaded) { // Added mapLoaded check
                     val currentTarget = cameraPositionState.position.target
                     val currentZoom = cameraPositionState.position.zoom
                     Log.d("MapScreen", "Refresh button tapped. Re-triggering fetch for current view.")
                     mapViewModel.requestHotspotsForCurrentView(currentTarget, currentZoom)
-                    Toast.makeText(context, "Refreshing hotspots...", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.map_toast_refreshing_hotspots), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(context, "Map not ready or SDK not initialized.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.map_toast_map_not_ready), Toast.LENGTH_SHORT).show()
                 }
             }
         ),
-// ...
         FloatingMapActionItem(
-            icon = { Icon(Icons.Filled.CameraAlt, contentDescription = "Identify Bird", tint = TextWhite) },
-            contentDescription = "Identify Bird",
+            icon = { Icon(Icons.Filled.CameraAlt, contentDescription = stringResource(R.string.map_action_identify_bird), tint = TextWhite) },
+            contentDescriptionResId = R.string.map_action_identify_bird,
             onClick = {
                 navController.navigate(Screen.BirdIdentifier.route)
             }
         ),
-        FloatingMapActionItem(
-            icon = { Icon(Icons.Filled.CameraAlt, contentDescription = "Identify Bird", tint = TextWhite) },
-            contentDescription = "Identify Bird",
-            onClick = {
-                navController.navigate(Screen.BirdIdentifier.route)
-            }
-        ),
-
-        )
+        // Add other existing items if any, or remove the duplicate camera icon
+    )
 
     AppScaffold(
         navController = navController,
         topBar = {
             MapScreenHeader(
-                onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() else { /* Handle */ } },
+                onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() else { /* Handle no backstack */ } },
                 onNavigateToCart = { navController.navigate(Screen.Cart.route) }
             )
         },
@@ -227,9 +239,14 @@ fun MapScreen(
                         Log.d("MapScreen", "GoogleMap onMapLoaded callback.")
                         mapLoaded = true
                         showMapError = false
+                        // Initial fetch for the starting position after map is loaded
+                        mapViewModel.requestHotspotsForCurrentView(
+                            cameraPositionState.position.target,
+                            cameraPositionState.position.zoom
+                        )
                     },
                     onPOIClick = { poi ->
-                        Toast.makeText(context, "POI Clicked: ${poi.name}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.map_toast_poi_clicked, poi.name), Toast.LENGTH_SHORT).show()
                     }
                 ) {
                     if (customHotspotIcon != null) {
@@ -239,7 +256,7 @@ fun MapScreen(
                                 Marker(
                                     state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
                                     title = ebirdHotspot.locName,
-                                    snippet = "Species: ${ebirdHotspot.numSpeciesAllTime ?: "N/A"}",
+                                    snippet = stringResource(R.string.map_marker_snippet_species, ebirdHotspot.numSpeciesAllTime ?: "N/A"),
                                     icon = customHotspotIcon,
                                     onInfoWindowClick = {
                                         navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
@@ -256,7 +273,7 @@ fun MapScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = GreenWave2.copy(alpha = 0.7f), strokeWidth = 5.dp)
                 }
                 (mapUiState as? MapUiState.Error)?.let { errorState ->
-                    LaunchedEffect(errorState.message) { // Show toast only once per error message
+                    LaunchedEffect(errorState.message) {
                         Toast.makeText(context, errorState.message, Toast.LENGTH_LONG).show()
                     }
                 }
@@ -270,7 +287,7 @@ fun MapScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        "Location permission is required to show your current location and relevant map features.",
+                        stringResource(R.string.map_permission_required_message),
                         color = TextWhite,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(bottom = 16.dp)
@@ -279,11 +296,11 @@ fun MapScreen(
                         onClick = { locationPermissionsState.launchMultiplePermissionRequest() },
                         colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
                     ) {
-                        Text("Grant Permissions", color = TextWhite)
+                        Text(stringResource(R.string.map_grant_permissions_button), color = TextWhite)
                     }
                     if (locationPermissionsState.shouldShowRationale && !locationPermissionsState.allPermissionsGranted) {
                         Text(
-                            "If you permanently denied permission, you'll need to enable it in app settings.",
+                            stringResource(R.string.map_permission_denied_rationale),
                             color = TextWhite.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 8.dp),
@@ -295,15 +312,15 @@ fun MapScreen(
 
             if (showMapError) {
                 Box(modifier = Modifier.fillMaxSize().background(GreenDeep.copy(alpha = 0.8f)), contentAlignment = Alignment.Center) {
-                    Text("Could not load map. Ensure Google Play Services is updated, API key is valid, and Maps SDK initialized correctly.", color = TextWhite, modifier = Modifier.padding(32.dp), textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.map_error_loading_detailed), color = TextWhite, modifier = Modifier.padding(32.dp), textAlign = TextAlign.Center)
                 }
             }
 
             if(mapsSdkInitialized && locationPermissionsState.allPermissionsGranted) {
                 Column(
                     modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 16.dp, top = 16.dp)
+                        .align(Alignment.CenterStart) // Position on the left
+                        .padding(start = 16.dp, top = 70.dp) // Adjust padding as needed
                         .wrapContentHeight(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -318,7 +335,7 @@ fun MapScreen(
     val googlePlayServicesAvailable = com.google.android.gms.common.GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
     if (googlePlayServicesAvailable != com.google.android.gms.common.ConnectionResult.SUCCESS) {
         LaunchedEffect(googlePlayServicesAvailable) {
-            Toast.makeText(context, "Google Play Services is not available or outdated. Map functionality may be limited.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.map_toast_play_services_unavailable), Toast.LENGTH_LONG).show()
             showMapError = true
             mapsSdkInitialized = false
         }
@@ -334,16 +351,16 @@ fun MapScreenHeader(
 ) {
     CenterAlignedTopAppBar(
         title = {
-            Text("BIRDLENS", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, color = GreenWave2, letterSpacing = 1.sp))
+            Text(stringResource(R.string.map_screen_title_birdlens).uppercase(), style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, color = GreenWave2, letterSpacing = 1.sp))
         },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextWhite)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = TextWhite)
             }
         },
         actions = {
             IconButton(onClick = onNavigateToCart) {
-                Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart", tint = TextWhite, modifier = Modifier.size(28.dp))
+                Icon(Icons.Filled.ShoppingCart, contentDescription = stringResource(R.string.icon_cart_description), tint = TextWhite, modifier = Modifier.size(28.dp))
             }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
@@ -354,6 +371,7 @@ fun MapScreenHeader(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FloatingMapButton(item: FloatingMapActionItem) {
+    val contentDesc = stringResource(id = item.contentDescriptionResId)
     BadgedBox(
         badge = {
             if (item.badgeCount != null) {
@@ -363,13 +381,13 @@ fun FloatingMapButton(item: FloatingMapActionItem) {
             }
         },
         modifier = Modifier
-            .size(56.dp)
+            .size(52.dp) // Slightly smaller for a list of buttons
             .clip(CircleShape)
-            .background(ButtonGreen.copy(alpha = 0.85f))
+            .background(ButtonGreen.copy(alpha = 0.9f)) // Slightly more opaque
             .clickable(onClick = item.onClick)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            item.icon()
+            item.icon() // Icon composable is called here
         }
     }
 }
