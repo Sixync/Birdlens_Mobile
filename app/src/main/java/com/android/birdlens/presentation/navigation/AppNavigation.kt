@@ -1,3 +1,4 @@
+// app/src/main/java/com/android/birdlens/presentation/navigation/AppNavigation.kt
 // EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/AppNavigation.kt
 package com.android.birdlens.presentation.navigation
 
