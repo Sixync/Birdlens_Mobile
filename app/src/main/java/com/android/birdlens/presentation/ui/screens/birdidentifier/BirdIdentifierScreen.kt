@@ -1,3 +1,4 @@
+// app/src/main/java/com/android/birdlens/presentation/ui/screens/birdidentifier/BirdIdentifierScreen.kt
 package com.android.birdlens.presentation.ui.screens.birdidentifier
 
 import android.Manifest
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
 import com.android.birdlens.presentation.viewmodel.BirdIdentifierUiState
@@ -51,8 +53,8 @@ fun BirdIdentifierScreen(
     viewModel: BirdIdentifierViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var userPrompt by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     // Image Picker Launcher
@@ -60,17 +62,14 @@ fun BirdIdentifierScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            selectedImageUri = it
             val bitmap = if (Build.VERSION.SDK_INT < 28) {
                 MediaStore.Images.Media.getBitmap(context.contentResolver, it)
             } else {
                 val source = ImageDecoder.createSource(context.contentResolver, it)
                 ImageDecoder.decodeBitmap(source)
             }
-            // Ensure bitmap is mutable and in ARGB_8888 for Gemini
             val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
             selectedImageBitmap = mutableBitmap
-            viewModel.identifyBirdFromImage(mutableBitmap)
         }
     }
 
@@ -123,7 +122,7 @@ fun BirdIdentifierScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Tap to select a bird photo",
+                            text = "Tap to select a bird photo (optional)",
                             color = TextWhite.copy(alpha = 0.8f)
                         )
                     }
@@ -141,10 +140,66 @@ fun BirdIdentifierScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Initial Prompt Input - shown only before the conversation starts
+            if (uiState is BirdIdentifierUiState.Idle) {
+                val placeholderText = if (selectedImageBitmap == null) {
+                    "Type a bird's name and a question..."
+                } else {
+                    "Ask about the bird in the image..."
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = userPrompt,
+                        onValueChange = { userPrompt = it },
+                        placeholder = { Text(placeholderText) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = TextWhite,
+                            unfocusedTextColor = TextWhite,
+                            focusedContainerColor = CardBackground,
+                            unfocusedContainerColor = CardBackground,
+                            cursorColor = TextWhite,
+                            focusedIndicatorColor = GreenWave2,
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = {
+                            if (selectedImageBitmap != null) {
+                                viewModel.startChatWithImage(selectedImageBitmap!!, userPrompt)
+                            } else {
+                                viewModel.startChatWithText(userPrompt)
+                            }
+                        },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(GreenWave2),
+                        enabled = userPrompt.isNotBlank() && uiState !is BirdIdentifierUiState.Loading
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Start conversation",
+                            tint = VeryDarkGreenBase
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // State Handling Section
             when (val state = uiState) {
                 is BirdIdentifierUiState.Idle -> {
-                    Text("Select an image to start.", color = TextWhite.copy(alpha = 0.7f))
+                    Text(
+                        "Select an image or type a bird's name above to start.",
+                        color = TextWhite.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
                 }
                 is BirdIdentifierUiState.Loading -> {
                     CircularProgressIndicator(color = GreenWave2)
@@ -153,11 +208,13 @@ fun BirdIdentifierScreen(
                 }
                 is BirdIdentifierUiState.Error -> {
                     Text(state.errorMessage, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                    Button(onClick = { viewModel.resetState() }) {
+                        Text("Try Again")
+                    }
                 }
                 is BirdIdentifierUiState.Success -> {
                     ConversationArea(
-                        identifiedBird = state.identifiedBird,
-                        chatResponse = state.chatResponse,
+                        state = state,
                         onQuestionAsked = { question -> viewModel.askQuestion(question) }
                     )
                 }
@@ -168,50 +225,66 @@ fun BirdIdentifierScreen(
 
 @Composable
 fun ColumnScope.ConversationArea(
-    identifiedBird: String,
-    chatResponse: String,
+    state: BirdIdentifierUiState.Success,
     onQuestionAsked: (String) -> Unit
 ) {
-    var questionText by remember { mutableStateOf("") }
+    var followUpQuestion by remember { mutableStateOf("") }
 
     // Identified Bird Title
     Text(
-        text = identifiedBird,
+        text = state.identifiedBird,
         style = MaterialTheme.typography.headlineSmall,
         color = GreenWave2,
         fontWeight = FontWeight.Bold
     )
 
-    Spacer(modifier = Modifier.height(16.dp))
-
-    // Chat Response Area
-    Box(
+    // Scrollable area for conversation history (including image)
+    Column(
         modifier = Modifier
             .weight(1f)
             .fillMaxWidth()
-            .background(CardBackground, RoundedCornerShape(12.dp))
-            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            text = chatResponse,
-            color = TextWhite,
+        // Display the fetched image of the bird
+        state.imageUrl?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            Image(
+                painter = rememberAsyncImagePainter(model = it),
+                contentDescription = "Image of ${state.identifiedBird}",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Chat Response Text
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-        )
+                .fillMaxWidth()
+                .background(CardBackground, RoundedCornerShape(12.dp))
+                .padding(16.dp)
+        ) {
+            Text(
+                text = state.chatResponse,
+                color = TextWhite,
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Input Area
+    // Input Area for follow-up questions
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         OutlinedTextField(
-            value = questionText,
-            onValueChange = { questionText = it },
-            placeholder = { Text("Ask about the ${identifiedBird}...") },
+            value = followUpQuestion,
+            onValueChange = { followUpQuestion = it },
+            placeholder = { Text("Ask a follow-up question...") },
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(24.dp),
             colors = TextFieldDefaults.colors(
@@ -219,25 +292,23 @@ fun ColumnScope.ConversationArea(
                 unfocusedTextColor = TextWhite,
                 focusedContainerColor = CardBackground,
                 unfocusedContainerColor = CardBackground,
-                disabledContainerColor = CardBackground,
                 cursorColor = TextWhite,
                 focusedIndicatorColor = GreenWave2,
-                unfocusedIndicatorColor = TextWhite.copy(alpha = 0.5f),
             )
         )
         Spacer(modifier = Modifier.width(8.dp))
         IconButton(
             onClick = {
-                if (questionText.isNotBlank()) {
-                    onQuestionAsked(questionText)
-                    questionText = ""
+                if (followUpQuestion.isNotBlank()) {
+                    onQuestionAsked(followUpQuestion)
+                    followUpQuestion = ""
                 }
             },
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
                 .background(GreenWave2),
-            enabled = questionText.isNotBlank()
+            enabled = followUpQuestion.isNotBlank()
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
