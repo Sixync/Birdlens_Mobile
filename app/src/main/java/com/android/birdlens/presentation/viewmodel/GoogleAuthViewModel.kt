@@ -1,29 +1,16 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/viewmodel/GoogleAuthViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
-// import android.app.Activity // No longer needed for Google One-Tap
 import android.app.Application
-import android.content.Context // Keep for TokenManager in signOut
+import android.content.Context
 import android.util.Log
-// import android.widget.Toast // Can be removed if not used directly in VM, typically handle UI feedback in UI layer
-// import androidx.activity.ComponentActivity // No longer needed for Google One-Tap
-// import androidx.activity.result.ActivityResultLauncher // No longer needed
-// import androidx.activity.result.IntentSenderRequest // No longer needed
-// import androidx.activity.result.contract.ActivityResultContracts // No longer needed
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-// import com.android.birdlens.data.model.request.GoogleIdTokenRequest // No longer needed
+import com.android.birdlens.data.TokenManager // Ensure correct import
 import com.android.birdlens.data.model.request.LoginRequest
 import com.android.birdlens.data.model.request.RegisterRequest
 import com.android.birdlens.data.network.ApiService
 import com.android.birdlens.data.network.RetrofitInstance
-// import com.google.android.gms.auth.api.identity.BeginSignInRequest // No longer needed
-// import com.google.android.gms.auth.api.identity.Identity // No longer needed
-// import com.google.android.gms.auth.api.identity.SignInClient // No longer needed
-// import com.google.android.gms.common.api.ApiException // No longer needed
-// import com.google.android.gms.common.api.CommonStatusCodes // No longer needed
-// import com.google.android.gms.common.GoogleApiAvailability // No longer needed
-// import com.google.android.gms.common.ConnectionResult // No longer needed
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
@@ -39,10 +26,8 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     private val appApplication: Application = application
 
     private val apiService: ApiService = RetrofitInstance.api(application.applicationContext)
+    private val tokenManager = TokenManager.getInstance(application.applicationContext)
 
-    // Removed _googleSignInOneTapState and its public StateFlow
-    // private val _googleSignInOneTapState = MutableStateFlow<GoogleSignInOneTapState>(GoogleSignInOneTapState.Idle)
-    // val googleSignInOneTapState: StateFlow<GoogleSignInOneTapState> = _googleSignInOneTapState.asStateFlow()
 
     private val _backendAuthState = MutableStateFlow<BackendAuthState>(BackendAuthState.Idle)
     val backendAuthState: StateFlow<BackendAuthState> = _backendAuthState.asStateFlow()
@@ -50,19 +35,14 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     private val _firebaseSignInState = MutableStateFlow<FirebaseSignInState>(FirebaseSignInState.Idle)
     val firebaseSignInState: StateFlow<FirebaseSignInState> = _firebaseSignInState.asStateFlow()
 
-    // Removed properties related to Google One-Tap
-    // private var oneTapClient: SignInClient? = null
-    // private lateinit var signInRequest: BeginSignInRequest // This was unused, maybe a typo for googleIdTokenSignInRequest
-    // private lateinit var googleIdTokenSignInRequest: BeginSignInRequest
-    // private var googleSignInLauncher: ActivityResultLauncher<IntentSenderRequest>? = null
-    // private val serverClientId = "154465275979-jjmn8mi9a47mjms952rcba7eph12kgo0.apps.googleusercontent.com" // No longer needed
+    // New state for email verification
+    private val _emailVerificationState = MutableStateFlow<EmailVerificationState>(EmailVerificationState.Idle)
+    val emailVerificationState: StateFlow<EmailVerificationState> = _emailVerificationState.asStateFlow()
 
-    // Removed initialize, checkGooglePlayServices, startGoogleSignIn,
-    // handleGoogleOneTapResult, handleGoogleOneTapException, authenticateWithBackendUsingGoogleToken methods
-    // as they were specific to Google One-Tap and direct backend /auth/google calls.
 
     fun registerUser(registerRequest: RegisterRequest) {
         _backendAuthState.value = BackendAuthState.Loading
+        Log.d("AuthVM", "Registering user: ${registerRequest.username}")
         viewModelScope.launch {
             try {
                 val response = apiService.registerUser(registerRequest)
@@ -70,7 +50,7 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
                     val apiResponse = response.body()!!
                     if (!apiResponse.error && apiResponse.data != null) {
                         val customToken = apiResponse.data
-                        Log.d("AuthVM", "Backend Registration Success, got custom token: ${customToken.take(15)}...")
+                        Log.d("AuthVM", "Backend Registration Success, got custom token (first 15 chars): ${customToken.take(15)}...")
                         _backendAuthState.value = BackendAuthState.RegistrationSuccess(customToken)
                         signInToFirebaseWithCustomToken(customToken)
                     } else {
@@ -92,6 +72,7 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
 
     fun loginUser(loginRequest: LoginRequest) {
         _backendAuthState.value = BackendAuthState.Loading
+        Log.d("AuthVM", "Logging in user: ${loginRequest.email}")
         viewModelScope.launch {
             try {
                 val response = apiService.loginUser(loginRequest)
@@ -99,8 +80,8 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
                     val apiResponse = response.body()!!
                     if (!apiResponse.error && apiResponse.data != null) {
                         val customToken = apiResponse.data
-                        Log.d("AuthVM", "Backend Login Success, got custom token: ${customToken.take(15)}...")
-                        _backendAuthState.value = BackendAuthState.CustomTokenReceived(customToken) // Generic for any custom token
+                        Log.d("AuthVM", "Backend Login Success, got custom token (first 15 chars): ${customToken.take(15)}...")
+                        _backendAuthState.value = BackendAuthState.CustomTokenReceived(customToken)
                         signInToFirebaseWithCustomToken(customToken)
                     } else {
                         val errorMsg = apiResponse.message ?: "Login failed: API error."
@@ -121,9 +102,9 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun signInToFirebaseWithCustomToken(customToken: String) {
         _firebaseSignInState.value = FirebaseSignInState.Loading
+        Log.d("AuthVM", "Attempting Firebase sign-in with custom token (first 15 chars): ${customToken.take(15)}...")
         viewModelScope.launch {
             try {
-                Log.d("AuthVM", "Attempting Firebase sign-in with custom token: ${customToken.take(15)}...")
                 val authResult = auth.signInWithCustomToken(customToken).await()
                 val firebaseUser = authResult.user
                 if (firebaseUser != null) {
@@ -131,9 +112,8 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
                     val idTokenResult = firebaseUser.getIdToken(true).await()
                     val firebaseIdToken = idTokenResult.token
                     if (firebaseIdToken != null) {
-                        Log.d("AuthVM", "Firebase ID Token obtained: ${firebaseIdToken.take(15)}...")
-                        Log.d("AuthVM_TOKEN", "Firebase ID Token: $firebaseIdToken")
-                        com.android.birdlens.data.TokenManager.getInstance(appApplication.applicationContext).saveFirebaseIdToken(firebaseIdToken)
+                        Log.d("AuthVM", "Firebase ID Token obtained (first 15 chars): ${firebaseIdToken.take(15)}...")
+                        tokenManager.saveFirebaseIdToken(firebaseIdToken)
                         _firebaseSignInState.value = FirebaseSignInState.Success(firebaseUser, firebaseIdToken)
                     } else {
                         _firebaseSignInState.value = FirebaseSignInState.Error("Failed to get Firebase ID Token after custom sign-in.")
@@ -150,45 +130,69 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun signOut(context: Context) { // Pass context for TokenManager
+    fun verifyEmailToken(token: String, userId: String) {
+        _emailVerificationState.value = EmailVerificationState.Loading
+        Log.d("AuthVM", "Verifying email with token: $token for user_id: $userId")
         viewModelScope.launch {
             try {
-                auth.signOut()
-                // Removed oneTapClient?.signOut() as it's no longer used
-                com.android.birdlens.data.TokenManager.getInstance(context.applicationContext).clearTokens()
-                resetAllAuthStates()
-                Log.d("AuthVM", "User signed out from Firebase.")
+                val response = apiService.verifyEmail(token, userId)
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (!apiResponse.error) {
+                        _emailVerificationState.value = EmailVerificationState.Success(apiResponse.message ?: "Email verified successfully!")
+                        Log.i("AuthVM", "Email verification success: ${apiResponse.message}")
+                    } else {
+                        _emailVerificationState.value = EmailVerificationState.Error(apiResponse.message ?: "Email verification failed.")
+                        Log.e("AuthVM", "Email verification API error: ${apiResponse.message}")
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: "Unknown error during email verification"
+                    _emailVerificationState.value = EmailVerificationState.Error("Error: ${response.code()} - $errorBody")
+                    Log.e("AuthVM", "Email verification HTTP error: ${response.code()} - $errorBody")
+                }
             } catch (e: Exception) {
-                Log.e("AuthVM", "Error during sign out: ${e.localizedMessage}", e)
-                com.android.birdlens.data.TokenManager.getInstance(context.applicationContext).clearTokens()
-                resetAllAuthStates() // Ensure states are reset even on error
+                _emailVerificationState.value = EmailVerificationState.Error("Exception: ${e.localizedMessage ?: "Network request failed"}")
+                Log.e("AuthVM", "Email verification exception", e)
             }
         }
     }
 
-    // Removed resetGoogleOneTapState
-    // fun resetGoogleOneTapState() { _googleSignInOneTapState.value = GoogleSignInOneTapState.Idle }
+
+    fun signOut(context: Context) {
+        viewModelScope.launch {
+            try {
+                auth.signOut()
+                tokenManager.clearTokens()
+                resetAllAuthStates()
+                Log.d("AuthVM", "User signed out from Firebase.")
+            } catch (e: Exception) {
+                Log.e("AuthVM", "Error during sign out: ${e.localizedMessage}", e)
+                tokenManager.clearTokens()
+                resetAllAuthStates()
+            }
+        }
+    }
+
     fun resetBackendAuthState() { _backendAuthState.value = BackendAuthState.Idle }
     fun resetFirebaseSignInState() { _firebaseSignInState.value = FirebaseSignInState.Idle }
+    fun resetEmailVerificationState() { _emailVerificationState.value = EmailVerificationState.Idle }
+
 
     private fun resetAllAuthStates() {
-        // resetGoogleOneTapState() // Removed
         resetBackendAuthState()
         resetFirebaseSignInState()
+        resetEmailVerificationState()
     }
 
     fun getCurrentFirebaseUser(): FirebaseUser? = auth.currentUser
 
-    // Removed GoogleSignInOneTapState sealed class
-
-    // Simplified AuthOperation
-    enum class AuthOperation { LOGIN, REGISTER } // Removed GOOGLE_SIGN_IN
+    enum class AuthOperation { LOGIN, REGISTER }
 
     sealed class BackendAuthState {
         object Idle : BackendAuthState()
         object Loading : BackendAuthState()
-        data class CustomTokenReceived(val customToken: String) : BackendAuthState() // Used for login
-        data class RegistrationSuccess(val customToken: String) : BackendAuthState() // Specific for registration response
+        data class CustomTokenReceived(val customToken: String) : BackendAuthState()
+        data class RegistrationSuccess(val customToken: String) : BackendAuthState()
         data class Error(val message: String, val operation: AuthOperation) : BackendAuthState()
     }
 
@@ -197,5 +201,13 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
         object Loading : FirebaseSignInState()
         data class Success(val firebaseUser: FirebaseUser, val firebaseIdToken: String) : FirebaseSignInState()
         data class Error(val message: String) : FirebaseSignInState()
+    }
+
+    // New sealed class for email verification state
+    sealed class EmailVerificationState {
+        object Idle : EmailVerificationState()
+        object Loading : EmailVerificationState()
+        data class Success(val message: String) : EmailVerificationState()
+        data class Error(val message: String) : EmailVerificationState()
     }
 }

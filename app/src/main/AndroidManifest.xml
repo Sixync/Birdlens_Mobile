@@ -3,13 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Permissions required by Google Maps -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Required for AdMob -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- Required for picking images for the AI -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
 
@@ -30,9 +27,6 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${GOOGLE_MAPS_API_KEY}" />
 
-        <!-- AdMob App ID -->
-        <!-- Replace with your actual AdMob App ID -->
-        <!-- Sample AdMob App ID for testing: ca-app-pub-3940256099942544~3347511713 -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-7643061698514707~1593445359"/>
@@ -42,11 +36,22 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.Birdlens">
+            android:theme="@style/Theme.Birdlens"
+            android:launchMode="singleTask"> {/* singleTask is good for deep link handling */}
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            {/* Deep Link Intent Filter for Email Verification using custom scheme */}
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                {/* This scheme and host must match the FRONTEND_URL base */}
+                <data android:scheme="birdlens"
+                    android:host="deeplink"
+                    android:pathPrefix="/auth/confirm-email" />
             </intent-filter>
         </activity>
     </application>

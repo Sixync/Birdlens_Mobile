@@ -1,10 +1,10 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/AppNavigation.kt
 package com.android.birdlens.presentation.navigation
 
-import android.app.Application // Import Application
+import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext // Import LocalContext
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -15,6 +15,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.android.birdlens.presentation.ui.screens.accountinfo.AccountInfoScreen
 import com.android.birdlens.presentation.ui.screens.admin.subscriptions.AdminSubscriptionListScreen
 import com.android.birdlens.presentation.ui.screens.admin.subscriptions.CreateSubscriptionScreen
@@ -24,12 +25,14 @@ import com.android.birdlens.presentation.ui.screens.birdidentifier.BirdIdentifie
 import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
+import com.android.birdlens.presentation.ui.screens.emailverification.EmailVerificationScreen
 import com.android.birdlens.presentation.ui.screens.eventdetail.EventDetailScreen
 import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
 import com.android.birdlens.presentation.ui.screens.pickdays.PickDaysScreen
+import com.android.birdlens.presentation.ui.screens.pleaseverify.PleaseVerifyEmailScreen // Import new screen
 import com.android.birdlens.presentation.ui.screens.register.RegisterScreen
 import com.android.birdlens.presentation.ui.screens.settings.SettingsScreen
 import com.android.birdlens.presentation.ui.screens.tour.TourScreen
@@ -46,7 +49,6 @@ import com.android.birdlens.presentation.viewmodel.EventDetailViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModelFactory
 import com.android.birdlens.presentation.viewmodel.MapViewModel
 import com.android.birdlens.presentation.viewmodel.HotspotBirdListViewModel
-// ... other imports
 
 @Composable
 fun AppNavigation(
@@ -76,6 +78,8 @@ fun AppNavigation(
             )
         }
         composable(Screen.Register.route) {
+            // Pass the AccountInfoViewModel here if you decide to fetch user profile immediately after reg
+            val accountInfoViewModel: AccountInfoViewModel = viewModel()
             RegisterScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
@@ -83,17 +87,50 @@ fun AppNavigation(
             )
         }
         composable(Screen.LoginSuccess.route) {
+            // The AccountInfoViewModel is needed here to check verification status
+            val accountInfoViewModel: AccountInfoViewModel = viewModel()
             LoginSuccessScreen(
-                onContinue = {
-                    navController.navigate(Screen.Tour.route) {
-                        popUpTo(Screen.Welcome.route) { inclusive = true }
-                    }
-                }
+                navController = navController, // Pass NavController
+                accountInfoViewModel = accountInfoViewModel // Pass AccountInfoViewModel
+            )
+        }
+        composable(
+            route = Screen.PleaseVerifyEmail.route,
+            arguments = listOf(navArgument("email") { type = NavType.StringType; nullable = true })
+        ) { backStackEntry ->
+            PleaseVerifyEmailScreen(
+                navController = navController,
+                email = backStackEntry.arguments?.getString("email"),
+                googleAuthViewModel = googleAuthViewModel
             )
         }
 
+        composable(
+            route = Screen.EmailVerification.route,
+            arguments = listOf(
+                navArgument("token") {
+                    type = NavType.StringType
+                    nullable = true
+                },
+                navArgument("user_id") {
+                    type = NavType.StringType
+                    nullable = true
+                }
+            ),
+            deepLinks = listOf(navDeepLink {
+                uriPattern = "birdlens://deeplink/auth/confirm-email?token={token}&user_id={user_id}"
+            })
+        ) { backStackEntry ->
+            EmailVerificationScreen(
+                navController = navController,
+                token = backStackEntry.arguments?.getString("token"),
+                userId = backStackEntry.arguments?.getString("user_id"),
+                googleAuthViewModel = googleAuthViewModel
+            )
+        }
+
+
         composable(Screen.Tour.route) {
-            // EventViewModel is an AndroidViewModel, can be obtained via default factory if no other args needed
             val eventViewModel: EventViewModel = viewModel()
             TourScreen(
                 navController = navController,
@@ -132,7 +169,6 @@ fun AppNavigation(
             arguments = listOf(navArgument("tourId") { type = NavType.LongType })
         ) { backStackEntry ->
             val tourId = backStackEntry.arguments?.getLong("tourId") ?: -1L
-            // TourViewModel is AndroidViewModel, default factory works
             TourDetailScreen(navController = navController, tourId = tourId, tourViewModel = viewModel())
         }
         composable(
@@ -146,11 +182,10 @@ fun AppNavigation(
             CartScreen(navController = navController)
         }
         composable(Screen.Marketplace.route) {
-            // MarketplaceViewModel might be needed here if it fetches data
             MarketplaceScreen(navController = navController)
         }
         composable(Screen.Map.route) {
-            val mapViewModel: MapViewModel = viewModel() // MapViewModel is a simple ViewModel
+            val mapViewModel: MapViewModel = viewModel()
             MapScreen(navController = navController, mapViewModel = mapViewModel)
         }
         composable(Screen.Community.route) {
@@ -159,11 +194,10 @@ fun AppNavigation(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 navController = navController,
-                googleAuthViewModel = googleAuthViewModel // GoogleAuthViewModel is passed from MainActivity
+                googleAuthViewModel = googleAuthViewModel
             )
         }
         composable(Screen.AccountInfo.route) {
-            // AccountInfoViewModel is AndroidViewModel, default factory works
             val accountInfoViewModel: AccountInfoViewModel = viewModel()
             AccountInfoScreen(
                 navController = navController,
@@ -176,18 +210,17 @@ fun AppNavigation(
             arguments = listOf(navArgument("eventId") { type = NavType.LongType })
         ) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getLong("eventId") ?: -1L
-            // EventDetailViewModel is AndroidViewModel and needs SavedStateHandle and Application
             val eventDetailViewModel: EventDetailViewModel = viewModel(
                 factory = EventDetailViewModelFactory(
-                    application, // Correctly obtained application context
-                    backStackEntry, // Pass the NavBackStackEntry as the owner
-                    backStackEntry.arguments // Pass arguments bundle as defaultArgs
+                    application,
+                    backStackEntry,
+                    backStackEntry.arguments
                 )
             )
             EventDetailScreen(
                 navController = navController,
                 eventId = eventId,
-                eventDetailViewModel = eventDetailViewModel // Pass the correctly instantiated ViewModel
+                eventDetailViewModel = eventDetailViewModel
             )
         }
 
@@ -195,8 +228,6 @@ fun AppNavigation(
             route = Screen.BirdInfo.route,
             arguments = listOf(navArgument("speciesCode") { type = NavType.StringType })
         ) { backStackEntry ->
-            // BirdInfoViewModel is a ViewModel and needs SavedStateHandle
-            // Using viewModelFactory for concise factory creation
             val birdInfoViewModel: BirdInfoViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { BirdInfoViewModel(createSavedStateHandle()) }
@@ -213,7 +244,6 @@ fun AppNavigation(
             arguments = listOf(navArgument("hotspotId") { type = NavType.StringType })
         ) { backStackEntry ->
             val hotspotId = backStackEntry.arguments?.getString("hotspotId")
-            // HotspotBirdListViewModel is a ViewModel and needs SavedStateHandle
             val hotspotBirdListViewModel: HotspotBirdListViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { HotspotBirdListViewModel(createSavedStateHandle()) }
@@ -229,7 +259,6 @@ fun AppNavigation(
             val birdIdentifierViewModel: BirdIdentifierViewModel = viewModel()
             BirdIdentifierScreen(navController = navController, viewModel = birdIdentifierViewModel)
         }
-        // Admin Subscription Routes
         composable(Screen.AdminSubscriptionList.route) {
             val adminSubscriptionViewModel: AdminSubscriptionViewModel = viewModel()
             AdminSubscriptionListScreen(

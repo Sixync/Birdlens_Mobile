@@ -1,10 +1,10 @@
 // EXE201/app/src/main/java/com/android/birdlens/MainActivity.kt
 package com.android.birdlens
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
-// import android.os.Handler // No longer needed for fixed timer
-// import android.os.Looper // No longer needed for fixed timer
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,10 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.android.birdlens.admob.AdManager
 import com.android.birdlens.data.LanguageManager
 import com.android.birdlens.presentation.navigation.AppNavigation
+import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
@@ -34,20 +36,14 @@ class MainActivity : ComponentActivity() {
     private val googleAuthViewModel: GoogleAuthViewModel by viewModels()
     private val accountInfoViewModel: AccountInfoViewModel by viewModels()
     private lateinit var adManager: AdManager
-    // private val adHandler = Handler(Looper.getMainLooper()) // Removed: Timer-based handler
-    // private lateinit var adDisplayRunnable: Runnable // Removed: Timer-based runnable
-
-    // State to control ad visibility based on subscription
-    // Default to true (show ads) until subscription status is confirmed.
-    // If confirmed as "ExBird", this will be set to false.
     private val _shouldShowAds = MutableStateFlow(true)
     val shouldShowAds: StateFlow<Boolean> get() = _shouldShowAds.asStateFlow()
 
+    private lateinit var navController: NavHostController
 
     companion object {
-        // Removed: AD_DISPLAY_INTERVAL_MS as fixed timer is gone
-        // private const val AD_DISPLAY_INTERVAL_MS = 5 * 60 * 1000L
         private const val TAG_ADS = "MainActivityAds"
+        private const val TAG_DEEPLINK = "MainActivityDeepLink"
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -58,12 +54,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        adManager = AdManager(applicationContext) // AdManager loads an ad on init
+        adManager = AdManager(applicationContext)
 
-        // Removed: adDisplayRunnable initialization and timer logic
-        // adDisplayRunnable = Runnable { ... }
-
-        // Observe user's subscription status
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 Log.d(TAG_ADS, "Started collecting AccountInfoUiState for ad logic.")
@@ -72,72 +64,116 @@ class MainActivity : ComponentActivity() {
                     when (state) {
                         is AccountInfoUiState.Success -> {
                             val subscriptionName = state.user.subscription
-                            // Key logic: Disable ads if user has "ExBird" subscription
                             _shouldShowAds.value = subscriptionName != "ExBird"
                             Log.d(TAG_ADS, "User subscription: '$subscriptionName'. Ads enabled: ${_shouldShowAds.value}")
                         }
                         is AccountInfoUiState.Error -> {
-                            _shouldShowAds.value = true // Default to showing ads if profile fetch fails
+                            _shouldShowAds.value = true
                             Log.w(TAG_ADS, "Error fetching user profile: ${state.message}. Ads enabled by default.")
                         }
                         is AccountInfoUiState.Idle, is AccountInfoUiState.Loading -> {
-                            // While loading or idle (before first fetch), maintain current ad policy.
-                            // If default is 'true', ads might be prepared.
-                            // If fetching user status takes time, an ad *could* be shown if triggered *before* status is confirmed.
-                            // This is why event-driven triggers are better than an immediate startup timer.
-                            // For initial load, consider _shouldShowAds = false until status is confirmed,
-                            // or ensure no ad trigger happens before confirmation.
-                            // For now, we stick to the default of true, and rely on event-driven triggers not firing too early.
                             Log.d(TAG_ADS, "User profile state: ${state::class.java.simpleName}. Current ads policy: ${_shouldShowAds.value}")
                             if (state is AccountInfoUiState.Idle && !previousShouldShowAds) {
-                                // This case: If user was ExBird (ads off), then logs out (Idle state from ViewModel), turn ads back on.
                                 _shouldShowAds.value = true
                                 Log.d(TAG_ADS, "User logged out or session expired. Ads policy reset to true.")
                             }
                         }
                     }
-
-                    // This section originally managed the timer.
-                    // Now, it just logs the policy change. The actual ad showing is event-driven.
                     if (previousShouldShowAds != _shouldShowAds.value) {
                         Log.d(TAG_ADS, "Ad policy changed. Ads enabled: ${_shouldShowAds.value}")
-                        // If ads were just disabled, any currently showing ad will complete. Future ads won't show.
-                        // If ads were just enabled, they will only show when triggered by an event.
                     }
                 }
             }
         }
 
         setContent {
+            navController = rememberNavController() // NavController initialized here
             BirdlensTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = GreenDeep
                 ) {
-                    val navController = rememberNavController()
                     AppNavigation(
                         navController = navController,
                         googleAuthViewModel = googleAuthViewModel
-                        // Pass 'this' (MainActivity instance) or a callback to trigger ads if needed by deeper screens
-                        // e.g., mainActivity = this
                     )
                 }
             }
+            // Handle initial intent in onCreate, after NavController is set up by setContent
+            handleIntent(intent)
         }
     }
 
-    /**
-     * Call this method from various points in your application (e.g., after specific user actions,
-     * navigating from certain screens) to attempt showing an interstitial ad.
-     * The ad will only be shown if the user is not subscribed ("ExBird") and an ad is loaded.
-     */
+    override fun onNewIntent(intent: Intent) { // Correct non-nullable Intent
+        super.onNewIntent(intent)
+        Log.d(TAG_DEEPLINK, "onNewIntent called with: $intent")
+        setIntent(intent) // Update the activity's current intent to this new one
+        handleIntent(intent) // Process the new intent
+    }
+
+    @SuppressLint("RestrictedApi")
+    private fun handleIntent(intent: Intent?) {
+        val currentIntent = intent ?: run {
+            Log.d(TAG_DEEPLINK, "handleIntent: intent is null, exiting.")
+            return
+        }
+
+        val action = currentIntent.action
+        val data = currentIntent.data
+        Log.d(TAG_DEEPLINK, "handleIntent: action=$action, data=$data")
+        Log.d(TAG_DEEPLINK, "handleIntent: RAW DATA URI AS STRING: ${data?.toString()}") // Log the raw URI
+
+        if (Intent.ACTION_VIEW == action && data != null) {
+            val scheme = data.scheme
+            val host = data.host
+            val path = data.path
+            Log.d(TAG_DEEPLINK, "Parsed from deep link - Scheme: $scheme, Host: $host, Path: $path")
+
+            val expectedScheme = "birdlens"
+            val expectedHost = "deeplink"
+            val expectedPath = "/auth/confirm-email"
+            Log.d(TAG_DEEPLINK, "Comparing with - Expected Scheme: $expectedScheme, Expected Host: $expectedHost, Expected Path: $expectedPath")
+
+
+            if (scheme == expectedScheme && host == expectedHost && path == expectedPath) {
+                Log.d(TAG_DEEPLINK, "Deep link structure MATCHED.")
+                val token = data.getQueryParameter("token")
+                val userId = data.getQueryParameter("user_id") // This is the standard Android way
+                Log.d(TAG_DEEPLINK, "Extracted token: $token, userId: $userId")
+
+                if (token != null && userId != null) {
+                    // Check if navController is initialized. It should be if setContent has run.
+                    if (::navController.isInitialized) {
+                        Log.d(TAG_DEEPLINK, "NavController is initialized. Attempting to navigate to EmailVerificationScreen.")
+                        Log.d(TAG_DEEPLINK, "Current NavController graph: ${navController.graph.route}, Start Destination: ${navController.graph.startDestinationRoute}")
+                        Log.d(TAG_DEEPLINK, "Current NavController backstack: ${navController.currentBackStack.value.joinToString { it.destination.route ?: "null" }}")
+
+                        navController.navigate(Screen.EmailVerification.createRoute(token, userId)) {
+                            // Optional: Consider popping up to a known screen if needed, or launching as single top
+                            // popUpTo(Screen.Welcome.route)
+                            // launchSingleTop = true
+                        }
+                        Log.d(TAG_DEEPLINK, "Navigation to EmailVerificationScreen attempted.")
+                    } else {
+                        Log.e(TAG_DEEPLINK, "NavController NOT initialized when trying to handle deep link. This is unexpected if setContent has completed.")
+                    }
+                } else {
+                    Log.w(TAG_DEEPLINK, "Token or userId missing in parsed deep link data. URI was: ${data.toString()}")
+                }
+            } else {
+                Log.w(TAG_DEEPLINK, "Deep link structure MISMATCHED. URI received: ${data.toString()}")
+            }
+        } else {
+            Log.d(TAG_DEEPLINK, "Intent is not ACTION_VIEW or data is null. Not a deep link for email verification.")
+        }
+    }
+
+
     fun triggerInterstitialAd() {
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
             if (_shouldShowAds.value) {
                 Log.d(TAG_ADS, "Interstitial ad triggered. Ads are currently enabled. Attempting to show.")
                 adManager.showInterstitialAd(this@MainActivity) {
-                    // This callback is invoked when the ad is closed or failed to show.
-                    // AdManager's internal logic already calls loadAd() to preload the next one.
                     Log.d(TAG_ADS, "Ad flow finished for triggered ad.")
                 }
             } else {
@@ -148,20 +184,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-    // Removed: startAdTimer() and stopAdTimer() as they were tied to the fixed interval timer.
-    // The AdManager handles preloading ads. Showing ads is now event-driven via triggerInterstitialAd().
-
     override fun onResume() {
         super.onResume()
-        // No timer to restart here. AdManager handles its own preloading.
-        // You might want to log or check ad readiness if specific onResume ad display is ever needed.
         Log.d(TAG_ADS, "onResume: Current shouldShowAds state: ${_shouldShowAds.value}. Ad display is event-driven.")
+        // If the activity was launched by a deep link that wasn't processed in onCreate (e.g. complex launch scenarios),
+        // you might consider calling handleIntent(intent) here too, but usually onCreate/onNewIntent cover it.
+        // handleIntent(intent) // Potentially redundant, but can be a safeguard if onCreate's call is missed.
     }
 
     override fun onPause() {
         super.onPause()
-        // No timer to stop here.
         Log.d(TAG_ADS, "onPause: Ad display is event-driven.")
     }
 

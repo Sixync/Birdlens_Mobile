@@ -1,10 +1,9 @@
 // EXE201/app/src/main/java/com/android/birdlens/data/network/ApiService.kt
 package com.android.birdlens.data.network
 
-// import com.android.birdlens.data.model.request.GoogleIdTokenRequest // No longer needed
 import com.android.birdlens.data.model.CreateSubscriptionRequest
 import com.android.birdlens.data.model.Event
-import com.android.birdlens.data.model.PaginatedEventData // New import
+import com.android.birdlens.data.model.PaginatedEventData
 import com.android.birdlens.data.model.PaginatedToursResponse
 import com.android.birdlens.data.model.Subscription
 import com.android.birdlens.data.model.Tour
@@ -14,7 +13,7 @@ import com.android.birdlens.data.model.post.CreateCommentRequest
 import com.android.birdlens.data.model.post.PaginatedCommentsResponse
 import com.android.birdlens.data.model.post.PaginatedPostsResponse
 import com.android.birdlens.data.model.post.PostResponse
-import com.android.birdlens.data.model.post.ReactionResponseData // Changed
+import com.android.birdlens.data.model.post.ReactionResponseData
 import com.android.birdlens.data.model.request.LoginRequest
 import com.android.birdlens.data.model.request.RegisterRequest
 import com.android.birdlens.data.model.response.GenericApiResponse
@@ -25,12 +24,12 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
+import retrofit2.http.PATCH // Import PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
-// Removed @Header("Authorization") as interceptor will handle it for relevant endpoints
 
 interface ApiService {
     @POST("auth/register")
@@ -39,65 +38,71 @@ interface ApiService {
     @POST("auth/login")
     suspend fun loginUser(@Body loginRequest: LoginRequest): Response<GenericApiResponse<String>>
 
-    @GET("users/me") // New endpoint to get current user
+    @GET("users/me")
     suspend fun getCurrentUser(): Response<GenericApiResponse<UserResponse>>
+
+    @PATCH("auth/email-verification") // New Endpoint
+    suspend fun verifyEmail(
+        @Query("token") token: String,
+        @Query("user_id") userId: String
+    ): Response<GenericApiResponse<Unit?>> // Backend returns null data on success
 
     // Tour Endpoints
     @GET("tours")
     suspend fun getTours(
         @Query("limit") limit: Int,
         @Query("offset") offset: Int
-    ): Response<GenericApiResponse<PaginatedToursResponse>> // Backend wraps paginated list in its JsonResponse
+    ): Response<GenericApiResponse<PaginatedToursResponse>>
 
     @GET("tours/{tour_id}")
     suspend fun getTourById(
         @Path("tour_id") tourId: Long
-    ): Response<GenericApiResponse<Tour>> // Backend wraps single tour in its JsonResponse
+    ): Response<GenericApiResponse<Tour>>
 
-    @POST("tours") // Assuming this will require auth
+    @POST("tours")
     suspend fun createTour(
         @Body tourCreateRequest: TourCreateRequest
-    ): Response<GenericApiResponse<Tour>> // Backend returns created tour, wrapped
+    ): Response<GenericApiResponse<Tour>>
 
     @Multipart
-    @PUT("tours/{tour_id}/images") // Assuming this will require auth
+    @PUT("tours/{tour_id}/images")
     suspend fun addTourImages(
         @Path("tour_id") tourId: Long,
-        @Part images: List<MultipartBody.Part> // Use List for multiple files with the same part name key
-    ): Response<GenericApiResponse<List<String>>> // Backend returns list of URLs, wrapped
+        @Part images: List<MultipartBody.Part>
+    ): Response<GenericApiResponse<List<String>>>
 
     @Multipart
-    @PUT("tours/{tour_id}/thumbnail") // Assuming this will require auth
+    @PUT("tours/{tour_id}/thumbnail")
     suspend fun addTourThumbnail(
         @Path("tour_id") tourId: Long,
-        @Part thumbnail: MultipartBody.Part // Single file
-    ): Response<GenericApiResponse<String>> // Backend returns single URL, wrapped
+        @Part thumbnail: MultipartBody.Part
+    ): Response<GenericApiResponse<String>>
 
     // Event Endpoints
-    @GET("events") // New endpoint for fetching events
+    @GET("events")
     suspend fun getEvents(
         @Query("limit") limit: Int,
         @Query("offset") offset: Int
-    ): Response<GenericApiResponse<PaginatedEventData>> // Using the new PaginatedEventData
+    ): Response<GenericApiResponse<PaginatedEventData>>
 
-    @GET("events/{event_id}") // Endpoint to get a single event
+    @GET("events/{event_id}")
     suspend fun getEventById(
         @Path("event_id") eventId: Long
-    ): Response<GenericApiResponse<Event>> // Ensure Event model matches response
+    ): Response<GenericApiResponse<Event>>
 
-    @GET("subscriptions") // Requires auth (handled by AuthInterceptor)
+    @GET("subscriptions")
     suspend fun getSubscriptions(): Response<GenericApiResponse<List<Subscription>>>
 
-    @POST("subscriptions") // Requires auth (handled by AuthInterceptor)
+    @POST("subscriptions")
     suspend fun createSubscription(
         @Body createSubscriptionRequest: CreateSubscriptionRequest
-    ): Response<GenericApiResponse<Subscription>> // Backend returns the created subscription
+    ): Response<GenericApiResponse<Subscription>>
     // Post Endpoints
     @GET("posts")
     suspend fun getPosts(
         @Query("limit") limit: Int,
         @Query("offset") offset: Int
-    ): Response<GenericApiResponse<PaginatedPostsResponse>> // Corrected
+    ): Response<GenericApiResponse<PaginatedPostsResponse>>
 
     @Multipart
     @POST("posts")
@@ -105,29 +110,29 @@ interface ApiService {
         @Part("content") content: RequestBody,
         @Part("location_name") locationName: RequestBody?,
         @Part("latitude") latitude: RequestBody?,
-        @Part("longitude") longitude: RequestBody?, // Corrected from logitude
+        @Part("longitude") longitude: RequestBody?,
         @Part("privacy_level") privacyLevel: RequestBody,
         @Part("type") type: RequestBody?,
         @Part("is_featured") isFeatured: RequestBody,
         @Part mediaFiles: List<MultipartBody.Part>
-    ): Response<GenericApiResponse<PostResponse>> // Expecting the created PostResponse structure
+    ): Response<GenericApiResponse<PostResponse>>
 
     @GET("posts/{post_id}/comments")
     suspend fun getComments(
-        @Path("post_id") postId: String, // Assuming post_id is String, adjust if Long
+        @Path("post_id") postId: String,
         @Query("limit") limit: Int,
         @Query("offset") offset: Int
-    ): Response<GenericApiResponse<PaginatedCommentsResponse>> // Corrected
+    ): Response<GenericApiResponse<PaginatedCommentsResponse>>
 
     @POST("posts/{post_id}/comments")
     suspend fun createComment(
-        @Path("post_id") postId: String, // Assuming post_id is String
+        @Path("post_id") postId: String,
         @Body commentRequest: CreateCommentRequest
-    ): Response<GenericApiResponse<CommentResponse>> // Corrected
+    ): Response<GenericApiResponse<CommentResponse>>
 
     @POST("posts/{post_id}/reactions")
     suspend fun addReaction(
-        @Path("post_id") postId: String, // Assuming post_id is String
+        @Path("post_id") postId: String,
         @Query("reaction_type") reactionType: String
-    ): Response<GenericApiResponse<ReactionResponseData?>> // Backend returns nil in data, message in outer layer
+    ): Response<GenericApiResponse<ReactionResponseData?>>
 }
