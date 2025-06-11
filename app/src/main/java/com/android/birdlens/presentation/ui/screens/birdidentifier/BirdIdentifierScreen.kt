@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.android.birdlens.R
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
 import com.android.birdlens.presentation.viewmodel.BirdIdentifierUiState
@@ -78,7 +80,7 @@ fun BirdIdentifierScreen(
 
     AppScaffold(
         navController = navController,
-        topBar = { SimpleTopAppBar("AI Bird Identifier", onNavigateBack = { navController.popBackStack() }) },
+        topBar = { SimpleTopAppBar(stringResource(id = R.string.bird_identifier_title), onNavigateBack = { navController.popBackStack() }) },
         showBottomBar = false
     ) { innerPadding ->
         Column(
@@ -122,7 +124,7 @@ fun BirdIdentifierScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Tap to select a bird photo (optional)",
+                            text = stringResource(id = R.string.bird_identifier_select_prompt),
                             color = TextWhite.copy(alpha = 0.8f)
                         )
                     }
@@ -131,7 +133,7 @@ fun BirdIdentifierScreen(
 
             if (!readImagesPermissionState.status.isGranted && readImagesPermissionState.status.shouldShowRationale) {
                 Text(
-                    "Permission to read images is needed to identify birds from your photos.",
+                    stringResource(id = R.string.bird_identifier_permission_rationale),
                     color = TextWhite.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 8.dp)
@@ -143,9 +145,9 @@ fun BirdIdentifierScreen(
             // Initial Prompt Input - shown only before the conversation starts
             if (uiState is BirdIdentifierUiState.Idle) {
                 val placeholderText = if (selectedImageBitmap == null) {
-                    "Type a bird's name and a question..."
+                    stringResource(id = R.string.bird_identifier_text_input_placeholder_no_image)
                 } else {
-                    "Ask about the bird in the image..."
+                    stringResource(id = R.string.bird_identifier_text_input_placeholder_with_image)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -183,7 +185,7 @@ fun BirdIdentifierScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Start conversation",
+                            contentDescription = stringResource(id = R.string.bird_identifier_start_conversation),
                             tint = VeryDarkGreenBase
                         )
                     }
@@ -196,7 +198,7 @@ fun BirdIdentifierScreen(
             when (val state = uiState) {
                 is BirdIdentifierUiState.Idle -> {
                     Text(
-                        "Select an image or type a bird's name above to start.",
+                        stringResource(id = R.string.bird_identifier_idle_prompt),
                         color = TextWhite.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
                     )
@@ -209,7 +211,7 @@ fun BirdIdentifierScreen(
                 is BirdIdentifierUiState.Error -> {
                     Text(state.errorMessage, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
                     Button(onClick = { viewModel.resetState() }) {
-                        Text("Try Again")
+                        Text(stringResource(id = R.string.bird_identifier_try_again))
                     }
                 }
                 is BirdIdentifierUiState.Success -> {
@@ -284,7 +286,7 @@ fun ColumnScope.ConversationArea(
         OutlinedTextField(
             value = followUpQuestion,
             onValueChange = { followUpQuestion = it },
-            placeholder = { Text("Ask a follow-up question...") },
+            placeholder = { Text(stringResource(id = R.string.bird_identifier_follow_up_placeholder)) },
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(24.dp),
             colors = TextFieldDefaults.colors(
@@ -312,7 +314,7 @@ fun ColumnScope.ConversationArea(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = "Send question",
+                contentDescription = stringResource(id = R.string.bird_identifier_send_question),
                 tint = VeryDarkGreenBase
             )
         }

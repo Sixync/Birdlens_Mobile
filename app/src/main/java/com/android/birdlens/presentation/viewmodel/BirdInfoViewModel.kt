@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/viewmodel/BirdInfoViewModel.kt
+// app/src/main/java/com/android/birdlens/presentation/viewmodel/BirdInfoViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
 import android.util.Log
@@ -29,7 +29,6 @@ open class BirdInfoViewModel(
 
     // Hold the speciesCode from SavedStateHandle
     private val speciesCode: String? = savedStateHandle["speciesCode"]
-    private var currentBirdData: EbirdTaxonomy? = null // Cache fetched bird data
 
     companion object {
         private const val TAG = "BirdInfoVM"
@@ -52,7 +51,6 @@ open class BirdInfoViewModel(
             fetchBirdInformation(speciesCode)
         } else {
             Log.e(TAG, "Retry fetch called, but speciesCode is still missing.")
-            // State should already be Error if speciesCode was initially null/blank
         }
     }
 
@@ -72,9 +70,10 @@ open class BirdInfoViewModel(
                 if (ebirdResponse.isSuccessful && ebirdResponse.body() != null) {
                     val taxonomyList = ebirdResponse.body()!!
                     if (taxonomyList.isNotEmpty()) {
-                        currentBirdData = taxonomyList.first()
-                        Log.d(TAG, "eBird taxonomy fetched successfully for ${currentBirdData!!.commonName}.")
-                        fetchWikipediaImage(currentBirdData!!)
+                        val birdData = taxonomyList.first()
+                        Log.d(TAG, "eBird taxonomy fetched successfully for ${birdData.commonName}.")
+                        // This now triggers the new image fetching logic
+                        fetchBestWikipediaImage(birdData)
                     } else {
                         val errorMsg = "No taxonomy data found for species code: $code"
                         _uiState.value = BirdInfoUiState.Error(errorMsg)
@@ -94,35 +93,92 @@ open class BirdInfoViewModel(
         }
     }
 
-    private suspend fun fetchWikipediaImage(birdData: EbirdTaxonomy) {
-        try {
-            Log.d(TAG, "Fetching Wikipedia image for: ${birdData.commonName}")
-            val wikiResponse = WikiRetrofitInstance.api.getPageImage(titles = birdData.commonName)
-            if (wikiResponse.isSuccessful && wikiResponse.body() != null) {
-                val wikiQueryResponse = wikiResponse.body()!!
-                val pages = wikiQueryResponse.query?.pages
-                if (pages != null && pages.isNotEmpty()) {
-                    val pageDetail = pages.values.firstOrNull { it.pageId != null && it.pageId > 0 }
-                    val imageUrl = pageDetail?.thumbnail?.source
-                    if (imageUrl != null) {
-                        Log.d(TAG, "Wikipedia image URL found: $imageUrl")
-                        _uiState.value = BirdInfoUiState.Success(birdData, imageUrl)
-                    } else {
-                        Log.w(TAG, "No image URL in Wikipedia response for ${birdData.commonName}. Thumbnail: ${pageDetail?.thumbnail}, PageImage: ${pageDetail?.pageImage}")
-                        _uiState.value = BirdInfoUiState.Success(birdData, null)
-                    }
+    /**
+     * Fetches the best possible image from Wikipedia.
+     * It first tries the common name. If that fails (e.g., it's a family page with no image),
+     * it tries to find a representative species from the family and fetches its image.
+     */
+    private suspend fun fetchBestWikipediaImage(birdData: EbirdTaxonomy) {
+        // 1. Primary attempt using the common name
+        val primaryImageUrl = getImageUrlForTitle(birdData.commonName)
+
+        if (primaryImageUrl != null) {
+            // Success on first try
+            Log.d(TAG, "Primary Wikipedia image found for ${birdData.commonName}: $primaryImageUrl")
+            _uiState.value = BirdInfoUiState.Success(birdData, primaryImageUrl)
+        } else {
+            // 2. Fallback attempt for families/groups
+            Log.w(TAG, "No direct image for '${birdData.commonName}'. Trying fallback using family name.")
+
+            // The scientific name of the family is the most reliable for Wikipedia categories
+            val familySciName = birdData.familyScientificName
+            if (familySciName.isNullOrBlank()) {
+                Log.w(TAG, "Fallback failed: No family scientific name available for ${birdData.commonName}.")
+                _uiState.value = BirdInfoUiState.Success(birdData, null) // Final state: no image
+                return
+            }
+
+            // Fetch a representative species from the family category on Wikipedia
+            val representativeSpeciesTitle = getRepresentativeSpeciesFromFamily(familySciName)
+
+            if (representativeSpeciesTitle != null) {
+                Log.d(TAG, "Found representative species '$representativeSpeciesTitle' for family '$familySciName'. Fetching its image.")
+                val fallbackImageUrl = getImageUrlForTitle(representativeSpeciesTitle)
+                if (fallbackImageUrl != null) {
+                    Log.d(TAG, "Fallback image found and being used: $fallbackImageUrl")
+                    _uiState.value = BirdInfoUiState.Success(birdData, fallbackImageUrl)
                 } else {
-                    Log.w(TAG, "No pages found in Wikipedia response for ${birdData.commonName}")
-                    _uiState.value = BirdInfoUiState.Success(birdData, null)
+                    Log.w(TAG, "Fallback failed: Could not get image for representative species '$representativeSpeciesTitle'.")
+                    _uiState.value = BirdInfoUiState.Success(birdData, null) // Final state: no image
                 }
             } else {
-                val errorBody = wikiResponse.errorBody()?.string() ?: "Unknown Wikipedia API error"
-                Log.e(TAG, "Wikipedia API Error ${wikiResponse.code()}: $errorBody")
-                _uiState.value = BirdInfoUiState.Success(birdData, null) // Still success for eBird part
+                Log.w(TAG, "Fallback failed: Could not find any representative species for family '$familySciName'.")
+                _uiState.value = BirdInfoUiState.Success(birdData, null) // Final state: no image
+            }
+        }
+    }
+
+    /**
+     * Fetches the image URL for a given Wikipedia page title.
+     * @return URL string or null if not found or on error.
+     */
+    private suspend fun getImageUrlForTitle(title: String): String? {
+        try {
+            val response = WikiRetrofitInstance.api.getPageImage(titles = title)
+            if (response.isSuccessful) {
+                val pages = response.body()?.query?.pages
+                // Find the first valid page with a non-null thumbnail source
+                val pageDetail = pages?.values?.firstOrNull { it.thumbnail?.source != null }
+                return pageDetail?.thumbnail?.source
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception fetching Wikipedia image for ${birdData.commonName}", e)
-            _uiState.value = BirdInfoUiState.Success(birdData, null) // Still success for eBird part
+            Log.e(TAG, "Exception fetching Wikipedia image for title '$title'", e)
         }
+        return null
+    }
+
+    /**
+     * Gets a title of a representative species from a Wikipedia category based on family name.
+     * @return A species page title string, or null if not found.
+     */
+    private suspend fun getRepresentativeSpeciesFromFamily(familySciName: String): String? {
+        try {
+            val categoryTitle = "Category:$familySciName"
+            Log.d(TAG, "Querying Wikipedia for members of '$categoryTitle'")
+            val response = WikiRetrofitInstance.api.getCategoryMembers(cmTitle = categoryTitle)
+
+            if (response.isSuccessful) {
+                val members = response.body()?.query?.categoryMembers
+                // Find the first member that doesn't seem like a list or another category
+                return members?.firstOrNull { member ->
+                    !member.title.contains("list of", ignoreCase = true) &&
+                            !member.title.startsWith("Category:", ignoreCase = true) &&
+                            !member.title.contains("template", ignoreCase = true)
+                }?.title
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception getting representative species for '$familySciName'", e)
+        }
+        return null
     }
 }

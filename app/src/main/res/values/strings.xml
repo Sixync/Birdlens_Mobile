@@ -1,3 +1,4 @@
+<!-- // app/src/main/res/values/strings.xml -->
 <resources>
     <string name="app_name">Birdlens</string>
 
@@ -167,6 +168,17 @@
     <string name="map_error_loading_detailed">Could not load map. Ensure Google Play Services is updated, API key is valid, and Maps SDK initialized correctly.</string>
     <string name="map_marker_snippet_species">Species: %1$s</string>
 
+    <!-- Map Screen Search -->
+    <string name="map_search_placeholder">Search for a bird species…</string>
+    <string name="map_search_icon_description">Search Bird</string>
+    <string name="map_search_clear_description">Clear Search</string>
+    <string name="map_search_error_not_found">Could not find a bird named \'%1$s\'. Please check spelling.</string>
+    <string name="map_search_error_no_hotspots">No recent observations of \'%1$s\' found in Vietnam.</string>
+    <string name="map_search_ai_analyzing">Analyzing your search…</string>
+    <string name="map_search_ai_finding">Finding locations for %1$s…</string>
+    <string name="map_search_error_ai_failed">Could not understand your search for \'%1$s\'. Please try a different name.</string>
+    <string name="gemini_prompt_map_search">Your task is to extract the name of a bird from the user\'s text and respond with ONLY the bird\'s common **English** name.\n\n- If the text is "tell me about the american robin", respond with "American Robin".\n- If the text is in Vietnamese, like "chim sáo", respond with "Starling".\n- If you cannot identify a specific bird (e.g., the text is "blue car"), you MUST respond with the exact text: "Error: No bird name found".\n\nUser text: "%1$s"</string>
+
 
     <!-- Marketplace Screen -->
     <string name="marketplace_title_birdlens">BIRDLENS</string>
@@ -207,6 +219,33 @@
     <string name="bird_status_historical">Historical</string>
     <string name="bird_seen_on">Seen: %1$s</string>
     <string name="bird_count">Count: %1$d</string>
+
+    <!-- Bird Identifier Screen -->
+    <string name="bird_identifier_title">AI Bird Identifier</string>
+    <string name="bird_identifier_select_prompt">Tap to select a bird photo (optional)</string>
+    <string name="bird_identifier_permission_rationale">Permission to read images is needed to identify birds from your photos.</string>
+    <string name="bird_identifier_text_input_placeholder_no_image">Type a bird\'s name and a question...</string>
+    <string name="bird_identifier_text_input_placeholder_with_image">Ask about the bird in the image...</string>
+    <string name="bird_identifier_start_conversation">Start conversation</string>
+    <string name="bird_identifier_idle_prompt">Select an image or type a bird\'s name above to start.</string>
+    <string name="bird_identifier_try_again">Try Again</string>
+    <string name="bird_identifier_follow_up_placeholder">Ask a follow-up question...</string>
+    <string name="bird_identifier_send_question">Send question</string>
+    <string name="bird_identifier_error_no_identify">Could not identify the bird. Please try another image.</string>
+    <string name="bird_identifier_error_no_bird_found">No bird was found in the image.</string>
+    <string name="bird_identifier_error_no_name_from_question">Could not determine the bird from your question. Please be more specific, e.g., \'Tell me about the Blue Jay\'.</string>
+    <string name="bird_identifier_error_failed_details">Failed to get details for %1$s.</string>
+    <string name="bird_identifier_error_generic">An error occurred: %1$s</string>
+    <string name="bird_identifier_error_ask_first">Please identify a bird first before asking questions.</string>
+    <string name="bird_identifier_error_no_response">I\'m sorry, I couldn\'t generate a response.</string>
+    <string name="bird_identifier_loading_analyzing">Analyzing image...</string>
+    <string name="bird_identifier_loading_fetching_details">Fetching details for %1$s...</string>
+    <string name="bird_identifier_loading_thinking">Thinking...</string>
+    <string name="bird_identifier_loading_extracting_name">Figuring out which bird you mean...</string>
+    <string name="gemini_prompt_identify_from_image">Identify the bird in this image. Respond with ONLY the bird\'s most common English name. Your entire response must be just the name, for example: \'House Sparrow\'. If there is no bird, respond with \'no bird\'.</string>
+    <string name="gemini_prompt_extract_name_from_text">You are an expert ornithologist and polyglot. Your task is to extract the name of a bird from the user\'s text and respond with ONLY the bird\'s common **English** name.\n\n- If the text is in English, like "tell me about the american robin", respond with "American Robin".\n- If the text is in Vietnamese, like "con chim hoạ mi", respond with "Chinese Hwamei".\n- If the text is just a name, like "Sáo", respond with the most likely English name, like "Starling".\n- If you cannot identify a specific bird (e.g., the text is "con mèo" or "what is the weather?"), you MUST respond with the exact text: "Error: No bird name found".\n\nUser text: "%1$s"</string>
+    <string name="gemini_prompt_initial_question_no_image">Tell me about this bird.</string>
+    <string name="gemini_language_suffix"> Please answer in English.</string>
 
 
     <!-- admin management-->

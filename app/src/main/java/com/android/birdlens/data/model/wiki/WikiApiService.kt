@@ -1,3 +1,4 @@
+// app/src/main/java/com/android/birdlens/data/model/wiki/WikiApiService.kt
 package com.android.birdlens.data.model.wiki
 
 import retrofit2.Response
@@ -18,4 +19,18 @@ interface WikiApiService {
         @Query("pithumbsize") pithumbsize: Int = 500, // Preferred thumbnail size
         @Query("redirects") redirects: Int = 1 // Follow redirects
     ): Response<WikiQueryResponse>
+
+    /**
+     * Fetches members of a given Wikipedia category.
+     * Example: https://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Passeridae&cmlimit=10&format=json
+     */
+    @GET("w/api.php")
+    suspend fun getCategoryMembers(
+        @Query("action") action: String = "query",
+        @Query("list") list: String = "categorymembers",
+        @Query("cmtitle") cmTitle: String,
+        @Query("cmlimit") cmLimit: Int = 10, // Get a few potential members
+        @Query("cmnamespace") cmNamespace: Int = 0, // Only pages, not other categories, templates, etc.
+        @Query("format") format: String = "json"
+    ): Response<WikiCategoryResponse>
 }

@@ -66,4 +66,19 @@ interface EbirdApiService {
     suspend fun getSpeciesListForHotspot(
         @Path("locId") locId: String
     ): Response<List<String>> // Returns a simple list of species codes
+
+    /**
+     * Fetches recent observations of a specific species within a given region (e.g., country).
+     * API Key is added via EbirdApiKeyInterceptor.
+     * Example: https://api.ebird.org/v2/data/obs/VN/recent/houspa
+     */
+    @GET("v2/data/obs/{regionCode}/recent/{speciesCode}")
+    suspend fun getRecentObservationsOfSpeciesInRegion(
+        @Path("regionCode") regionCode: String,
+        @Path("speciesCode") speciesCode: String,
+        @Query("back") back: Int = 30, // Days back
+        @Query("hotspot") hotspot: Boolean = true, // Only get observations from hotspots
+        @Query("maxResults") maxResults: Int = 1000, // Limit results
+        @Query("fmt") format: String = "json"
+    ): Response<List<EbirdObservation>>
 }

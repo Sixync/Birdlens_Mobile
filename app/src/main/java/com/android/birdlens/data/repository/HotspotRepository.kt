@@ -4,7 +4,6 @@ package com.android.birdlens.data.repository
 import android.content.Context
 import android.util.Log
 import com.android.birdlens.data.local.AppDatabase
-import com.android.birdlens.data.local.LocalHotspot
 import com.android.birdlens.data.local.toEbirdNearbyHotspot
 import com.android.birdlens.data.local.toLocalHotspot
 import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
@@ -14,9 +13,7 @@ import com.google.android.gms.maps.model.LatLngBounds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
-import kotlin.math.abs
 import kotlin.math.cos
-import kotlin.math.ln
 
 class HotspotRepository(applicationContext: Context) {
 
@@ -41,9 +38,6 @@ class HotspotRepository(applicationContext: Context) {
             val cacheExpiryTimestamp = currentTime - CACHE_EXPIRY_MS
 
             if (!forceRefresh && currentBounds != null) {
-                // Try to fetch from local cache first, ensuring the current view is somewhat covered
-                // This is a simplified check; more sophisticated would be to check if 'currentBounds'
-                // is mostly contained within a region for which we have fresh cache.
                 val cachedHotspots = hotspotDao.getHotspotsInRegion(
                     minLat = currentBounds.southwest.latitude,
                     maxLat = currentBounds.northeast.latitude,
@@ -99,11 +93,72 @@ class HotspotRepository(applicationContext: Context) {
         }
     }
 
-    // Keep calculateBounds if used by ViewModel directly, or remove if ViewModel passes LatLngBounds
+    suspend fun findSpeciesCode(birdName: String): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                // The eBird API allows searching by common or scientific name.
+                // We trust it to return the most relevant match as the first item.
+                val response = ebirdApiService.getSpeciesTaxonomy(speciesCodes = birdName, category = "species")
+                if (response.isSuccessful && response.body()?.isNotEmpty() == true) {
+                    val speciesCode = response.body()!!.first().speciesCode
+                    Log.d(TAG, "Found species code '$speciesCode' for name '$birdName'")
+                    speciesCode
+                } else {
+                    Log.w(TAG, "Could not find species code for '$birdName'. Response: ${response.code()}")
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception finding species code for '$birdName'", e)
+                null
+            }
+        }
+    }
+
+    suspend fun getHotspotsForSpeciesInCountry(speciesCode: String, countryCode: String): List<EbirdNearbyHotspot> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = ebirdApiService.getRecentObservationsOfSpeciesInRegion(
+                    regionCode = countryCode,
+                    speciesCode = speciesCode,
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    val observations = response.body()!!
+                    Log.d(TAG, "Found ${observations.size} observations for species '$speciesCode' in '$countryCode'.")
+
+                    // Create EbirdNearbyHotspot objects from unique observation locations
+                    val hotspots = observations
+                        .distinctBy { it.locId }
+                        .map { obs ->
+                            EbirdNearbyHotspot(
+                                locId = obs.locId,
+                                locName = obs.locName,
+                                countryCode = countryCode, // Set the country code from the request
+                                subnational1Code = null,
+                                subnational2Code = null,
+                                lat = obs.lat,
+                                lng = obs.lng,
+                                latestObsDt = obs.obsDt,
+                                numSpeciesAllTime = null // Not available in this response, but not critical for this view
+                            )
+                        }
+                    Log.d(TAG, "Created ${hotspots.size} unique hotspots for species '$speciesCode'.")
+                    hotspots
+                } else {
+                    Log.e(TAG, "Network error fetching species observations: ${response.code()} - ${response.message()}")
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception fetching species observations for '$speciesCode' in '$countryCode': ${e.localizedMessage}", e)
+                emptyList()
+            }
+        }
+    }
+
     fun calculateBounds(center: LatLng, radiusKm: Double): LatLngBounds {
         val earthRadiusKm = 6371.0
         val latChange = Math.toDegrees(radiusKm / earthRadiusKm)
-        val lngChange = Math.toDegrees(radiusKm / earthRadiusKm / cos(Math.toRadians(center.latitude)))
+        val lngChange = Math.toDegrees(radiusKm / earthRadiusKm / kotlin.math.cos(Math.toRadians(center.latitude)))
 
         val southwest = LatLng(center.latitude - latChange, center.longitude - lngChange)
         val northeast = LatLng(center.latitude + latChange, center.longitude + lngChange)

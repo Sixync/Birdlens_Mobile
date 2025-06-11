@@ -13,6 +13,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -24,8 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -99,6 +104,7 @@ fun MapScreen(
     val context = LocalContext.current
     var showMapError by remember { mutableStateOf(false) }
     val mapUiState by mapViewModel.uiState.collectAsState()
+    val searchQuery by mapViewModel.searchQuery.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
     var customHotspotIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
@@ -140,7 +146,7 @@ fun MapScreen(
 
     val initialCameraPosition = CameraPosition.fromLatLngZoom(
         MapViewModel.VIETNAM_INITIAL_CENTER,
-        MapViewModel.HOME_BUTTON_ZOOM_LEVEL // Use defined home zoom for consistency
+        MapViewModel.HOME_BUTTON_ZOOM_LEVEL
     )
     val cameraPositionState = rememberCameraPositionState {
         position = initialCameraPosition
@@ -180,18 +186,16 @@ fun MapScreen(
                             MapViewModel.VIETNAM_INITIAL_CENTER,
                             MapViewModel.HOME_BUTTON_ZOOM_LEVEL
                         ),
-                        durationMs = 1000 // Animation duration
+                        durationMs = 1000
                     )
                 }
-                // Optionally trigger a hotspot fetch for the home location if desired
-                // mapViewModel.requestHotspotsForCurrentView(MapViewModel.VIETNAM_INITIAL_CENTER, MapViewModel.HOME_BUTTON_ZOOM_LEVEL)
             }
         ),
         FloatingMapActionItem(
             icon = { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.map_action_refresh_hotspots), tint = TextWhite) },
             contentDescriptionResId = R.string.map_action_refresh_hotspots,
             onClick = {
-                if (mapsSdkInitialized && mapLoaded) { // Added mapLoaded check
+                if (mapsSdkInitialized && mapLoaded) {
                     val currentTarget = cameraPositionState.position.target
                     val currentZoom = cameraPositionState.position.zoom
                     Log.d("MapScreen", "Refresh button tapped. Re-triggering fetch for current view.")
@@ -209,13 +213,34 @@ fun MapScreen(
                 navController.navigate(Screen.BirdIdentifier.route)
             }
         ),
-        // Add other existing items if any, or remove the duplicate camera icon
     )
+
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     AppScaffold(
         navController = navController,
         topBar = {
             MapScreenHeader(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { mapViewModel.onSearchQueryChanged(it) },
+                onSearchSubmit = {
+                    keyboardController?.hide()
+                    mapViewModel.onBirdSearchSubmitted()
+                    // Animate camera to show the whole country after search
+                    coroutineScope.launch {
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newLatLngZoom(
+                                MapViewModel.VIETNAM_INITIAL_CENTER,
+                                MapViewModel.HOME_BUTTON_ZOOM_LEVEL
+                            ),
+                            1500
+                        )
+                    }
+                },
+                onClearSearch = {
+                    keyboardController?.hide()
+                    mapViewModel.onSearchQueryCleared(cameraPositionState.position.target)
+                },
                 onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() else { /* Handle no backstack */ } },
                 onNavigateToCart = { navController.navigate(Screen.Cart.route) }
             )
@@ -239,7 +264,6 @@ fun MapScreen(
                         Log.d("MapScreen", "GoogleMap onMapLoaded callback.")
                         mapLoaded = true
                         showMapError = false
-                        // Initial fetch for the starting position after map is loaded
                         mapViewModel.requestHotspotsForCurrentView(
                             cameraPositionState.position.target,
                             cameraPositionState.position.zoom
@@ -270,10 +294,29 @@ fun MapScreen(
                 }
 
                 if (mapUiState is MapUiState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = GreenWave2.copy(alpha = 0.7f), strokeWidth = 5.dp)
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(color = GreenWave2.copy(alpha = 0.7f), strokeWidth = 5.dp)
+                        val message = (mapUiState as MapUiState.Loading).message
+                        if (!message.isNullOrBlank()) {
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = message,
+                                color = TextWhite,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
                 }
+
                 (mapUiState as? MapUiState.Error)?.let { errorState ->
-                    LaunchedEffect(errorState.message) {
+                    LaunchedEffect(errorState, errorState.message) {
                         Toast.makeText(context, errorState.message, Toast.LENGTH_LONG).show()
                     }
                 }
@@ -319,9 +362,8 @@ fun MapScreen(
             if(mapsSdkInitialized && locationPermissionsState.allPermissionsGranted) {
                 Column(
                     modifier = Modifier
-                        .align(Alignment.CenterStart) // Position on the left
-                        .padding(start = 16.dp, top = 70.dp) // Adjust padding as needed
-                        .wrapContentHeight(),
+                        .align(Alignment.CenterStart)
+                        .padding(start = 16.dp, top = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     floatingActionItems.forEach { item ->
@@ -345,27 +387,66 @@ fun MapScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreenHeader(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onSearchSubmit: () -> Unit,
+    onClearSearch: () -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToCart: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    CenterAlignedTopAppBar(
-        title = {
-            Text(stringResource(R.string.map_screen_title_birdlens).uppercase(), style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, color = GreenWave2, letterSpacing = 1.sp))
-        },
-        navigationIcon = {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = TextWhite)
-            }
-        },
-        actions = {
-            IconButton(onClick = onNavigateToCart) {
-                Icon(Icons.Filled.ShoppingCart, contentDescription = stringResource(R.string.icon_cart_description), tint = TextWhite, modifier = Modifier.size(28.dp))
-            }
-        },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-        modifier = modifier.padding(top=8.dp)
-    )
+    Column(modifier = modifier.padding(bottom = 8.dp)) {
+        CenterAlignedTopAppBar(
+            title = {
+                Text(
+                    stringResource(R.string.map_screen_title_birdlens).uppercase(),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, color = GreenWave2, letterSpacing = 1.sp)
+                )
+            },
+            navigationIcon = {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = TextWhite)
+                }
+            },
+            actions = {
+                IconButton(onClick = onNavigateToCart) {
+                    Icon(Icons.Filled.ShoppingCart, contentDescription = stringResource(R.string.icon_cart_description), tint = TextWhite, modifier = Modifier.size(28.dp))
+                }
+            },
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+            modifier = modifier.padding(top = 8.dp)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            placeholder = { Text(stringResource(R.string.map_search_placeholder), color = TextWhite.copy(alpha = 0.7f)) },
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.map_search_icon_description), tint = TextWhite) },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = onClearSearch) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.map_search_clear_description), tint = TextWhite)
+                    }
+                }
+            },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
+            singleLine = true,
+            shape = RoundedCornerShape(50),
+            colors = TextFieldDefaults.colors(
+                focusedTextColor = TextWhite,
+                unfocusedTextColor = TextWhite,
+                focusedContainerColor = SearchBarBackground,
+                unfocusedContainerColor = SearchBarBackground,
+                cursorColor = TextWhite,
+                focusedIndicatorColor = GreenWave2,
+                unfocusedIndicatorColor = Color.Transparent
+            )
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
