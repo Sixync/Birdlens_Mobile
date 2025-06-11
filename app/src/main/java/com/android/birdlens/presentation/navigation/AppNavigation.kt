@@ -1,4 +1,4 @@
-// app/src/main/java/com/android/birdlens/presentation/navigation/AppNavigation.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/AppNavigation.kt
 // EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/AppNavigation.kt
 package com.android.birdlens.presentation.navigation
 
@@ -25,6 +25,8 @@ import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
 import com.android.birdlens.presentation.ui.screens.birdidentifier.BirdIdentifierScreen
 import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
+// Import CreatePostScreen
+import com.android.birdlens.presentation.ui.screens.community.CreatePostScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
 import com.android.birdlens.presentation.ui.screens.emailverification.EmailVerificationScreen
 import com.android.birdlens.presentation.ui.screens.eventdetail.EventDetailScreen
@@ -33,7 +35,7 @@ import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScr
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
 import com.android.birdlens.presentation.ui.screens.pickdays.PickDaysScreen
-import com.android.birdlens.presentation.ui.screens.pleaseverify.PleaseVerifyEmailScreen // Import new screen
+import com.android.birdlens.presentation.ui.screens.pleaseverify.PleaseVerifyEmailScreen
 import com.android.birdlens.presentation.ui.screens.register.RegisterScreen
 import com.android.birdlens.presentation.ui.screens.settings.SettingsScreen
 import com.android.birdlens.presentation.ui.screens.tour.TourScreen
@@ -46,6 +48,8 @@ import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
 import com.android.birdlens.presentation.viewmodel.AdminSubscriptionViewModel
 import com.android.birdlens.presentation.viewmodel.BirdIdentifierViewModel
+// Import CommunityViewModel for CreatePostScreen if not already imported for CommunityScreen
+import com.android.birdlens.presentation.viewmodel.CommunityViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModelFactory
 import com.android.birdlens.presentation.viewmodel.MapViewModel
@@ -58,6 +62,8 @@ fun AppNavigation(
     modifier: Modifier = Modifier
 ) {
     val application = LocalContext.current.applicationContext as Application
+    // Obtain CommunityViewModel once, it can be shared if CreatePostScreen is conceptually part of Community feature
+    val communityViewModel: CommunityViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -79,7 +85,6 @@ fun AppNavigation(
             )
         }
         composable(Screen.Register.route) {
-            // Pass the AccountInfoViewModel here if you decide to fetch user profile immediately after reg
             val accountInfoViewModel: AccountInfoViewModel = viewModel()
             RegisterScreen(
                 navController = navController,
@@ -88,11 +93,10 @@ fun AppNavigation(
             )
         }
         composable(Screen.LoginSuccess.route) {
-            // The AccountInfoViewModel is needed here to check verification status
             val accountInfoViewModel: AccountInfoViewModel = viewModel()
             LoginSuccessScreen(
-                navController = navController, // Pass NavController
-                accountInfoViewModel = accountInfoViewModel // Pass AccountInfoViewModel
+                navController = navController,
+                accountInfoViewModel = accountInfoViewModel
             )
         }
         composable(
@@ -190,7 +194,13 @@ fun AppNavigation(
             MapScreen(navController = navController, mapViewModel = mapViewModel)
         }
         composable(Screen.Community.route) {
-            CommunityScreen(navController = navController)
+            // Provide the shared CommunityViewModel instance here
+            CommunityScreen(navController = navController, communityViewModel = communityViewModel)
+        }
+        // Add composable for CreatePostScreen
+        composable(Screen.CreatePost.route) {
+            // Provide the shared CommunityViewModel instance here too
+            CreatePostScreen(navController = navController, communityViewModel = communityViewModel)
         }
         composable(Screen.Settings.route) {
             SettingsScreen(
@@ -214,8 +224,8 @@ fun AppNavigation(
             val eventDetailViewModel: EventDetailViewModel = viewModel(
                 factory = EventDetailViewModelFactory(
                     application,
-                    backStackEntry,
-                    backStackEntry.arguments
+                    backStackEntry, // pass the NavBackStackEntry as SavedStateRegistryOwner
+                    backStackEntry.arguments // pass the arguments as defaultArgs
                 )
             )
             EventDetailScreen(
@@ -229,14 +239,15 @@ fun AppNavigation(
             route = Screen.BirdInfo.route,
             arguments = listOf(navArgument("speciesCode") { type = NavType.StringType })
         ) { backStackEntry ->
+            // Correct ViewModel instantiation with SavedStateHandle for BirdInfoViewModel
             val birdInfoViewModel: BirdInfoViewModel = viewModel(
                 factory = viewModelFactory {
-                    initializer { BirdInfoViewModel(createSavedStateHandle()) }
+                    initializer { BirdInfoViewModel(createSavedStateHandle()) } // Use createSavedStateHandle()
                 }
             )
             BirdInfoScreen(
                 navController = navController,
-                viewModel = birdInfoViewModel
+                viewModel = birdInfoViewModel // Pass the correctly instantiated ViewModel
             )
         }
 
@@ -244,7 +255,8 @@ fun AppNavigation(
             route = Screen.HotspotBirdList.route,
             arguments = listOf(navArgument("hotspotId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val hotspotId = backStackEntry.arguments?.getString("hotspotId")
+            val hotspotId = backStackEntry.arguments?.getString("hotspotId") // Retrieve hotspotId
+            // Correct ViewModel instantiation for HotspotBirdListViewModel
             val hotspotBirdListViewModel: HotspotBirdListViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { HotspotBirdListViewModel(createSavedStateHandle()) }
@@ -252,7 +264,7 @@ fun AppNavigation(
             )
             HotspotBirdListScreen(
                 navController = navController,
-                hotspotId = hotspotId,
+                hotspotId = hotspotId, // Pass hotspotId
                 viewModel = hotspotBirdListViewModel
             )
         }

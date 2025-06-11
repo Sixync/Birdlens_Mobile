@@ -1,8 +1,7 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/community/CommunityScreen.kt
-package com.android.birdlens.presentation.ui.screens.community // Ensure this package is correct
+package com.android.birdlens.presentation.ui.screens.community
 
 import android.annotation.SuppressLint
-// Removed android.util.Log as formatTimestamp is moved
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,7 +45,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.time.OffsetDateTime
 
-// No longer need to import formatTimestamp related java.time classes if formatTimestamp is self-contained in CommentSection.kt or a util file
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +61,7 @@ fun CommunityScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
 
+    // Effect for pagination
     LaunchedEffect(listState, postFeedState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
             .collect { visibleItems ->
@@ -70,7 +69,7 @@ fun CommunityScreen(
                     val lastVisibleItemIndex = visibleItems.last().index
                     val currentSuccessState = postFeedState
                     if (currentSuccessState is PostFeedUiState.Success && currentSuccessState.canLoadMore && !currentSuccessState.isLoadingMore) {
-                        if (lastVisibleItemIndex >= currentSuccessState.posts.size - 5) {
+                        if (lastVisibleItemIndex >= currentSuccessState.posts.size - 5) { // Trigger load more when 5 items from end
                             communityViewModel.fetchPosts()
                         }
                     }
@@ -89,7 +88,8 @@ fun CommunityScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: Navigate to Create Post Screen or show Dialog */ },
+                // Navigate to CreatePostScreen
+                onClick = { navController.navigate(Screen.CreatePost.route) },
                 containerColor = ButtonGreen,
                 contentColor = TextWhite
             ) {
@@ -122,7 +122,7 @@ fun CommunityScreen(
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp) // Added bottom padding for FAB
                         ) {
                             items(state.posts, key = { it.id }) { post ->
                                 CommunityPostCard(
@@ -132,12 +132,13 @@ fun CommunityScreen(
                                     },
                                     onCommentClick = {
                                         showCommentSheetForPostId = post.id.toString()
-                                        communityViewModel.fetchCommentsForPost(post.id.toString(), initialLoad = true)
+                                        communityViewModel.fetchCommentsForPost(post.id.toString(), initialLoad = true) // Fetch comments for this post
                                         coroutineScope.launch { sheetState.show() }
                                     },
                                     onShareClick = { /* TODO */ }
                                 )
                             }
+                            // Loading indicator for pagination
                             if (state.isLoadingMore) {
                                 item {
                                     Row(
@@ -165,26 +166,28 @@ fun CommunityScreen(
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { communityViewModel.fetchPosts(initialLoad = true) }) {
+                        Button(onClick = { communityViewModel.fetchPosts(initialLoad = true) }) { // Pass initialLoad = true for retry
                             Text("Retry")
                         }
                     }
                 }
-                is PostFeedUiState.Idle -> { /* Handled by initial fetch or loading state */ }
+                is PostFeedUiState.Idle -> {
+                    // This state should ideally transition to Loading quickly
+                }
             }
         }
 
+        // Modal Bottom Sheet for Comments
         if (showCommentSheetForPostId != null) {
             ModalBottomSheet(
                 onDismissRequest = {
                     showCommentSheetForPostId = null
-                    communityViewModel.resetCommentsState()
+                    communityViewModel.resetCommentsState() // Reset comment state when sheet dismissed
                     coroutineScope.launch { sheetState.hide() }
                 },
                 sheetState = sheetState,
-                containerColor = CardBackground.copy(alpha = 0.95f)
+                containerColor = CardBackground.copy(alpha = 0.95f) // Semi-transparent background
             ) {
-                // This call should now resolve to the CommentSection in CommentSection.kt
                 CommentSection(
                     postId = showCommentSheetForPostId!!,
                     communityViewModel = communityViewModel,
@@ -227,6 +230,7 @@ fun CommunityHeader(
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
+        // Using the CustomTextField from login screen for consistency, or define a similar one
         com.android.birdlens.presentation.ui.screens.login.CustomTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
@@ -249,11 +253,12 @@ fun CommunityPostCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp), // Ensure cards have padding if LazyColumn doesn't
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
+            // User Info Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -263,69 +268,72 @@ fun CommunityPostCard(
                 Image(
                     painter = rememberAsyncImagePainter(
                         model = post.posterAvatarUrl,
-                        error = painterResource(id = R.drawable.ic_launcher_foreground),
+                        error = painterResource(id = R.drawable.ic_launcher_foreground), // Generic placeholder
                         placeholder = painterResource(id = R.drawable.ic_launcher_background)
                     ),
                     contentDescription = stringResource(id = R.string.community_user_avatar_description),
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.Gray),
+                        .background(Color.Gray), // Placeholder background
                     contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(text = post.posterName, color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                    // Calls formatTimestamp from the same package (defined in CommentSection.kt)
                     Text(text = formatTimestamp(post.createdAt), color = TextWhite.copy(alpha = 0.7f), fontSize = 14.sp)
                 }
             }
 
+            // Post Image (if any)
             if (!post.imagesUrls.isNullOrEmpty()) {
                 Image(
                     painter = rememberAsyncImagePainter(
-                        model = post.imagesUrls.first(),
-                        error = painterResource(id = R.drawable.bg_placeholder_image),
+                        model = post.imagesUrls.first(), // Show first image
+                        error = painterResource(id = R.drawable.bg_placeholder_image), // More fitting placeholder
                         placeholder = painterResource(id = R.drawable.bg_placeholder_image)
                     ),
                     contentDescription = stringResource(id = R.string.community_post_image_description),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 200.dp, max = 350.dp)
-                        .aspectRatio(16f / 9f, matchHeightConstraintsFirst = false)
-                        .background(Color.DarkGray),
+                        .heightIn(min = 200.dp, max = 350.dp) // Constrain height
+                        .aspectRatio(16f / 9f, matchHeightConstraintsFirst = false) // Maintain aspect ratio
+                        .background(Color.DarkGray), // Placeholder background for image area
                     contentScale = ContentScale.Crop
                 )
             }
 
+            // Post Content
             Text(
                 text = post.content,
                 color = TextWhite,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(16.dp)
             )
+
+            // Action Buttons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceAround
+                horizontalArrangement = Arrangement.SpaceAround // Distribute buttons evenly
             ) {
                 ActionButton(
                     icon = if (post.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    text = "${post.likesCount}",
+                    text = "${post.likesCount}", // Dynamic count
                     accessibilityTextResId = R.string.community_action_like,
                     onClick = onLikeClick,
-                    tint = if (post.isLiked) Color.Red else TextWhite
+                    tint = if (post.isLiked) Color.Red else TextWhite // Change tint if liked
                 )
                 ActionButton(
                     icon = Icons.Outlined.ChatBubbleOutline,
-                    text = "${post.commentsCount}",
+                    text = "${post.commentsCount}", // Dynamic count
                     accessibilityTextResId = R.string.community_action_comment,
                     onClick = onCommentClick
                 )
                 ActionButton(
                     icon = Icons.Outlined.Share,
-                    text = "${post.sharesCount}",
+                    text = "${post.sharesCount}", // Dynamic count
                     accessibilityTextResId = R.string.community_action_share,
                     onClick = onShareClick
                 )
@@ -338,9 +346,9 @@ fun CommunityPostCard(
 fun ActionButton(
     icon: ImageVector,
     text: String,
-    accessibilityTextResId: Int,
+    accessibilityTextResId: Int, // For accessibility
     onClick: () -> Unit,
-    tint: Color = TextWhite
+    tint: Color = TextWhite // Default tint
 ) {
     val actionName = stringResource(id = accessibilityTextResId)
     Row(
@@ -349,7 +357,7 @@ fun ActionButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = actionName,
+            contentDescription = actionName, // Use localized string for accessibility
             tint = tint,
             modifier = Modifier.size(24.dp)
         )
@@ -358,39 +366,7 @@ fun ActionButton(
     }
 }
 
-
-// --- Previews for CommunityScreen ---
-@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
-@Composable
-fun CommunityScreenPreview_Loading() {
-    BirdlensTheme {
-        val mockViewModel: CommunityViewModel = viewModel()
-        LaunchedEffect(Unit) {
-            if (mockViewModel.postFeedState is MutableStateFlow<PostFeedUiState>) {
-                (mockViewModel.postFeedState as MutableStateFlow<PostFeedUiState>).value = PostFeedUiState.Loading
-            }
-        }
-        CommunityScreen(navController = rememberNavController(), communityViewModel = mockViewModel)
-    }
-}
-
-@SuppressLint("StateFlowValueCalledInComposition")
-@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
-@Composable
-fun CommunityScreenPreview_Success_Empty() {
-    BirdlensTheme {
-        val mockViewModel: CommunityViewModel = viewModel()
-        LaunchedEffect(Unit) {
-            val internalStateField = CommunityViewModel::class.java.getDeclaredField("_postFeedState")
-            internalStateField.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val mutableFlow = internalStateField.get(mockViewModel) as MutableStateFlow<PostFeedUiState>
-            mutableFlow.value = PostFeedUiState.Success(posts = emptyList(), canLoadMore = false)
-        }
-        CommunityScreen(navController = rememberNavController(), communityViewModel = mockViewModel)
-    }
-}
-
+// Preview for CommunityScreen - assumes ViewModel is handled by compose viewModel()
 @SuppressLint("StateFlowValueCalledInComposition")
 @Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
 @Composable
@@ -409,6 +385,8 @@ fun CommunityScreenPreview_Success_WithData() {
             isLiked = false
         )
         val mockViewModel: CommunityViewModel = viewModel()
+        // For preview, directly set the state if possible (requires making _postFeedState internal or having a setter)
+        // This is a simplified way; in complex scenarios, use Hilt for preview or mock repository.
         LaunchedEffect(Unit) {
             val internalStateField = CommunityViewModel::class.java.getDeclaredField("_postFeedState")
             internalStateField.isAccessible = true
@@ -416,23 +394,7 @@ fun CommunityScreenPreview_Success_WithData() {
             val mutableFlow = internalStateField.get(mockViewModel) as MutableStateFlow<PostFeedUiState>
             mutableFlow.value = PostFeedUiState.Success(posts = listOf(samplePost, samplePost.copy(id = 2L, isLiked = true, likesCount = 1)), canLoadMore = true)
         }
-        CommunityScreen(navController = rememberNavController(), communityViewModel = mockViewModel)
-    }
-}
 
-@SuppressLint("StateFlowValueCalledInComposition")
-@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
-@Composable
-fun CommunityScreenPreview_Error() {
-    BirdlensTheme {
-        val mockViewModel: CommunityViewModel = viewModel()
-        LaunchedEffect(Unit) {
-            val internalStateField = CommunityViewModel::class.java.getDeclaredField("_postFeedState")
-            internalStateField.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val mutableFlow = internalStateField.get(mockViewModel) as MutableStateFlow<PostFeedUiState>
-            mutableFlow.value = PostFeedUiState.Error("Failed to fetch posts. Please check your connection.")
-        }
         CommunityScreen(navController = rememberNavController(), communityViewModel = mockViewModel)
     }
 }

@@ -37,18 +37,18 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Birdlens"
-            android:launchMode="singleTask"> {/* singleTask is good for deep link handling */}
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            {/* Deep Link Intent Filter for Email Verification using custom scheme */}
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                {/* This scheme and host must match the FRONTEND_URL base */}
+
                 <data android:scheme="birdlens"
                     android:host="deeplink"
                     android:pathPrefix="/auth/confirm-email" />

@@ -26,6 +26,15 @@ sealed class PostFeedUiState {
     data class Error(val message: String) : PostFeedUiState()
 }
 
+// Generic UI state for single operations like create, update, delete
+sealed class GenericUiState<out T> {
+    data object Idle : GenericUiState<Nothing>()
+    data object Loading : GenericUiState<Nothing>()
+    data class Success<T>(val data: T) : GenericUiState<T>()
+    data class Error(val message: String) : GenericUiState<Nothing>()
+}
+
+
 class CommunityViewModel(application: Application) : AndroidViewModel(application) {
 
     private val postRepository = PostRepository(application.applicationContext)
@@ -43,7 +52,7 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
 
     private var currentPostPage = 0
     private val postPageSize = 10
-    private var isPostLoadingPosts = false // Renamed for clarity
+    private var isPostLoadingPosts = false
     private var allPostsLoaded = false
 
     private var currentCommentPage = 0
@@ -130,29 +139,37 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             _createPostState.value = GenericUiState.Loading
             try {
-                val files = mediaUris.mapNotNull { uri ->
-                    fileUtil.getFileFromUri(uri)
+                // Convert Uris to Files using FileUtil
+                val files: List<File> = mediaUris.mapNotNull { uri ->
+                    fileUtil.getFileFromUri(uri) // getFileFromUri should handle potential nulls gracefully
                 }
+                Log.d("CommunityVM", "Preparing to upload ${files.size} files for post.")
 
                 val response = postRepository.createPost(
                     content, locationName, latitude, longitude, privacyLevel, type, isFeatured, files
                 )
+
                 if (response.isSuccessful && response.body() != null) {
                     val genericResponse = response.body()!!
                     if (!genericResponse.error && genericResponse.data != null) {
                         _createPostState.value = GenericUiState.Success(genericResponse.data)
-                        fetchPosts(initialLoad = true) // Refresh post list
+                        fetchPosts(initialLoad = true) // Refresh post list after successful creation
                     } else {
                         _createPostState.value = GenericUiState.Error(genericResponse.message ?: "Failed to create post")
+                        Log.e("CommunityVM", "API error creating post: ${genericResponse.message}")
                     }
                 } else {
-                    _createPostState.value = GenericUiState.Error("Error: ${response.code()} - ${response.errorBody()?.string()}")
+                    val errorBody = response.errorBody()?.string() ?: "Unknown error during post creation"
+                    _createPostState.value = GenericUiState.Error("Error: ${response.code()} - $errorBody")
+                    Log.e("CommunityVM", "HTTP error creating post: ${response.code()} - $errorBody")
                 }
             } catch (e: Exception) {
-                _createPostState.value = GenericUiState.Error(e.localizedMessage ?: "An unexpected error occurred")
+                _createPostState.value = GenericUiState.Error(e.localizedMessage ?: "An unexpected error occurred while creating the post")
+                Log.e("CommunityVM", "Exception creating post", e)
             }
         }
     }
+
     fun resetCreatePostState() {
         _createPostState.value = GenericUiState.Idle
     }
@@ -176,6 +193,7 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
 
                 if (postIndex != -1) {
                     postToUpdate = originalState.posts[postIndex]
+                    // Optimistic update
                     val newLikedStatus = !postToUpdate.isLiked
                     val newLikesCount = if (newLikedStatus) postToUpdate.likesCount + 1 else (postToUpdate.likesCount - 1).coerceAtLeast(0)
 
@@ -191,12 +209,15 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
                 if (response.isSuccessful && response.body() != null) {
                     val genericResponse = response.body()!!
                     if (!genericResponse.error) {
+                        // Backend might return updated like count and isLiked status in genericResponse.data
+                        // If so, update the specific post again with confirmed data
+                        // For now, optimistic update is considered final on success
                         Log.d("CommunityVM", "Reaction success: ${genericResponse.message}")
-                        // Optionally, fetch updated post details or rely on optimistic update
                     } else {
                         Log.e("CommunityVM", "Failed to add reaction (API error): ${genericResponse.message}")
+                        // Revert optimistic update if API call fails
                         if (originalState is PostFeedUiState.Success && postToUpdate != null && postIndex != -1) {
-                            _postFeedState.value = originalState // Revert optimistic update
+                            _postFeedState.value = originalState
                         }
                     }
                 } else {
@@ -234,11 +255,13 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
                     val newComment = response.body()!!.data!!
                     Log.d("CommunityVM", "Comment created successfully: $newComment")
 
+                    // Update the comments list in the bottom sheet
                     _commentsState.update { currentCommentUiState ->
                         when (currentCommentUiState) {
                             is GenericUiState.Success -> {
                                 val existingItems = currentCommentUiState.data.items ?: emptyList()
-                                val updatedItems = listOf(newComment) + existingItems // Prepend
+                                // Prepend new comment to show it at the top
+                                val updatedItems = listOf(newComment) + existingItems
 
                                 currentCommentUiState.copy(
                                     data = currentCommentUiState.data.copy(
@@ -248,11 +271,12 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
                                 )
                             }
                             else -> {
+                                // If this is the first comment, initialize the success state
                                 GenericUiState.Success(
                                     PaginatedCommentsResponse(
                                         items = listOf(newComment),
                                         totalCount = 1,
-                                        page = 0,
+                                        page = 0, // Assuming first page
                                         pageSize = commentPageSize,
                                         totalPages = 1
                                     )
@@ -263,7 +287,8 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
                 } else {
                     val errorMsg = response.body()?.message ?: response.errorBody()?.string() ?: "Failed to create comment"
                     Log.e("CommunityVM", "Failed to create comment: $errorMsg")
-                    _postFeedState.update { currentPostState -> // Revert optimistic count
+                    // Revert optimistic update for comment count if API call fails
+                    _postFeedState.update { currentPostState ->
                         if (currentPostState is PostFeedUiState.Success) {
                             val postIdAsLong = postId.toLongOrNull()
                             currentPostState.copy(posts = currentPostState.posts.map { post ->
@@ -276,7 +301,8 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             } catch (e: Exception) {
                 Log.e("CommunityVM", "Exception creating comment: ${e.localizedMessage}")
-                _postFeedState.update { currentPostState -> // Revert optimistic count
+                // Revert optimistic update for comment count on exception
+                _postFeedState.update { currentPostState ->
                     if (currentPostState is PostFeedUiState.Success) {
                         val postIdAsLong = postId.toLongOrNull()
                         currentPostState.copy(posts = currentPostState.posts.map { post ->
@@ -291,13 +317,14 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun fetchCommentsForPost(postId: String, initialLoad: Boolean = false) {
-        if (currentPostIdForComments != postId && initialLoad) { // Reset if fetching for a new post
-            resetCommentsStateInternal()
+        // If fetching for a new post or it's an initial load for the current post, reset pagination
+        if (currentPostIdForComments != postId || initialLoad) {
+            resetCommentsStateInternal() // Resets page, loading flags, etc.
         }
-        currentPostIdForComments = postId
+        currentPostIdForComments = postId // Set current post ID for subsequent pagination
 
 
-        if (isCommentLoading && !initialLoad) return
+        if (isCommentLoading && !initialLoad) return // Prevent multiple simultaneous pagination calls
         if (!initialLoad && allCommentsForPostLoaded) {
             Log.d("CommunityVM", "All comments already loaded for post $postId.")
             return
@@ -308,13 +335,9 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
             val offsetToFetch = if (initialLoad) 0 else currentCommentPage * commentPageSize
 
             if (initialLoad) {
-                currentCommentPage = 0
-                allCommentsForPostLoaded = false
-                _commentsState.value = GenericUiState.Loading
+                _commentsState.value = GenericUiState.Loading // Show loading for initial fetch
             }
-            // No need for an 'else' that sets _commentsState to Loading here for pagination,
-            // as we want to keep displaying existing comments.
-            // A loading indicator for pagination should be handled in the UI list itself.
+            // For pagination, we don't set to Loading to keep existing comments visible
 
             try {
                 val response = postRepository.getComments(postId, limit = commentPageSize, offset = offsetToFetch)
@@ -328,38 +351,40 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
                         } else {
                             currentState.data.items ?: emptyList()
                         }
-                        // Backend sorts DESC, so new pages are older. We append to show older items at the bottom.
+                        // Comments are usually sorted newest first by backend; append for pagination
                         val updatedItems = existingComments + newComments
 
                         GenericUiState.Success(
-                            paginatedData.copy( // Use API's pagination info, but our combined list
+                            paginatedData.copy( // Use API's pagination info
                                 items = updatedItems,
                                 totalCount = paginatedData.totalCount,
-                                page = currentCommentPage, // This is the page index we just fetched
+                                page = currentCommentPage, // This reflects the "page" of data we just fetched
                                 totalPages = paginatedData.totalPages
                             )
                         )
                     }
                     if (newComments.isNotEmpty()){
-                        currentCommentPage++ // Increment page only if new items were fetched
+                        currentCommentPage++ // Increment page for next fetch
                     }
+                    // Update allCommentsLoaded based on the response
                     allCommentsForPostLoaded = newComments.size < commentPageSize || paginatedData.totalPages <= currentCommentPage
                 } else {
                     val errorMsg = response.body()?.message ?: "Failed to load comments for post $postId"
-                    _commentsState.value = if (initialLoad || _commentsState.value !is GenericUiState.Success) {
-                        GenericUiState.Error(errorMsg)
+                    // Only set to error if it's an initial load or if the current state isn't already Success (to avoid wiping data on pagination error)
+                    if (initialLoad || _commentsState.value !is GenericUiState.Success) {
+                        _commentsState.value = GenericUiState.Error(errorMsg)
                     } else {
                         Log.e("CommunityVM", "Error fetching comments (page $currentCommentPage): $errorMsg")
-                        _commentsState.value // Keep existing data if pagination fails
+                        // Optionally, emit a transient error state or log, but keep existing data for pagination errors
                     }
                 }
             } catch (e: Exception) {
                 val errorMsg = e.localizedMessage ?: "Network error fetching comments for post $postId"
-                _commentsState.value = if (initialLoad || _commentsState.value !is GenericUiState.Success) {
-                    GenericUiState.Error(errorMsg)
+                if (initialLoad || _commentsState.value !is GenericUiState.Success) {
+                    _commentsState.value = GenericUiState.Error(errorMsg)
                 } else {
                     Log.e("CommunityVM", "Exception fetching comments (page $currentCommentPage): $errorMsg", e)
-                    _commentsState.value // Keep existing data
+                    // Keep existing data on pagination error
                 }
             } finally {
                 isCommentLoading = false
@@ -367,23 +392,18 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private fun resetCommentsStateInternal() { // Renamed to avoid confusion with public reset
+    // Renamed to avoid confusion with public reset that also nullifies postId
+    private fun resetCommentsStateInternal() {
         _commentsState.value = GenericUiState.Idle
         currentCommentPage = 0
         isCommentLoading = false
         allCommentsForPostLoaded = false
-        // currentPostIdForComments is reset by the caller (fetchCommentsForPost)
+        // currentPostIdForComments is NOT reset here, it's managed by the caller (fetchCommentsForPost)
     }
 
-    fun resetCommentsState() { // Public reset, e.g., when bottom sheet is dismissed
+    // Public function to reset comments state, e.g., when bottom sheet is dismissed
+    fun resetCommentsState() {
         resetCommentsStateInternal()
-        currentPostIdForComments = null
+        currentPostIdForComments = null // Explicitly nullify when dismissing sheet
     }
-}
-
-sealed class GenericUiState<out T> {
-    data object Idle : GenericUiState<Nothing>()
-    data object Loading : GenericUiState<Nothing>()
-    data class Success<T>(val data: T) : GenericUiState<T>()
-    data class Error(val message: String) : GenericUiState<Nothing>()
 }
