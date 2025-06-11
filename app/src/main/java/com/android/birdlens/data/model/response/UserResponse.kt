@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 
 data class UserResponse(
     @SerializedName("id")
-    val id: Long?, // Assuming id might not always be in every UserResponse context
+    val id: Long?,
     @SerializedName("username")
     val username: String,
     @SerializedName("first_name")
@@ -18,6 +18,8 @@ data class UserResponse(
     val age: Int,
     @SerializedName("avatar_url")
     val avatarUrl: String?,
-    @SerializedName("subscription") // This field is key
-    val subscription: String?    // Nullable, as it's not present if user hasn't subscribed
+    @SerializedName("subscription")
+    val subscription: String?,
+    @SerializedName("email_verified") // Added
+    val emailVerified: Boolean
 )

@@ -10,7 +10,7 @@
     <string name="back">Back</string>
     <string name="continue_button">Continue</string>
     <string name="search_something">Search something…</string>
-    <string name="see_all">See all -></string>
+    <string name="see_all">See all -</string>
     <string name="confirm">CONFIRM</string>
     <string name="buy_now">BUY NOW</string>
     <string name="all_selected_count">ALL (%d)</string> <!-- %d for count -->
@@ -40,8 +40,13 @@
     <string name="retype_password_placeholder">Retype password</string>
     <string name="register_error_all_fields">All fields are required.</string>
     <string name="register_error_valid_age">Please enter a valid age.</string>
-    <string name="register_error_password_length">Password must be at least 6 characters.</string>
+    <string name="register_error_password_min_length">Password must be at least %d characters.</string> <!-- %d for length -->
     <string name="register_error_passwords_mismatch">Passwords do not match.</string>
+    <string name="register_error_username_length">Username must be between 3 and 20 characters.</string>
+    <string name="register_error_invalid_email">Please enter a valid email address.</string>
+    <string name="register_error_firstname_length">First name must be between 3 and 20 characters.</string>
+    <string name="register_error_lastname_length">Last name must be between 3 and 20 characters.</string>
+    <string name="register_error_age_range">Age must be between 1 and 120.</string>
 
 
     <!-- Login Success Screen -->

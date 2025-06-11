@@ -34,11 +34,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.test.core.app.ApplicationProvider
 import com.android.birdlens.R
 import com.android.birdlens.data.model.request.LoginRequest
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AuthScreenLayout
-import com.android.birdlens.presentation.ui.screens.accountinfo.ApplicationProvider
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
 
@@ -77,7 +77,7 @@ fun LoginScreen(
                 googleAuthViewModel.resetBackendAuthState()
             }
             is GoogleAuthViewModel.FirebaseSignInState.Error -> {
-                Toast.makeText(context, "Firebase Sign-In Error: ${state.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show() // Using state.message directly
                 googleAuthViewModel.resetFirebaseSignInState()
             }
             else -> { /* Idle or Loading */ }
@@ -87,7 +87,8 @@ fun LoginScreen(
     LaunchedEffect(backendAuthState) {
         when (val state = backendAuthState) {
             is GoogleAuthViewModel.BackendAuthState.Error -> {
-                Toast.makeText(context, "Auth Error (${state.operation}): ${state.message}", Toast.LENGTH_LONG).show()
+                // Display only the message from the backend error state
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
                 googleAuthViewModel.resetBackendAuthState()
             }
             else -> { /* Idle, Loading, or Success (which triggers Firebase sign-in) */ }

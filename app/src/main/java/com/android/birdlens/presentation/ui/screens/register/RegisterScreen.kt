@@ -2,6 +2,7 @@
 package com.android.birdlens.presentation.ui.screens.register
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -31,11 +32,10 @@ import com.android.birdlens.R
 import com.android.birdlens.data.model.request.RegisterRequest
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AuthScreenLayout
-import com.android.birdlens.presentation.ui.screens.accountinfo.ApplicationProvider
 import com.android.birdlens.presentation.ui.screens.login.CustomTextField
-// import com.android.birdlens.presentation.ui.screens.login.SocialLoginButton // If used
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
+import java.util.regex.Pattern // For email validation
 
 @Composable
 fun RegisterScreen(
@@ -56,6 +56,9 @@ fun RegisterScreen(
 
     val backendAuthState by googleAuthViewModel.backendAuthState.collectAsState()
     val firebaseSignInState by googleAuthViewModel.firebaseSignInState.collectAsState()
+
+    // Email validation pattern
+    val emailPattern = remember { Pattern.compile("[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+") }
 
     LaunchedEffect(firebaseSignInState) {
         when (val state = firebaseSignInState) {
@@ -83,14 +86,21 @@ fun RegisterScreen(
                     GoogleAuthViewModel.AuthOperation.REGISTER -> "Registration"
                     else -> "Authentication"
                 }
-                Toast.makeText(context, "$operationType Error: ${state.message}", Toast.LENGTH_LONG).show()
+                // Use only the message for the Toast
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                Log.e("RegisterScreen", "$operationType Backend Error: ${state.message}")
                 googleAuthViewModel.resetBackendAuthState()
             }
             is GoogleAuthViewModel.BackendAuthState.RegistrationSuccess -> {
-                Toast.makeText(context, "Registration with backend successful. Signing into Firebase...", Toast.LENGTH_SHORT).show()
+                // Use only the message for the Toast, or a custom success message
+                Toast.makeText(context, "Registration initiated. Signing into Firebase...", Toast.LENGTH_SHORT).show()
+                Log.d("RegisterScreen", "Registration with backend successful. Got custom token.")
             }
             is GoogleAuthViewModel.BackendAuthState.CustomTokenReceived -> {
-                Toast.makeText(context, "Auth with backend successful. Signing into Firebase...", Toast.LENGTH_SHORT).show()
+                // This state might not be hit directly in registration flow before Firebase sign-in,
+                // but if it were, use only the message.
+                Toast.makeText(context, "Authentication progressing...", Toast.LENGTH_SHORT).show()
+                Log.d("RegisterScreen", "Auth with backend successful (custom token received). Signing into Firebase...")
             }
             else -> { /* Idle or Loading */ }
         }
@@ -99,7 +109,6 @@ fun RegisterScreen(
     val isLoading = backendAuthState is GoogleAuthViewModel.BackendAuthState.Loading ||
             firebaseSignInState is GoogleAuthViewModel.FirebaseSignInState.Loading
 
-    // SOLUTION: Get string resources here
     val backText = stringResource(id = R.string.back)
     val createAccountTitleText = stringResource(id = R.string.create_account_title)
     val firstNamePlaceholderText = stringResource(id = R.string.first_name_placeholder)
@@ -110,12 +119,6 @@ fun RegisterScreen(
     val passwordPlaceholderText = stringResource(id = R.string.password_placeholder)
     val retypePasswordPlaceholderText = stringResource(id = R.string.retype_password_placeholder)
     val continueButtonText = stringResource(id = R.string.continue_button)
-    // val signUpWithGoogleText = stringResource(id = R.string.signup_with_google) // If social buttons used
-
-    val errorAllFieldsText = stringResource(id = R.string.register_error_all_fields)
-    val errorValidAgeText = stringResource(id = R.string.register_error_valid_age)
-    val errorPasswordLengthText = stringResource(id = R.string.register_error_password_length)
-    val errorPasswordsMismatchText = stringResource(id = R.string.register_error_passwords_mismatch)
 
     AuthScreenLayout(
         modifier = modifier,
@@ -181,18 +184,33 @@ fun RegisterScreen(
                 Button(
                     onClick = {
                         val age = ageString.toIntOrNull()
-                        if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || username.isBlank() || password.isBlank()) {
-                            Toast.makeText(context, errorAllFieldsText, Toast.LENGTH_SHORT).show()
-                        } else if (age == null || age <= 0) {
-                            Toast.makeText(context, errorValidAgeText, Toast.LENGTH_SHORT).show()
-                        } else if (password.length < 6) {
-                            Toast.makeText(context, errorPasswordLengthText, Toast.LENGTH_SHORT).show()
+                        var errorMessage = ""
+
+                        if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || username.isBlank() || password.isBlank() || retypePassword.isBlank() || ageString.isBlank()) {
+                            errorMessage = context.getString(R.string.register_error_all_fields)
+                        } else if (username.length < 3 || username.length > 20) {
+                            errorMessage = context.getString(R.string.register_error_username_length)
+                        } else if (password.length < 6) { // Using 6 as per your request
+                            errorMessage = context.getString(R.string.register_error_password_min_length, 6)
                         } else if (password != retypePassword) {
-                            Toast.makeText(context, errorPasswordsMismatchText, Toast.LENGTH_SHORT).show()
+                            errorMessage = context.getString(R.string.register_error_passwords_mismatch)
+                        } else if (!emailPattern.matcher(email).matches()) {
+                            errorMessage = context.getString(R.string.register_error_invalid_email)
+                        } else if (firstName.length < 3 || firstName.length > 20) {
+                            errorMessage = context.getString(R.string.register_error_firstname_length)
+                        } else if (lastName.length < 3 || lastName.length > 20) {
+                            errorMessage = context.getString(R.string.register_error_lastname_length)
+                        } else if (age == null || age < 1 || age > 120) {
+                            errorMessage = context.getString(R.string.register_error_age_range)
+                        }
+
+
+                        if (errorMessage.isNotEmpty()) {
+                            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                         } else {
                             val request = RegisterRequest(
                                 username = username, password = password, email = email,
-                                firstName = firstName, lastName = lastName, age = age
+                                firstName = firstName, lastName = lastName, age = age!! // Safe due to prior check
                             )
                             googleAuthViewModel.registerUser(request)
                         }
@@ -206,15 +224,6 @@ fun RegisterScreen(
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-
-                // Example if you re-add social login buttons:
-                // SocialLoginButton(
-                //    text = signUpWithGoogleText,
-                //    onClick = { /* ... */ },
-                //    // ...
-                // )
-                // Spacer(modifier = Modifier.height(10.dp))
-
 
                 if (isLoading) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -233,7 +242,8 @@ fun RegisterScreen(
 fun RegisterScreenPreview() {
     BirdlensTheme {
         val navController = rememberNavController()
-        val dummyViewModel = GoogleAuthViewModel(ApplicationProvider.getApplicationContext())
+        // In a real app, use Hilt or a proper ViewModel factory. For preview, this is okay.
+        val dummyViewModel = GoogleAuthViewModel(LocalContext.current.applicationContext as Application)
         RegisterScreen(
             navController = navController,
             googleAuthViewModel = dummyViewModel,

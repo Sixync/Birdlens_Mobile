@@ -38,8 +38,13 @@
     <string name="retype_password_placeholder">Nhập lại mật khẩu</string>
     <string name="register_error_all_fields">Tất cả các trường là bắt buộc.</string>
     <string name="register_error_valid_age">Vui lòng nhập tuổi hợp lệ.</string>
-    <string name="register_error_password_length">Mật khẩu phải có ít nhất 6 ký tự.</string>
+    <string name="register_error_password_min_length">Mật khẩu phải có ít nhất %d ký tự.</string> <!-- %d for length -->
     <string name="register_error_passwords_mismatch">Mật khẩu không khớp.</string>
+    <string name="register_error_username_length">Tên người dùng phải từ 3 đến 20 ký tự.</string>
+    <string name="register_error_invalid_email">Vui lòng nhập địa chỉ email hợp lệ.</string>
+    <string name="register_error_firstname_length">Tên phải từ 3 đến 20 ký tự.</string>
+    <string name="register_error_lastname_length">Họ phải từ 3 đến 20 ký tự.</string>
+    <string name="register_error_age_range">Tuổi phải từ 1 đến 120.</string>
 
     <!-- Login Success Screen -->
     <string name="login_successful_title">Đăng nhập thành công</string>

@@ -34,7 +34,8 @@ data class LoginResponse(
             email = email,
             age = age,
             avatarUrl = avatarUrl,
-            subscription = null
+            subscription = null,
+            emailVerified = true
         )
     }
 }

@@ -1,35 +1,31 @@
 // EXE201/app/src/main/java/com/android/birdlens/data/network/RetrofitInstance.kt
 package com.android.birdlens.data.network
 
-import android.content.Context // Required for AuthInterceptor instantiation
-import com.android.birdlens.MainActivity // Or any other context provider
+import android.content.Context
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit // Import TimeUnit
 
 object RetrofitInstance {
-    private const val BASE_URL = "http://10.0.2.2/"  // Or your deployed backend URL
-        //http://20.191.153.166/
-        //http://10.0.2.2/ localhost
+    private const val BASE_URL = "http://10.0.2.2/"
+    //http://20.191.153.166/
+    //http://10.0.2.2/ localhost
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    // Function to create OkHttpClient, requires Context for AuthInterceptor
     fun createOkHttpClient(context: Context): OkHttpClient {
         return OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS) // Increased connect timeout to 30 seconds
+            .readTimeout(30, TimeUnit.SECONDS)    // Increased read timeout to 30 seconds
+            .writeTimeout(30, TimeUnit.SECONDS)   // Increased write timeout to 30 seconds
             .addInterceptor(loggingInterceptor)
-            .addInterceptor(AuthInterceptor(context.applicationContext)) // Add AuthInterceptor
+            .addInterceptor(AuthInterceptor(context.applicationContext))
             .build()
     }
 
-    // ApiService instance needs to be initialized with context
-    // This lazy initialization needs context. One way is to initialize it from Application class
-    // or pass context when first accessed. For simplicity, assuming a context is available.
-    // A better approach would be to use dependency injection (e.g., Hilt).
-
-    // Lateinit var for ApiService, to be initialized with context
     private lateinit var apiService: ApiService
 
     fun getApiService(context: Context): ApiService {
@@ -38,7 +34,7 @@ object RetrofitInstance {
                 if (!::apiService.isInitialized) {
                     val retrofit = Retrofit.Builder()
                         .baseUrl(BASE_URL)
-                        .client(createOkHttpClient(context.applicationContext)) // Pass context here
+                        .client(createOkHttpClient(context.applicationContext))
                         .addConverterFactory(GsonConverterFactory.create())
                         .build()
                     apiService = retrofit.create(ApiService::class.java)
@@ -48,21 +44,11 @@ object RetrofitInstance {
         return apiService
     }
 
-    // Old lazy val - this will cause issues if context is needed before MainActivity.
-    // Keeping the structure but showing how to adapt if context is needed earlier.
-    // For now, we will adapt how it's called in ViewModels.
+    // This lazy val is problematic if context is needed before MainActivity (e.g. in Application class for init)
+    // However, your current usage of api(context) should be fine.
     val api: ApiService by lazy {
-        // This will crash if called before context is available for AuthInterceptor.
-        // This is a placeholder, use getApiService(context) instead.
-        // For a quick fix without major DI restructure, you'd pass context to viewmodels
-        // that then pass to this.
-        // However, for a robust solution, DI (Hilt) is recommended.
-        // For this exercise, we'll modify ViewModels to call getApiService(context).
         throw IllegalStateException("ApiService not initialized with Context. Use getApiService(context) instead.")
     }
 
-    // Simplified access for ViewModels that can get context
-    // This is a common pattern if not using Hilt.
-    // Make sure context passed is applicationContext to avoid leaks.
     fun api(context: Context): ApiService = getApiService(context.applicationContext)
 }
