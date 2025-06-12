@@ -173,16 +173,14 @@
     <string name="map_error_loading_detailed">Could not load map. Ensure Google Play Services is updated, API key is valid, and Maps SDK initialized correctly.</string>
     <string name="map_marker_snippet_species">Species: %1$s</string>
 
-    <!-- Map Screen Search -->
+    <!-- Map Screen Search (Local Search) -->
     <string name="map_search_placeholder">Search for a bird species…</string>
     <string name="map_search_icon_description">Search Bird</string>
     <string name="map_search_clear_description">Clear Search</string>
     <string name="map_search_error_not_found">Could not find a bird named \'%1$s\'. Please check spelling.</string>
     <string name="map_search_error_no_hotspots">No recent observations of \'%1$s\' found in Vietnam.</string>
-    <string name="map_search_ai_analyzing">Analyzing your search…</string>
+    <string name="map_search_local_finding">Searching for \'%1$s\'…</string>
     <string name="map_search_ai_finding">Finding locations for %1$s…</string>
-    <string name="map_search_error_ai_failed">Could not understand your search for \'%1$s\'. Please try a different name.</string>
-    <string name="gemini_prompt_map_search">Your task is to extract the name of a bird from the user\'s text and respond with ONLY the bird\'s common **English** name.\n\n- If the text is "tell me about the american robin", respond with "American Robin".\n- If the text is in Vietnamese, like "chim sáo", respond with "Starling".\n- If you cannot identify a specific bird (e.g., the text is "blue car"), you MUST respond with the exact text: "Error: No bird name found".\n\nUser text: "%1$s"</string>
 
 
     <!-- Marketplace Screen -->

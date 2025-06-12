@@ -1,4 +1,3 @@
-// EXE201/app/src/main/java/com/android/birdlens/MainActivity.kt
 package com.android.birdlens
 
 import android.annotation.SuppressLint
@@ -20,6 +19,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.android.birdlens.admob.AdManager
 import com.android.birdlens.data.LanguageManager
+import com.android.birdlens.data.repository.BirdSpeciesRepository
 import com.android.birdlens.presentation.navigation.AppNavigation
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
@@ -27,6 +27,7 @@ import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.BirdlensTheme
 import com.android.birdlens.ui.theme.GreenDeep
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,6 +54,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Trigger bird species database population on a background thread
+        lifecycleScope.launch(Dispatchers.IO) {
+            BirdSpeciesRepository(applicationContext).populateDatabaseIfEmpty()
+        }
 
         adManager = AdManager(applicationContext)
 

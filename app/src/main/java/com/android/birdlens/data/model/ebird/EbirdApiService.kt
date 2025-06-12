@@ -1,3 +1,4 @@
+// app/src/main/java/com/android/birdlens/data/model/ebird/EbirdApiService.kt
 // EXE201/app/src/main/java/com/android/birdlens/data/model/ebird/EbirdApiService.kt
 package com.android.birdlens.data.model.ebird
 
@@ -11,7 +12,7 @@ interface EbirdApiService {
      * Fetches the eBird Taxonomy for given species codes.
      * API Key is added via EbirdApiKeyInterceptor.
      * Example: https://api.ebird.org/v2/ref/taxonomy/ebird?species=houspa,amerob&fmt=json
-     * @param speciesCodes A comma-separated list of eBird species codes (e.g., "houspa,amerob").
+     * @param speciesCodes A comma-separated list of eBird species codes (e.g., "houspa,amerob"). If null, returns entire taxonomy.
      * @param fmt Format (json or csv).
      * @param locale Locale for common names (e.g., "en", "es_ES").
      * @param cat Category of taxa to return (e.g., "species", "issf", "hybrid").
@@ -19,7 +20,7 @@ interface EbirdApiService {
      */
     @GET("v2/ref/taxonomy/ebird")
     suspend fun getSpeciesTaxonomy(
-        @Query("species") speciesCodes: String, // Changed from speciesCode to speciesCodes for clarity with list
+        @Query("species") speciesCodes: String? = null, // Changed to nullable with default
         @Query("fmt") format: String = "json",
         @Query("locale") locale: String? = null,
         @Query("cat") category: String? = null,
