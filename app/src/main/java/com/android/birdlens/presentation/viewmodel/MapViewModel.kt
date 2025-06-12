@@ -5,11 +5,11 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.birdlens.BuildConfig
 import com.android.birdlens.R
+import com.android.birdlens.data.local.BirdSpecies
 import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
+import com.android.birdlens.data.repository.BirdSpeciesRepository
 import com.android.birdlens.data.repository.HotspotRepository
-import com.google.ai.client.generativeai.GenerativeModel
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -38,17 +38,14 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
 
     private val hotspotRepository = HotspotRepository(application.applicationContext)
+    private val birdSpeciesRepository = BirdSpeciesRepository(application.applicationContext)
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     private val context = application.applicationContext // For string resources
 
-    // Gemini AI model
-    private val generativeModel: GenerativeModel by lazy {
-        GenerativeModel(
-            modelName = "gemini-1.5-flash",
-            apiKey = BuildConfig.GEMINI_API_KEY
-        )
-    }
+    // New state for search recommendations
+    private val _searchResults = MutableStateFlow<List<BirdSpecies>>(emptyList())
+    val searchResults: StateFlow<List<BirdSpecies>> = _searchResults.asStateFlow()
 
     companion object {
         const val SHOW_HOTSPOTS_MIN_ZOOM_LEVEL = 7.5f
@@ -59,9 +56,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         private const val SIGNIFICANT_PAN_THRESHOLD_DEGREES = 0.25
         const val COUNTRY_CODE_VIETNAM = "VN"
         private const val TAG = "MapViewModel"
+        private const val SEARCH_DEBOUNCE_MS = 300L // Debounce for search input
     }
 
     private var fetchJob: Job? = null
+    private var searchJob: Job? = null // Job for debounced search
     private var lastFetchedCenter: LatLng? = null
     private var areHotspotsVisible = false
     private var isSearchActive = false
@@ -69,6 +68,22 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
+        searchJob?.cancel() // Cancel previous search job
+        if (query.isNotBlank()) {
+            searchJob = viewModelScope.launch {
+                delay(SEARCH_DEBOUNCE_MS) // Debounce to avoid querying on every keystroke
+                try {
+                    val results = birdSpeciesRepository.searchBirds(query)
+                    _searchResults.value = results
+                    Log.d(TAG, "Local search for '$query' found ${results.size} results.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error searching for birds in local DB: ${e.message}", e)
+                    _searchResults.value = emptyList() // Clear results on error
+                }
+            }
+        } else {
+            _searchResults.value = emptyList() // Clear results if query is blank
+        }
     }
 
     fun onBirdSearchSubmitted() {
@@ -76,39 +91,35 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         if (query.isBlank()) {
             return
         }
-        isSearchActive = true
-        // Instead of directly fetching, we now go through the AI
-        searchForBirdWithAI(query)
-    }
 
-    // New AI-powered search function
-    private fun searchForBirdWithAI(query: String) {
+        searchJob?.cancel()
+        _searchResults.value = emptyList() // Hide recommendations after submission
+
+        isSearchActive = true
         fetchJob?.cancel()
         fetchJob = viewModelScope.launch {
-            _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_ai_analyzing))
+            _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_local_finding, query))
             try {
-                // Construct the prompt to get a normalized English name
-                val prompt = context.getString(R.string.gemini_prompt_map_search, query)
-                val response = generativeModel.generateContent(prompt)
-                val birdName = response.text?.trim()
+                // Search the local database for the bird
+                val searchResults = birdSpeciesRepository.searchBirds(query)
 
-                if (birdName.isNullOrBlank() || birdName.contains("Error:", ignoreCase = true)) {
-                    _uiState.value = MapUiState.Error(context.getString(R.string.map_search_error_ai_failed, query))
-                    isSearchActive = false // Reset search state
-                    return@launch
+                if (searchResults.isNotEmpty()) {
+                    val foundBird = searchResults.first()
+                    // Update loading message to show the found bird name
+                    _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_ai_finding, foundBird.commonName))
+                    fetchHotspotsForSpeciesCode(foundBird.speciesCode, foundBird.commonName)
+                } else {
+                    _uiState.value = MapUiState.Error(context.getString(R.string.map_search_error_not_found, query))
+                    isSearchActive = false
                 }
-
-                // Now that we have a good name, proceed with the eBird search
-                fetchHotspotsForBird(birdName)
-
             } catch (e: Exception) {
                 if (e is CancellationException) {
-                    Log.i(TAG, "AI search job was cancelled.")
+                    Log.i(TAG, "Local bird search was cancelled.")
                     return@launch
                 }
-                val errorMsg = "Exception during AI search: ${e.localizedMessage}"
+                val errorMsg = "Exception during local bird search: ${e.localizedMessage}"
                 _uiState.value = MapUiState.Error(errorMsg)
-                isSearchActive = false // Reset search state
+                isSearchActive = false
                 Log.e(TAG, errorMsg, e)
             }
         }
@@ -117,6 +128,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onSearchQueryCleared(currentCenter: LatLng) {
         _searchQuery.value = ""
+        _searchResults.value = emptyList() // Clear recommendations
         isSearchActive = false
         // Re-fetch all hotspots for the current view to restore normal map behavior
         requestHotspotsForCurrentView(currentCenter, (_uiState.value as? MapUiState.Success)?.zoomLevelContext ?: SHOW_HOTSPOTS_MIN_ZOOM_LEVEL)
@@ -187,22 +199,12 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun fetchHotspotsForBird(birdName: String) {
-        // This function is now private and part of the AI search flow.
-        // The fetchJob is already active from the calling function `searchForBirdWithAI`.
+    private fun fetchHotspotsForSpeciesCode(speciesCode: String, birdDisplayName: String) {
+        // This function is now private and part of the search flow.
+        // It's called after a speciesCode has been successfully found.
         viewModelScope.launch {
-            _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_ai_finding, birdName))
-            Log.d(TAG, "Fetching hotspots for bird: '$birdName' in country '$COUNTRY_CODE_VIETNAM'")
-
+            Log.d(TAG, "Fetching hotspots for speciesCode: '$speciesCode'")
             try {
-                val speciesCode = hotspotRepository.findSpeciesCode(birdName)
-
-                if (speciesCode == null) {
-                    _uiState.value = MapUiState.Error(context.getString(R.string.map_search_error_not_found, birdName))
-                    isSearchActive = false // Reset search state on failure
-                    return@launch
-                }
-
                 val hotspotsWithBird = hotspotRepository.getHotspotsForSpeciesInCountry(
                     speciesCode = speciesCode,
                     countryCode = COUNTRY_CODE_VIETNAM
@@ -213,17 +215,16 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     areHotspotsVisible = true
                     // Keep isSearchActive = true until the user clears it
                 } else {
-                    _uiState.value = MapUiState.Error(context.getString(R.string.map_search_error_no_hotspots, birdName))
+                    _uiState.value = MapUiState.Error(context.getString(R.string.map_search_error_no_hotspots, birdDisplayName))
                     isSearchActive = false // Reset search state on failure
                 }
 
             } catch (e: Exception) {
-                // If the job was cancelled, it's not a user-facing error, just an interruption.
                 if (e is CancellationException) {
-                    Log.i(TAG, "Bird search job was cancelled. This is expected if a new action occurred.")
-                    return@launch // Don't set error state for cancellation
+                    Log.i(TAG, "Bird hotspot fetch job was cancelled.")
+                    return@launch
                 }
-                val errorMsg = "Exception searching for bird: ${e.localizedMessage}"
+                val errorMsg = "Exception fetching hotspots for species: ${e.localizedMessage}"
                 _uiState.value = MapUiState.Error(errorMsg)
                 isSearchActive = false // Reset search state on failure
                 Log.e(TAG, errorMsg, e)

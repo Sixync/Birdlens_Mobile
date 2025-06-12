@@ -1,3 +1,4 @@
+<!-- // app/src/main/res/values-vi/strings.xml -->
 <resources>
     <string name="app_name">Birdlens</string>
 
@@ -175,16 +176,16 @@
     <string name="map_error_loading_detailed">Không thể tải bản đồ. Đảm bảo Dịch vụ Google Play đã được cập nhật, khóa API hợp lệ và SDK Bản đồ được khởi tạo chính xác.</string>
     <string name="map_marker_snippet_species">Loài: %1$s</string>
 
-    <!-- Map Screen Search -->
+    <!-- Map Screen Search (Local Search) -->
     <string name="map_search_placeholder">Tìm kiếm loài chim…</string>
     <string name="map_search_icon_description">Tìm kiếm Chim</string>
     <string name="map_search_clear_description">Xóa Tìm kiếm</string>
     <string name="map_search_error_not_found">Không thể tìm thấy loài chim có tên \'%1$s\'. Vui lòng kiểm tra lại chính tả.</string>
     <string name="map_search_error_no_hotspots">Không tìm thấy quan sát gần đây của \'%1$s\' tại Việt Nam.</string>
-    <string name="map_search_ai_analyzing">Đang phân tích tìm kiếm của bạn…</string>
+    <string name="map_search_local_finding">Đang tìm kiếm \'%1$s\'…</string>
     <string name="map_search_ai_finding">Đang tìm vị trí cho %1$s…</string>
-    <string name="map_search_error_ai_failed">Không thể hiểu tìm kiếm của bạn cho \'%1$s\'. Vui lòng thử một tên khác.</string>
-    <string name="gemini_prompt_map_search">Nhiệm vụ của bạn là trích xuất tên một loài chim từ văn bản của người dùng và chỉ trả lời bằng tên tiếng Anh thông dụng của loài chim đó.\n\n- Nếu văn bản là "tell me about the american robin", trả lời "American Robin".\n- Nếu văn bản là tiếng Việt, như "chim sáo", trả lời "Starling".\n- Nếu bạn không thể xác định một loài chim cụ thể (ví dụ: văn bản là "xe hơi màu xanh"), bạn PHẢI trả lời bằng văn bản chính xác: "Error: No bird name found".\n\nUser text: "%1$s"</string>
+
+
     <!-- Marketplace Screen -->
     <string name="marketplace_title_birdlens">BIRDLENS</string>
     <string name="marketplace_subtitle">Chợ</string>

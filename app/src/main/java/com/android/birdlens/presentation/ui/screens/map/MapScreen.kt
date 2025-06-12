@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
+// app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
 package com.android.birdlens.presentation.ui.screens.map
 
 import android.Manifest
@@ -12,6 +12,8 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -41,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.android.birdlens.R
+import com.android.birdlens.data.local.BirdSpecies
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.viewmodel.MapUiState
@@ -105,6 +108,7 @@ fun MapScreen(
     var showMapError by remember { mutableStateOf(false) }
     val mapUiState by mapViewModel.uiState.collectAsState()
     val searchQuery by mapViewModel.searchQuery.collectAsState()
+    val searchResults by mapViewModel.searchResults.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
     var customHotspotIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
@@ -242,7 +246,14 @@ fun MapScreen(
                     mapViewModel.onSearchQueryCleared(cameraPositionState.position.target)
                 },
                 onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() else { /* Handle no backstack */ } },
-                onNavigateToCart = { navController.navigate(Screen.Cart.route) }
+                onNavigateToCart = { navController.navigate(Screen.Cart.route) },
+                searchResults = searchResults,
+                onSearchResultClick = { birdName ->
+                    keyboardController?.hide()
+                    // This sequence updates the text field and immediately submits
+                    mapViewModel.onSearchQueryChanged(birdName)
+                    mapViewModel.onBirdSearchSubmitted()
+                }
             )
         },
         showBottomBar = true
@@ -393,6 +404,8 @@ fun MapScreenHeader(
     onClearSearch: () -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToCart: () -> Unit,
+    searchResults: List<BirdSpecies>,
+    onSearchResultClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(bottom = 8.dp)) {
@@ -446,6 +459,46 @@ fun MapScreenHeader(
                 unfocusedIndicatorColor = Color.Transparent
             )
         )
+
+        // Search recommendations dropdown
+        if (searchResults.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.95f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
+                    items(searchResults, key = { it.speciesCode }) { bird ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSearchResultClick(bird.commonName) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Outlined.Search, // Or a bird icon
+                                contentDescription = null,
+                                tint = TextWhite.copy(alpha = 0.7f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(text = bird.commonName, color = TextWhite)
+                                Text(
+                                    text = bird.scientificName,
+                                    color = TextWhite.copy(alpha = 0.6f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
