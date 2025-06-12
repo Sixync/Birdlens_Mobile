@@ -4,6 +4,7 @@ package com.android.birdlens.presentation.ui.screens.payment
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.android.birdlens.data.network.RetrofitInstance
 import com.android.birdlens.ui.theme.BirdlensTheme
 import com.android.birdlens.ui.theme.ButtonGreen
 import com.android.birdlens.ui.theme.GreenDeep
@@ -54,15 +56,18 @@ import org.json.JSONObject
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-import androidx.activity.ComponentActivity // Change this import
+
 class CheckoutActivity : ComponentActivity() {
     companion object {
         private const val BACKEND_URL = "http://10.0.2.2"
         private const val TAG = "CheckoutActivity"
     }
 
+    private lateinit var okHttpClient: OkHttpClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        okHttpClient = RetrofitInstance.createOkHttpClient(applicationContext)
 
         setContent {
             BirdlensTheme {
@@ -199,15 +204,16 @@ class CheckoutActivity : ComponentActivity() {
         val url = "$BACKEND_URL/create-payment-intent"
 
         val shoppingCartContent = """
-            {
-                "items": [
-                    {"id":"sub_premium", "amount": 2000} 
-                ]
-            }
-        """
+         {
+             "items": [
+                 {"id":"sub_premium"} 
+             ]
+         }
+     """
 
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val body = shoppingCartContent.toRequestBody(mediaType)
+
         val request = Request.Builder()
             .url(url)
             .post(body)
@@ -215,8 +221,7 @@ class CheckoutActivity : ComponentActivity() {
 
         Log.d(TAG, "Fetching PaymentIntent from: $url with body: $shoppingCartContent")
 
-        OkHttpClient()
-            .newCall(request)
+        okHttpClient.newCall(request)
             .enqueue(object: Callback {
                 override fun onFailure(call: Call, e: IOException) {
                     Log.e(TAG, "OkHttp onFailure: ${e.message}", e)
@@ -231,7 +236,7 @@ class CheckoutActivity : ComponentActivity() {
                     } else {
                         val clientSecret = extractClientSecretFromResponse(response)
                         clientSecret?.let { secret ->
-                            Log.d(TAG, "OkHttp onResponse success, clientSecret: $secret")
+                            Log.d(TAG, "OkHttp onResponse success, clientSecret: ${secret.take(10)}...")
                             continuation.resume(Result.success(secret))
                         } ?: run {
                             val errorMsg = "Could not find payment intent client secret in response!"
