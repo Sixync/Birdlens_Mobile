@@ -1,4 +1,4 @@
-// EXE201/app/build.gradle.kts
+
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -16,7 +16,7 @@ val localPropertiesFile = rootProject.file("local.properties")
 var googleMapsApiKeyFromProperties = "YOUR_API_KEY_MISSING_IN_LOCAL_PROPERTIES"
 var ebirdApiKeyFromProperties = "YOUR_EBIRD_API_KEY_MISSING"
 var geminiApiKeyFromProperties = "YOUR_GEMINI_API_KEY_MISSING"
-var stripePublishableKeyFromProperties = "YOUR_STRIPE_PUBLISHABLE_KEY_MISSING" // New Stripe Key variable
+var stripePublishableKeyFromProperties: String? = null // Initialize as nullable String
 
 if (localPropertiesFile.exists()) {
     try {
@@ -25,7 +25,7 @@ if (localPropertiesFile.exists()) {
             googleMapsApiKeyFromProperties = localProperties.getProperty("MAPS_API_KEY")
             ebirdApiKeyFromProperties = localProperties.getProperty("EBIRD_API_KEY")
             geminiApiKeyFromProperties = localProperties.getProperty("GEMINI_API_KEY")
-            stripePublishableKeyFromProperties = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY") // Get Stripe Key
+            stripePublishableKeyFromProperties = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY") // Reading the key
 
             if (googleMapsApiKeyFromProperties != null) {
                 println("Successfully loaded MAPS_API_KEY from local.properties.")
@@ -42,10 +42,12 @@ if (localPropertiesFile.exists()) {
             } else {
                 println("Warning: GEMINI_API_KEY not found in local.properties.")
             }
+
+            // More specific check for Stripe key
             if (stripePublishableKeyFromProperties != null) {
-                println("Successfully loaded STRIPE_PUBLISHABLE_KEY from local.properties.")
+                println("Successfully loaded STRIPE_PUBLISHABLE_KEY from local.properties. Value: '${stripePublishableKeyFromProperties}'")
             } else {
-                println("Warning: STRIPE_PUBLISHABLE_KEY not found in local.properties.")
+                println("Warning: STRIPE_PUBLISHABLE_KEY not found or is null in local.properties.")
             }
         }
     } catch (e: Exception) {
@@ -77,16 +79,17 @@ val googleMapsApiKey = if (googleMapsApiKeyFromProperties.isNullOrBlank()) {
 }
 
 // Read Stripe Publishable Key
-val stripePublishableKey = if (stripePublishableKeyFromProperties.isNullOrBlank() || stripePublishableKeyFromProperties == "YOUR_STRIPE_PUBLISHABLE_KEY_MISSING") {
-    println("Using default/fallback Stripe Publishable Key. Please ensure it's set in local.properties for real use.")
-    "pk_test_DEFAULT_FALLBACK_KEY" // Provide a non-empty fallback or ensure it's always in local.properties
+val stripePublishableKey = if (stripePublishableKeyFromProperties.isNullOrBlank()) { // Simplified condition: if null or blank from properties file
+    println("Stripe Key from properties was null or blank. Using default/fallback Stripe Publishable Key: 'pk_test_DEFAULT_FALLBACK_KEY'")
+    "pk_test_DEFAULT_FALLBACK_KEY"
 } else {
+    println("Stripe Key successfully read from properties. Using value: '${stripePublishableKeyFromProperties}'")
     stripePublishableKeyFromProperties!!
 }
 
 
 println("MAPS_API_KEY to be used in build: ${googleMapsApiKey.take(5)}...")
-println("STRIPE_PUBLISHABLE_KEY to be used in build: ${stripePublishableKey.take(8)}...")
+println("FINAL STRIPE_PUBLISHABLE_KEY to be injected into BuildConfig: '${stripePublishableKey.take(8)}...'") // Debugging line
 
 
 android {
@@ -105,7 +108,7 @@ android {
         resourceConfigurations.addAll(listOf("en", "vi"))
         buildConfigField("String", "EBIRD_API_KEY", "\"$ebirdApiKey\"")
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
-        buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"") // Added Stripe Key to BuildConfig
+        buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
     }
 
     buildFeatures {
@@ -156,7 +159,7 @@ dependencies {
     implementation(libs.maps.compose)
     implementation(libs.play.services.maps)
     implementation(libs.androidx.media3.common.ktx)
-    implementation(libs.core.ktx) // androidx.test:core-ktx
+    implementation(libs.core.ktx)
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
     implementation(libs.generativeai)
@@ -184,12 +187,10 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
-    // implementation("com.google.ai.client.generativeai:generativeai:0.7.0") // Using libs.generativeai (0.9.0) instead
 
     // Stripe SDK Dependencies
     implementation("com.stripe:stripe-android:21.17.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // Add AppCompat dependency
     implementation(libs.androidx.appcompat)
 }
