@@ -11,6 +11,7 @@
 
 
     <application
+        android:name=".MyApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -54,6 +55,14 @@
                     android:pathPrefix="/auth/confirm-email" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".presentation.ui.screens.payment.CheckoutActivity"
+            android:exported="false"
+            android:label="Checkout"
+            android:theme="@style/Theme.Birdlens">
+        </activity>
+
     </application>
 
 </manifest>

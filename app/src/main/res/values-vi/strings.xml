@@ -86,6 +86,8 @@
     <string name="subscription_tier_standard">Người Dùng Tiêu Chuẩn</string>
     <string name="subscription_tier_unknown">Không xác định</string>
     <string name="loading_ellipsis">Đang tải…</string>
+    <string name="purchase_exbird_subscription">Mua Gói ExBird</string>
+    <string name="manage_subscription">Quản lý Gói</string>
 
     <!-- Tour Screen -->
     <string name="tour_screen_title_birdlens">BIRDLENS</string>

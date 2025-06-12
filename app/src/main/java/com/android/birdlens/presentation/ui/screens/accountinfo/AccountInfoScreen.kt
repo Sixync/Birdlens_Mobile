@@ -2,6 +2,7 @@
 package com.android.birdlens.presentation.ui.screens.accountinfo
 
 import android.annotation.SuppressLint
+import android.content.Intent // Import Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,7 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.VerifiedUser // Example icon for verified email
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -36,6 +37,8 @@ import com.android.birdlens.R
 import com.android.birdlens.data.model.response.UserResponse
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
+// Import CheckoutActivity to launch it
+import com.android.birdlens.presentation.ui.screens.payment.CheckoutActivity
 import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.ui.theme.*
@@ -55,7 +58,7 @@ fun AccountInfoScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         },
-        showBottomBar = false // Assuming this screen is not part of the main bottom nav flow
+        showBottomBar = false
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -67,7 +70,7 @@ fun AccountInfoScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
                 }
                 is AccountInfoUiState.Success -> {
-                    AccountDetails(user = state.user)
+                    AccountDetails(user = state.user) // Pass navController if needed for other nav
                 }
                 is AccountInfoUiState.Error -> {
                     Column(
@@ -97,6 +100,8 @@ fun AccountInfoScreen(
 
 @Composable
 fun AccountDetails(user: UserResponse) {
+    val context = LocalContext.current // Get context to launch activity
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -118,7 +123,7 @@ fun AccountDetails(user: UserResponse) {
             modifier = Modifier
                 .size(120.dp)
                 .clip(CircleShape)
-                .background(Color.Gray), // Placeholder background
+                .background(Color.Gray),
             contentScale = ContentScale.Crop
         )
 
@@ -129,9 +134,8 @@ fun AccountDetails(user: UserResponse) {
             UserInfoRow(
                 label = stringResource(id = R.string.account_info_email),
                 value = user.email,
-                // Optionally show verification status next to email
                 icon = if (user.emailVerified) Icons.Filled.VerifiedUser else null,
-                iconColor = if (user.emailVerified) GreenWave2 else TextWhite.copy(alpha = 0.5f) // Green if verified
+                iconColor = if (user.emailVerified) GreenWave2 else TextWhite.copy(alpha = 0.5f)
             )
             UserInfoRow(label = stringResource(id = R.string.account_info_first_name), value = user.firstName)
             UserInfoRow(label = stringResource(id = R.string.account_info_last_name), value = user.lastName)
@@ -149,6 +153,45 @@ fun AccountDetails(user: UserResponse) {
                 iconColor = if (!user.subscription.isNullOrBlank()) GreenWave2 else TextWhite.copy(alpha = 0.7f)
             )
         }
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Button to Purchase/Manage Subscription
+        if (user.subscription != "ExBird") { // Assuming "ExBird" is your premium subscription name
+            Button(
+                onClick = {
+                    val intent = Intent(context, CheckoutActivity::class.java)
+                    // You can pass data to CheckoutActivity if needed, e.g., which subscription to buy.
+                    // For now, CheckoutActivity uses a hardcoded item.
+                    // intent.putExtra("SUBSCRIPTION_ID", "exbird_premium_monthly")
+                    context.startActivity(intent)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(50.dp),
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
+            ) {
+                Text(stringResource(id = R.string.purchase_exbird_subscription), color = TextWhite)
+            }
+        } else {
+            // Optionally, show a "Manage Subscription" button or info if already subscribed
+            Button(
+                onClick = {
+                    // TODO: Navigate to a subscription management portal or show info
+                    // For now, could also launch CheckoutActivity if it can handle "managing"
+                    android.widget.Toast.makeText(context, "Subscription management not yet implemented.", android.widget.Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(50.dp),
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = GreenWave3) // Different color for manage
+            ) {
+                Text(stringResource(id = R.string.manage_subscription), color = VeryDarkGreenBase)
+            }
+        }
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -159,7 +202,7 @@ fun UserInfoCard(content: @Composable ColumnScope.() -> Unit) {
         shape = RoundedCornerShape(16.dp),
         color = CardBackground.copy(alpha = 0.5f),
         modifier = Modifier.fillMaxWidth(),
-        tonalElevation = 2.dp // Adds a slight shadow
+        tonalElevation = 2.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -179,11 +222,10 @@ fun UserInfoRow(
         .fillMaxWidth()
         .padding(vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Icon displayed next to the label if provided
             icon?.let {
                 Icon(
                     imageVector = it,
-                    contentDescription = label, // Icon's description relates to the label
+                    contentDescription = label,
                     tint = iconColor,
                     modifier = Modifier.size(18.dp)
                 )
@@ -201,7 +243,6 @@ fun UserInfoRow(
             fontSize = 18.sp,
             color = TextWhite,
             fontWeight = FontWeight.SemiBold,
-            // Indent value only if the label has an icon, to align values nicely
             modifier = Modifier.padding(start = if (icon != null && label == stringResource(id = R.string.account_info_email)) 26.dp else 0.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
@@ -217,13 +258,11 @@ fun AccountInfoScreenPreview_Success_WithSubscription() {
         val dummyUser = UserResponse(
             id = 1, username = "birdwatcher_pro", firstName = "Alex", lastName = "Smith",
             email = "alex.smith@example.com", age = 32, avatarUrl = null,
-            subscription = "ExBird", // Has subscription
-            emailVerified = true    // Added emailVerified
+            subscription = "ExBird",
+            emailVerified = true
         )
-        // Mocking AccountInfoViewModel for preview
         val context = LocalContext.current
         val mockViewModel = AccountInfoViewModel(context.applicationContext as android.app.Application)
-        // Directly set the state for preview
         mockViewModel._uiState.value = AccountInfoUiState.Success(dummyUser)
 
         AppScaffold(navController = rememberNavController(), topBar = { SimpleTopAppBar(stringResource(id = R.string.account_info_title))}) {
@@ -240,8 +279,8 @@ fun AccountInfoScreenPreview_Success_NoSubscription_NotVerified() {
         val dummyUser = UserResponse(
             id = 1, username = "free_user", firstName = "Jane", lastName = "Doe",
             email = "jane.doe@example.com", age = 28, avatarUrl = null,
-            subscription = null, // No subscription
-            emailVerified = false // Email not verified
+            subscription = null,
+            emailVerified = false
         )
         val context = LocalContext.current
         val mockViewModel = AccountInfoViewModel(context.applicationContext as android.app.Application)
@@ -252,13 +291,3 @@ fun AccountInfoScreenPreview_Success_NoSubscription_NotVerified() {
         }
     }
 }
-
-// ApplicationProvider for preview context can be removed if LocalContext.current.applicationContext is used directly
-// class ApplicationProvider {
-//    companion object {
-//        @Composable
-//        fun getApplicationContext(): android.app.Application {
-//            return LocalContext.current.applicationContext as android.app.Application
-//        }
-//    }
-// }

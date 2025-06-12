@@ -84,7 +84,8 @@
     <string name="account_info_age">Age</string>
     <string name="account_info_error_loading">Error: %s</string> <!-- %s for error message -->
     <string name="user_avatar_description">User Avatar</string>
-
+    <string name="purchase_exbird_subscription">Purchase ExBird Subscription</string>
+    <string name="manage_subscription">Manage Subscription</string>
     <!-- Tour Screen -->
     <string name="tour_screen_title_birdlens">BIRDLENS</string>
     <string name="tour_screen_subtitle_tours">Tours</string>
