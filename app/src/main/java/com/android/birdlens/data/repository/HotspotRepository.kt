@@ -8,10 +8,12 @@ import com.android.birdlens.data.local.toEbirdNearbyHotspot
 import com.android.birdlens.data.local.toLocalHotspot
 import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
 import com.android.birdlens.data.model.ebird.EbirdRetrofitInstance
+import com.android.birdlens.utils.ErrorUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.math.cos
 
@@ -25,11 +27,10 @@ class HotspotRepository(applicationContext: Context) {
         private const val TAG = "HotspotRepository"
     }
 
-
     suspend fun getNearbyHotspots(
         center: LatLng,
         radiusKm: Int,
-        currentBounds: LatLngBounds?, // Added to check if existing cache covers the new view
+        currentBounds: LatLngBounds?,
         countryCodeFilter: String? = null,
         forceRefresh: Boolean = false
     ): List<EbirdNearbyHotspot> {
@@ -58,14 +59,12 @@ class HotspotRepository(applicationContext: Context) {
                 Log.d(TAG, "Cache miss or insufficient for current view. Will attempt network fetch if radius search differs.")
             }
 
-
-            // If forceRefresh, or cache didn't satisfy the current view, proceed to fetch by radius from network
             Log.d(TAG, "Fetching from network: lat=${center.latitude}, lng=${center.longitude}, dist=$radiusKm, forceRefresh=$forceRefresh")
             try {
                 val response = ebirdApiService.getNearbyHotspots(
                     lat = center.latitude,
                     lng = center.longitude,
-                    dist = radiusKm // eBird API takes distance in km
+                    dist = radiusKm
                 )
 
                 if (response.isSuccessful && response.body() != null) {
@@ -76,19 +75,21 @@ class HotspotRepository(applicationContext: Context) {
                     hotspotDao.insertAll(localHotspotsToSave)
                     Log.d(TAG, "Saved ${localHotspotsToSave.size} hotspots to cache.")
 
-
                     return@withContext if (countryCodeFilter != null) {
                         networkHotspots.filter { it.countryCode == countryCodeFilter }
                     } else {
                         networkHotspots
                     }
                 } else {
-                    Log.e(TAG, "Network error fetching hotspots: ${response.code()} - ${response.message()}")
-                    emptyList()
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "eBird API error ${response.code()}")
+                    Log.e(TAG, "Network error fetching hotspots: ${response.code()} - ${response.message()}. Parsed: $extractedMessage. Full Body: $errorBody")
+                    throw IOException(extractedMessage)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception fetching hotspots from network: ${e.localizedMessage}", e)
-                emptyList()
+                if (e is IOException) throw e // Re-throw IOExceptions (including our custom ones)
+                throw IOException("Failed to fetch hotspots: ${e.localizedMessage}", e) // Wrap other exceptions
             }
         }
     }
@@ -96,8 +97,6 @@ class HotspotRepository(applicationContext: Context) {
     suspend fun findSpeciesCode(birdName: String): String? {
         return withContext(Dispatchers.IO) {
             try {
-                // The eBird API allows searching by common or scientific name.
-                // We trust it to return the most relevant match as the first item.
                 val response = ebirdApiService.getSpeciesTaxonomy(speciesCodes = birdName, category = "species")
                 if (response.isSuccessful && response.body()?.isNotEmpty() == true) {
                     val speciesCode = response.body()!!.first().speciesCode
@@ -125,32 +124,33 @@ class HotspotRepository(applicationContext: Context) {
                 if (response.isSuccessful && response.body() != null) {
                     val observations = response.body()!!
                     Log.d(TAG, "Found ${observations.size} observations for species '$speciesCode' in '$countryCode'.")
-
-                    // Create EbirdNearbyHotspot objects from unique observation locations
                     val hotspots = observations
                         .distinctBy { it.locId }
                         .map { obs ->
                             EbirdNearbyHotspot(
                                 locId = obs.locId,
                                 locName = obs.locName,
-                                countryCode = countryCode, // Set the country code from the request
+                                countryCode = countryCode,
                                 subnational1Code = null,
                                 subnational2Code = null,
                                 lat = obs.lat,
                                 lng = obs.lng,
                                 latestObsDt = obs.obsDt,
-                                numSpeciesAllTime = null // Not available in this response, but not critical for this view
+                                numSpeciesAllTime = null
                             )
                         }
                     Log.d(TAG, "Created ${hotspots.size} unique hotspots for species '$speciesCode'.")
                     hotspots
                 } else {
-                    Log.e(TAG, "Network error fetching species observations: ${response.code()} - ${response.message()}")
-                    emptyList()
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "eBird API error ${response.code()}")
+                    Log.e(TAG, "Network error fetching species observations: ${response.code()} - ${response.message()}. Parsed: $extractedMessage. Full Body: $errorBody")
+                    throw IOException(extractedMessage)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception fetching species observations for '$speciesCode' in '$countryCode': ${e.localizedMessage}", e)
-                emptyList()
+                if (e is IOException) throw e
+                throw IOException("Failed to fetch species observations: ${e.localizedMessage}", e)
             }
         }
     }

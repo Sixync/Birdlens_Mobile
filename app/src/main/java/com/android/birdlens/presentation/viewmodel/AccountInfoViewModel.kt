@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.birdlens.data.model.response.UserResponse
 import com.android.birdlens.data.network.RetrofitInstance
+import com.android.birdlens.utils.ErrorUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,8 +15,7 @@ import kotlinx.coroutines.launch
 
 class AccountInfoViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Make _uiState internal for preview if needed, but typically private
-    internal val _uiState = MutableStateFlow<AccountInfoUiState>(AccountInfoUiState.Idle) // Start with Idle
+    internal val _uiState = MutableStateFlow<AccountInfoUiState>(AccountInfoUiState.Idle)
     val uiState: StateFlow<AccountInfoUiState> = _uiState.asStateFlow()
 
     private val apiService = RetrofitInstance.api(application.applicationContext)
@@ -38,9 +38,10 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
                         Log.e("AccountInfoVM", "API error: ${genericResponse.message}")
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "Unknown error"
-                    _uiState.value = AccountInfoUiState.Error("Error: ${response.code()} - $errorBody")
-                    Log.e("AccountInfoVM", "HTTP error: ${response.code()} - $errorBody")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _uiState.value = AccountInfoUiState.Error(extractedMessage)
+                    Log.e("AccountInfoVM", "HTTP error: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _uiState.value = AccountInfoUiState.Error("Exception: ${e.localizedMessage ?: "Network request failed"}")
@@ -51,7 +52,7 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
 }
 
 sealed class AccountInfoUiState {
-    data object Idle : AccountInfoUiState() // Added Idle state
+    data object Idle : AccountInfoUiState()
     data object Loading : AccountInfoUiState()
     data class Success(val user: UserResponse) : AccountInfoUiState()
     data class Error(val message: String) : AccountInfoUiState()

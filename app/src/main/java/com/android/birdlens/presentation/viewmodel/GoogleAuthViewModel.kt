@@ -6,11 +6,12 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.birdlens.data.TokenManager // Ensure correct import
+import com.android.birdlens.data.TokenManager
 import com.android.birdlens.data.model.request.LoginRequest
 import com.android.birdlens.data.model.request.RegisterRequest
 import com.android.birdlens.data.network.ApiService
 import com.android.birdlens.data.network.RetrofitInstance
+import com.android.birdlens.utils.ErrorUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
@@ -35,7 +36,6 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     private val _firebaseSignInState = MutableStateFlow<FirebaseSignInState>(FirebaseSignInState.Idle)
     val firebaseSignInState: StateFlow<FirebaseSignInState> = _firebaseSignInState.asStateFlow()
 
-    // New state for email verification
     private val _emailVerificationState = MutableStateFlow<EmailVerificationState>(EmailVerificationState.Idle)
     val emailVerificationState: StateFlow<EmailVerificationState> = _emailVerificationState.asStateFlow()
 
@@ -59,12 +59,13 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
                         Log.e("AuthVM", "Registration API failed: $errorMsg")
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "Unknown error"
-                    _backendAuthState.value = BackendAuthState.Error("Registration HTTP Error: ${response.code()} - $errorBody", AuthOperation.REGISTER)
-                    Log.e("AuthVM", "Registration HTTP Error: ${response.code()} - $errorBody")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Registration HTTP Error ${response.code()}")
+                    _backendAuthState.value = BackendAuthState.Error(extractedMessage, AuthOperation.REGISTER)
+                    Log.e("AuthVM", "Registration HTTP Error: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
-                _backendAuthState.value = BackendAuthState.Error("Registration Exception: ${e.localizedMessage}", AuthOperation.REGISTER)
+                _backendAuthState.value = BackendAuthState.Error("Registration Exception: ${e.localizedMessage ?: "An unexpected error occurred."}", AuthOperation.REGISTER)
                 Log.e("AuthVM", "Registration Exception", e)
             }
         }
@@ -89,12 +90,13 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
                         Log.e("AuthVM", "Login API failed: $errorMsg")
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "Unknown error"
-                    _backendAuthState.value = BackendAuthState.Error("Login HTTP Error: ${response.code()} - $errorBody", AuthOperation.LOGIN)
-                    Log.e("AuthVM", "Login HTTP Error: ${response.code()} - $errorBody")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Login HTTP Error ${response.code()}")
+                    _backendAuthState.value = BackendAuthState.Error(extractedMessage, AuthOperation.LOGIN)
+                    Log.e("AuthVM", "Login HTTP Error: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
-                _backendAuthState.value = BackendAuthState.Error("Login Exception: ${e.localizedMessage}", AuthOperation.LOGIN)
+                _backendAuthState.value = BackendAuthState.Error("Login Exception: ${e.localizedMessage ?: "An unexpected error occurred."}", AuthOperation.LOGIN)
                 Log.e("AuthVM", "Login Exception", e)
             }
         }
@@ -124,7 +126,7 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
                     Log.w("AuthVM", "Firebase signInWithCustomToken failed, user is null")
                 }
             } catch (e: Exception) {
-                _firebaseSignInState.value = FirebaseSignInState.Error("Firebase custom sign-in error: ${e.localizedMessage}")
+                _firebaseSignInState.value = FirebaseSignInState.Error("Firebase custom sign-in error: ${e.localizedMessage ?: "An unexpected error occurred."}")
                 Log.e("AuthVM", "Firebase signInWithCustomToken error", e)
             }
         }
@@ -146,9 +148,10 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
                         Log.e("AuthVM", "Email verification API error: ${apiResponse.message}")
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "Unknown error during email verification"
-                    _emailVerificationState.value = EmailVerificationState.Error("Error: ${response.code()} - $errorBody")
-                    Log.e("AuthVM", "Email verification HTTP error: ${response.code()} - $errorBody")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _emailVerificationState.value = EmailVerificationState.Error(extractedMessage)
+                    Log.e("AuthVM", "Email verification HTTP error: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _emailVerificationState.value = EmailVerificationState.Error("Exception: ${e.localizedMessage ?: "Network request failed"}")
@@ -189,24 +192,23 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     enum class AuthOperation { LOGIN, REGISTER }
 
     sealed class BackendAuthState {
-        object Idle : BackendAuthState()
-        object Loading : BackendAuthState()
+        data object Idle : BackendAuthState()
+        data object Loading : BackendAuthState()
         data class CustomTokenReceived(val customToken: String) : BackendAuthState()
         data class RegistrationSuccess(val customToken: String) : BackendAuthState()
         data class Error(val message: String, val operation: AuthOperation) : BackendAuthState()
     }
 
     sealed class FirebaseSignInState {
-        object Idle : FirebaseSignInState()
-        object Loading : FirebaseSignInState()
+        data object Idle : FirebaseSignInState()
+        data object Loading : FirebaseSignInState()
         data class Success(val firebaseUser: FirebaseUser, val firebaseIdToken: String) : FirebaseSignInState()
         data class Error(val message: String) : FirebaseSignInState()
     }
 
-    // New sealed class for email verification state
     sealed class EmailVerificationState {
-        object Idle : EmailVerificationState()
-        object Loading : EmailVerificationState()
+        data object Idle : EmailVerificationState()
+        data object Loading : EmailVerificationState()
         data class Success(val message: String) : EmailVerificationState()
         data class Error(val message: String) : EmailVerificationState()
     }

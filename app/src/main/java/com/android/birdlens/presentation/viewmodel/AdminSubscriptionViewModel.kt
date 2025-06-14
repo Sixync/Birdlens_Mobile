@@ -2,11 +2,13 @@
 package com.android.birdlens.presentation.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.birdlens.data.model.CreateSubscriptionRequest
 import com.android.birdlens.data.model.Subscription
 import com.android.birdlens.data.repository.SubscriptionRepository
+import com.android.birdlens.utils.ErrorUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +31,10 @@ class AdminSubscriptionViewModel(application: Application) : AndroidViewModel(ap
     private val _createSubscriptionState = MutableStateFlow<SubscriptionUIState<Subscription>>(SubscriptionUIState.Idle)
     val createSubscriptionState: StateFlow<SubscriptionUIState<Subscription>> = _createSubscriptionState.asStateFlow()
 
+    companion object {
+        private const val TAG = "AdminSubVM"
+    }
+
     fun fetchSubscriptions() {
         viewModelScope.launch {
             _subscriptionsState.value = SubscriptionUIState.Loading
@@ -42,10 +48,14 @@ class AdminSubscriptionViewModel(application: Application) : AndroidViewModel(ap
                         _subscriptionsState.value = SubscriptionUIState.Error(genericResponse.message ?: "Failed to load subscriptions")
                     }
                 } else {
-                    _subscriptionsState.value = SubscriptionUIState.Error("Error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _subscriptionsState.value = SubscriptionUIState.Error(extractedMessage)
+                    Log.e(TAG, "Fetch Subscriptions HTTP error: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _subscriptionsState.value = SubscriptionUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
+                Log.e(TAG, "Fetch Subscriptions exception", e)
             }
         }
     }
@@ -72,15 +82,19 @@ class AdminSubscriptionViewModel(application: Application) : AndroidViewModel(ap
                     val genericResponse = response.body()!!
                     if (!genericResponse.error && genericResponse.data != null) {
                         _createSubscriptionState.value = SubscriptionUIState.Success(genericResponse.data)
-                        fetchSubscriptions() // Refresh list after creation
+                        fetchSubscriptions()
                     } else {
                         _createSubscriptionState.value = SubscriptionUIState.Error(genericResponse.message ?: "Failed to create subscription")
                     }
                 } else {
-                    _createSubscriptionState.value = SubscriptionUIState.Error("Error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _createSubscriptionState.value = SubscriptionUIState.Error(extractedMessage)
+                    Log.e(TAG, "Create Subscription HTTP error: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _createSubscriptionState.value = SubscriptionUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
+                Log.e(TAG, "Create Subscription exception", e)
             }
         }
     }

@@ -9,6 +9,7 @@ import com.android.birdlens.data.model.PaginatedToursResponse
 import com.android.birdlens.data.model.Tour
 import com.android.birdlens.data.model.TourCreateRequest
 import com.android.birdlens.data.repository.TourRepository
+import com.android.birdlens.utils.ErrorUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +48,9 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
     private val _horizontalToursState = MutableStateFlow<TourUIState<PaginatedToursResponse>>(TourUIState.Idle)
     val horizontalToursState: StateFlow<TourUIState<PaginatedToursResponse>> = _horizontalToursState.asStateFlow()
 
+    companion object {
+        private const val TAG = "TourVM"
+    }
 
     fun fetchTours(limit: Int = 10, offset: Int = 0) {
         viewModelScope.launch {
@@ -61,10 +65,14 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
                         _toursState.value = TourUIState.Error(genericResponse.message ?: "Failed to load tours")
                     }
                 } else {
-                    _toursState.value = TourUIState.Error("Error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _toursState.value = TourUIState.Error(extractedMessage)
+                    Log.e(TAG, "HTTP error fetching tours: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _toursState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
+                Log.e(TAG, "Exception fetching tours", e)
             }
         }
     }
@@ -82,10 +90,14 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
                         _tourDetailState.value = TourUIState.Error(genericResponse.message ?: "Failed to load tour details")
                     }
                 } else {
-                    _tourDetailState.value = TourUIState.Error("Error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _tourDetailState.value = TourUIState.Error(extractedMessage)
+                    Log.e(TAG, "HTTP error fetching tour detail: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _tourDetailState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
+                Log.e(TAG, "Exception fetching tour detail", e)
             }
         }
     }
@@ -103,10 +115,14 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
                         _popularTourState.value = TourUIState.Error(genericResponse.message ?: "Failed to load popular tour")
                     }
                 } else {
-                    _popularTourState.value = TourUIState.Error("Error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _popularTourState.value = TourUIState.Error(extractedMessage)
+                    Log.e(TAG, "HTTP error fetching popular tour: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _popularTourState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
+                Log.e(TAG, "Exception fetching popular tour", e)
             }
         }
     }
@@ -124,10 +140,14 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
                         _horizontalToursState.value = TourUIState.Error(genericResponse.message ?: "Failed to load horizontal tours")
                     }
                 } else {
-                    _horizontalToursState.value = TourUIState.Error("Error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _horizontalToursState.value = TourUIState.Error(extractedMessage)
+                    Log.e(TAG, "HTTP error fetching horizontal tours: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _horizontalToursState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
+                Log.e(TAG, "Exception fetching horizontal tours", e)
             }
         }
     }
@@ -145,10 +165,14 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
                         _createTourState.value = TourUIState.Error(genericResponse.message ?: "Failed to create tour")
                     }
                 } else {
-                    _createTourState.value = TourUIState.Error("Error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _createTourState.value = TourUIState.Error(extractedMessage)
+                    Log.e(TAG, "HTTP error creating tour: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _createTourState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
+                Log.e(TAG, "Exception creating tour", e)
             }
         }
     }
@@ -166,11 +190,14 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
                         _uploadImagesState.value = TourUIState.Error(genericResponse.message ?: "Failed to upload images")
                     }
                 } else {
-                    _uploadImagesState.value = TourUIState.Error("Error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _uploadImagesState.value = TourUIState.Error(extractedMessage)
+                    Log.e(TAG, "HTTP error uploading images: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _uploadImagesState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
-                Log.e("TourVM", "addTourImages Exception", e)
+                Log.e(TAG, "addTourImages Exception", e)
             }
         }
     }
@@ -188,11 +215,14 @@ class TourViewModel(application: Application) : AndroidViewModel(application) {
                         _uploadThumbnailState.value = TourUIState.Error(genericResponse.message ?: "Failed to upload thumbnail")
                     }
                 } else {
-                    _uploadThumbnailState.value = TourUIState.Error("Error: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
+                    _uploadThumbnailState.value = TourUIState.Error(extractedMessage)
+                    Log.e(TAG, "HTTP error uploading thumbnail: ${response.code()} - Full error body: $errorBody")
                 }
             } catch (e: Exception) {
                 _uploadThumbnailState.value = TourUIState.Error(e.localizedMessage ?: "An unexpected error occurred")
-                Log.e("TourVM", "addTourThumbnail Exception", e)
+                Log.e(TAG, "addTourThumbnail Exception", e)
             }
         }
     }
