@@ -284,4 +284,5 @@
     <string name="hotspot_comparison_error_fetch">Không thể tải dữ liệu cho tất cả các điểm nóng đã chọn.</string>
     <string name="map_fetch_error_generic">Lỗi tải dữ liệu: %1$s</string>
     <string name="map_compare_max_items_toast">Bạn có thể chọn tối đa %1$d điểm nóng để so sánh.</string>
+
 </resources>
