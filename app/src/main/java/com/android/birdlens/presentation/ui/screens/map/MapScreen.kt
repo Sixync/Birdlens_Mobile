@@ -12,7 +12,6 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.BorderStroke // Import for BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -60,17 +59,14 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
-import com.google.android.gms.maps.OnMapsSdkInitializedCallback
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import com.google.maps.android.compose.Marker // Ensure this is the compose Marker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-// bitmapDescriptorFromVector function remains the same
 fun bitmapDescriptorFromVector(
     context: Context,
     @DrawableRes vectorResId: Int,
@@ -138,7 +134,7 @@ fun MapScreen(
                 selectedHotspotIcon = bitmapDescriptorFromVector(
                     context,
                     R.drawable.ic_map_pin,
-                    ContextCompat.getColor(context, R.color.purple_500) // Make sure R.color.purple_500 exists
+                    ContextCompat.getColor(context, R.color.purple_500)
                 )
                 if (customHotspotIcon == null) Log.e("MapScreen", "Failed to create customHotspotIcon.")
                 if (selectedHotspotIcon == null) Log.e("MapScreen", "Failed to create selectedHotspotIcon.")
@@ -150,6 +146,7 @@ fun MapScreen(
             mapsSdkInitialized = false
         }
     }
+
 
     val locationPermissionsState = rememberMultiplePermissionsState(
         permissions = listOf(
@@ -187,6 +184,7 @@ fun MapScreen(
     }
 
     var mapLoaded by remember { mutableStateOf(false) }
+
     LaunchedEffect(cameraPositionState.isMoving, mapLoaded) {
         if (!cameraPositionState.isMoving && mapLoaded) {
             val currentTarget = cameraPositionState.position.target
@@ -229,8 +227,8 @@ fun MapScreen(
             isSelected = isCompareModeActive
         )
     )
-
     val keyboardController = LocalSoftwareKeyboardController.current
+
 
     AppScaffold(
         navController = navController,
@@ -276,7 +274,6 @@ fun MapScreen(
                     onPOIClick = { poi ->
                         Toast.makeText(context, context.getString(R.string.map_toast_poi_clicked, poi.name), Toast.LENGTH_SHORT).show()
                     }
-                    // Removed onMarkerClick from GoogleMap directly
                 ) {
                     if (customHotspotIcon != null) {
                         (mapUiState as? MapUiState.Success)?.hotspots?.forEach { ebirdHotspot ->
@@ -293,20 +290,18 @@ fun MapScreen(
                                 snippet = stringResource(R.string.map_marker_snippet_species, ebirdHotspot.numSpeciesAllTime ?: "N/A"),
                                 icon = currentIcon,
                                 zIndex = if (isCompareModeActive && isSelectedForCompare) 1.0f else 0.0f,
-                                onClick = { marker -> // Handle click on individual Marker
+                                onClick = { marker ->
+                                    mapViewModel.notifyMarkerInteraction()
                                     if (isCompareModeActive) {
                                         mapViewModel.onHotspotSelectedForComparison(ebirdHotspot)
-                                        true // Consume click in compare mode
+                                        true
                                     } else {
-                                        // Allow default info window behavior or custom navigation
-                                        // To navigate immediately:
-                                        // navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
-                                        // true // if you handle it and don't want info window
-                                        false // to allow default info window
+                                        false
                                     }
                                 },
                                 onInfoWindowClick = {
                                     if (!isCompareModeActive) {
+                                        mapViewModel.notifyMarkerInteraction()
                                         navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
                                     }
                                 }
@@ -315,7 +310,6 @@ fun MapScreen(
                     }
                 }
             } else if (!locationPermissionsState.allPermissionsGranted && mapsSdkInitialized) {
-                // ... (Permission rationale UI remains the same) ...
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -405,12 +399,12 @@ fun MapScreen(
                 }
             }
 
+
             (mapUiState as? MapUiState.Error)?.let { errorState ->
                 LaunchedEffect(errorState.message) {
                     Toast.makeText(context, errorState.message, Toast.LENGTH_LONG).show()
                 }
             }
-
             if (showMapError) {
                 Box(modifier = Modifier.fillMaxSize().background(GreenDeep.copy(alpha = 0.8f)), contentAlignment = Alignment.Center) {
                     Text(stringResource(R.string.map_error_loading_detailed), color = TextWhite, modifier = Modifier.padding(32.dp), textAlign = TextAlign.Center)
@@ -420,64 +414,6 @@ fun MapScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CompareModeBottomBar(
-    selectedHotspots: List<EbirdNearbyHotspot>,
-    onClearSelection: () -> Unit,
-    onCompareClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = CardBackground.copy(alpha = 0.95f),
-        tonalElevation = 4.dp
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    stringResource(R.string.map_compare_selected_info, selectedHotspots.size, MapViewModel.MAX_COMPARISON_ITEMS),
-                    color = TextWhite,
-                    fontWeight = FontWeight.SemiBold
-                )
-                TextButton(onClick = onClearSelection) {
-                    Text(stringResource(R.string.map_compare_clear_selection), color = GreenWave2)
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(selectedHotspots, key = { it.locId }) { hotspot ->
-                    SuggestionChip(
-                        onClick = { /* Optional: allow deselecting by tapping chip */ },
-                        label = { Text(hotspot.locName, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp) },
-                        colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = ButtonGreen.copy(alpha = 0.7f),
-                            labelColor = TextWhite
-                        ),
-                        border = null // No border
-                    )
-                        // Alternative for truly no border: border = null
-
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = onCompareClick,
-                enabled = selectedHotspots.size >= 2,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
-            ) {
-                Text(stringResource(R.string.map_compare_button_text, selectedHotspots.size), color = TextWhite)
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -533,10 +469,10 @@ fun MapScreenHeader(
             keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
             singleLine = true,
             shape = RoundedCornerShape(50),
-            colors = OutlinedTextFieldDefaults.colors( // Changed from .colors to .outlinedTextFieldColors
+            colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = TextWhite,
                 unfocusedTextColor = TextWhite,
-                focusedContainerColor = SearchBarBackground, // M3 uses containerColor
+                focusedContainerColor = SearchBarBackground,
                 unfocusedContainerColor = SearchBarBackground,
                 disabledContainerColor = SearchBarBackground,
                 cursorColor = TextWhite,
@@ -616,6 +552,64 @@ fun FloatingMapButton(item: FloatingMapActionItem) {
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             item.icon()
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CompareModeBottomBar(
+    selectedHotspots: List<EbirdNearbyHotspot>,
+    onClearSelection: () -> Unit,
+    onCompareClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = CardBackground.copy(alpha = 0.95f),
+        tonalElevation = 4.dp
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.map_compare_selected_info, selectedHotspots.size, MapViewModel.MAX_COMPARISON_ITEMS),
+                    color = TextWhite,
+                    fontWeight = FontWeight.SemiBold
+                )
+                TextButton(onClick = onClearSelection) {
+                    Text(stringResource(R.string.map_compare_clear_selection), color = GreenWave2)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(selectedHotspots, key = { it.locId }) { hotspot ->
+                    SuggestionChip(
+                        onClick = { /* Optional: allow deselecting by tapping chip */ },
+                        label = { Text(hotspot.locName, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp) },
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = ButtonGreen.copy(alpha = 0.7f),
+                            labelColor = TextWhite
+                        ),
+                        border = null
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onCompareClick,
+                enabled = selectedHotspots.size >= 2,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
+            ) {
+                Text(stringResource(R.string.map_compare_button_text, selectedHotspots.size), color = TextWhite)
+            }
         }
     }
 }

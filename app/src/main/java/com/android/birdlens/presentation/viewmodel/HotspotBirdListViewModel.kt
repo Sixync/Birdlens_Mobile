@@ -8,7 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.android.birdlens.data.model.ebird.EbirdObservation
 import com.android.birdlens.data.model.ebird.EbirdRetrofitInstance
 import com.android.birdlens.data.model.ebird.EbirdTaxonomy
-import com.android.birdlens.data.model.wiki.WikiRetrofitInstance // Added for Wikipedia API
+import com.android.birdlens.data.model.wiki.WikiRetrofitInstance
 import com.android.birdlens.utils.ErrorUtils
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.CancellationException // Added for explicit cancellation handling
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.awaitAll
 
 data class BirdSpeciesInfo(
@@ -28,12 +28,12 @@ data class BirdSpeciesInfo(
     val observationDate: String?,
     val count: Int?,
     val isRecent: Boolean,
-    val imageUrl: String? = null // New field for the bird's image
+    val imageUrl: String? = null
 )
 
 sealed class HotspotBirdListUiState {
-    data object Idle : HotspotBirdListUiState() // Re-add or ensure Idle is present
-    data object Loading : HotspotBirdListUiState() // Simplified from Idle to Loading for initial state
+    data object Idle : HotspotBirdListUiState()
+    data object Loading : HotspotBirdListUiState()
     data class Success(
         val birds: List<BirdSpeciesInfo>,
         val canLoadMore: Boolean,
@@ -43,19 +43,18 @@ sealed class HotspotBirdListUiState {
 }
 
 open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
-    internal val initialLocId: String? // Made internal for preview access if needed
+    internal val initialLocId: String?
 
-    // Initialize to Idle
-    val _uiState = MutableStateFlow<HotspotBirdListUiState>(HotspotBirdListUiState.Idle)
+    val _uiState = MutableStateFlow<HotspotBirdListUiState>(HotspotBirdListUiState.Idle) // Start as Idle
     val uiState: StateFlow<HotspotBirdListUiState> = _uiState.asStateFlow()
 
     private val ebirdApiService = EbirdRetrofitInstance.api
-    private val wikiApiService = WikiRetrofitInstance.api // Added Wiki API service
+    private val wikiApiService = WikiRetrofitInstance.api
 
     companion object {
         private const val TAG = "HotspotBirdListVM"
         private const val RECENT_DAYS_BACK = 30
-        private const val DETAILS_PAGE_SIZE = 15 // Number of species details (taxonomy + image) to fetch per page
+        private const val DETAILS_PAGE_SIZE = 15
     }
 
     private var allSpeciesCodesForHotspot: List<String> = emptyList()
@@ -66,45 +65,29 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
 
     init {
         initialLocId = savedStateHandle.get<String>("hotspotId")
-        Log.d(TAG, "ViewModel initialized. Attempting to retrieve hotspotId.")
+        Log.d(TAG, "ViewModel initialized. HotspotId from SavedStateHandle: $initialLocId")
         if (initialLocId.isNullOrBlank()) {
-            Log.e(TAG, "INIT_ERROR: Hotspot ID (locId) is null or blank from SavedStateHandle.")
-            _uiState.value =
-                HotspotBirdListUiState.Error("Hotspot ID not provided. Cannot load bird list.")
+            Log.e(TAG, "INIT_ERROR: Hotspot ID (locId) is null or blank.")
+            _uiState.value = HotspotBirdListUiState.Error("Hotspot ID not provided.")
         } else {
-            Log.i(
-                TAG,
-                "INIT_SUCCESS: Valid Hotspot ID '$initialLocId' received. Triggering fetch."
-            )
-            // ViewModel is created, now trigger the first fetch if locId is valid.
-            // The fetch function will set it to Loading.
+            Log.i(TAG, "INIT_SUCCESS: Valid Hotspot ID '$initialLocId' received. Triggering initial fetch.")
             fetchAllSpeciesCodesAndInitialDetails(initialLocId)
         }
     }
 
     private fun fetchAllSpeciesCodesAndInitialDetails(locId: String) {
-        if (_uiState.value is HotspotBirdListUiState.Error && initialLocId.isNullOrBlank()) {
-            Log.w(
-                TAG,
-                "FETCH_SKIP: ViewModel is in an initial error state due to missing locId. Skipping fetch for '$locId'."
-            )
-            return
-        }
-        // Set to Loading when fetch actually starts
-        _uiState.value = HotspotBirdListUiState.Loading
-        Log.i(TAG, "INIT_FETCH_START: Attempting to fetch all species codes and recent observations for locId: '$locId'")
+        _uiState.value = HotspotBirdListUiState.Loading // Set to loading at the start of the process
+        Log.i(TAG, "Fetching all species codes and recent observations for locId: '$locId'")
         viewModelScope.launch {
             try {
-                coroutineScope {
-                    val allSpeciesCodesDeferred = async {
-                        ebirdApiService.getSpeciesListForHotspot(locId)
-                    }
+                coroutineScope { // Ensures all async calls within complete or fail together
+                    val allSpeciesCodesDeferred = async { ebirdApiService.getSpeciesListForHotspot(locId) }
                     val recentObservationsDeferred = async {
                         ebirdApiService.getRecentObservationsForHotspot(
                             locId = locId,
                             back = RECENT_DAYS_BACK,
                             detail = "simple",
-                            maxResults = 1000 // Fetch enough recent observations
+                            maxResults = 1000
                         )
                     }
                     val allSpeciesResponse = allSpeciesCodesDeferred.await()
@@ -113,8 +96,8 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
                     if (!allSpeciesResponse.isSuccessful || allSpeciesResponse.body() == null) {
                         val errorBody = allSpeciesResponse.errorBody()?.string()
                         val extractedMessage = ErrorUtils.extractMessage(errorBody, "Failed to fetch species list (HTTP ${allSpeciesResponse.code()})")
-                        Log.e(TAG, "Failed to fetch species list for hotspot '$locId'. Code: ${allSpeciesResponse.code()}. Full error body: $errorBody")
                         _uiState.value = HotspotBirdListUiState.Error(extractedMessage)
+                        Log.e(TAG, "Error fetching species list for '$locId': $extractedMessage. Full Body: $errorBody")
                         return@coroutineScope
                     }
                     allSpeciesCodesForHotspot = allSpeciesResponse.body()!!
@@ -122,26 +105,32 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
                     recentObsMapForHotspot = if (recentObsResponse.isSuccessful && recentObsResponse.body() != null) {
                         recentObsResponse.body()!!.associateBy { it.speciesCode }
                     } else {
-                        Log.w(TAG, "Failed to fetch recent observations for '$locId'. Code: ${recentObsResponse.code()}. Proceeding without recency info for some species.")
+                        Log.w(TAG, "Failed to fetch recent observations for '$locId'. Code: ${recentObsResponse.code()}. Error: ${recentObsResponse.errorBody()?.string()}")
                         emptyMap()
                     }
 
                     if (allSpeciesCodesForHotspot.isEmpty()) {
-                        Log.i(TAG, "No species ever recorded at hotspot '$locId'.")
+                        Log.i(TAG, "No species recorded at hotspot '$locId'.")
                         _uiState.value = HotspotBirdListUiState.Success(emptyList(), canLoadMore = false)
                         allDetailsLoaded = true
                         return@coroutineScope
                     }
-                }
+                } // End of coroutineScope for initial data fetching
 
+                // Reset pagination and load the first page of details
                 currentDetailsPage = 0
                 allDetailsLoaded = false
+                isLoadingDetails = false // Ensure this is reset
                 loadPageOfBirdDetailsAndUpdateState(mutableListOf(), isInitialLoad = true)
 
             } catch (e: Exception) {
-                val errorMsg = "Error fetching initial data for hotspot '$locId': ${e.javaClass.simpleName} - ${e.localizedMessage ?: "Unknown error"}"
-                _uiState.value = HotspotBirdListUiState.Error(errorMsg)
-                Log.e(TAG, "INIT_FETCH_EXCEPTION: $errorMsg", e)
+                if (e is CancellationException) {
+                    Log.i(TAG, "Initial data fetching cancelled for locId '$locId'.")
+                } else {
+                    val errorMsg = "Error fetching initial data for hotspot '$locId': ${e.localizedMessage ?: "Unknown error"}"
+                    _uiState.value = HotspotBirdListUiState.Error(errorMsg)
+                    Log.e(TAG, "Exception in fetchAllSpeciesCodesAndInitialDetails for '$locId': $errorMsg", e)
+                }
             }
         }
     }
@@ -152,19 +141,24 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
             return
         }
         Log.d(TAG, "LoadMore TRIGGERED for page: $currentDetailsPage")
-
         viewModelScope.launch {
             isLoadingDetails = true
             val currentBirds = (_uiState.value as? HotspotBirdListUiState.Success)?.birds ?: emptyList()
 
-            if (_uiState.value is HotspotBirdListUiState.Success) {
-                _uiState.update {
-                    (it as HotspotBirdListUiState.Success).copy(isLoadingMore = true)
+            _uiState.update { currentState ->
+                if (currentState is HotspotBirdListUiState.Success) {
+                    currentState.copy(isLoadingMore = true)
+                } else {
+                    // If current state isn't Success (e.g. initial Loading, or Error),
+                    // this loadMore might be a stale call. Ideally, UI wouldn't allow it.
+                    // For robustness, we could just return or log.
+                    Log.w(TAG, "loadMoreBirdDetails called when state is not Success. Current state: $currentState")
+                    isLoadingDetails = false
+                    return@launch
                 }
             }
-
             loadPageOfBirdDetailsAndUpdateState(currentBirds.toMutableList(), isInitialLoad = false)
-            isLoadingDetails = false // Ensure this is reset even if an error occurs in loadPage
+            // isLoadingDetails will be reset inside loadPageOfBirdDetailsAndUpdateState or its catch block
         }
     }
 
@@ -177,12 +171,12 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
             _uiState.update {
                 if (it is HotspotBirdListUiState.Success) {
                     it.copy(canLoadMore = false, isLoadingMore = false)
-                } else {
-                    // If state is not Success (e.g. Error, Loading), create a new Success state
+                } else { // Should not happen if logic is correct, but handle defensively
                     HotspotBirdListUiState.Success(existingBirds, canLoadMore = false, isLoadingMore = false)
                 }
             }
             Log.d(TAG, "All details loaded. Total: ${existingBirds.size}")
+            isLoadingDetails = false // Reset here too
             return
         }
 
@@ -197,6 +191,7 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
                 }
             }
             Log.d(TAG, "No more codes to fetch details for this page.")
+            isLoadingDetails = false // Reset here too
             return
         }
 
@@ -206,11 +201,12 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
             val taxonomyResponse = ebirdApiService.getSpeciesTaxonomy(speciesCodes = codesToFetchDetails.joinToString(","))
             if (!taxonomyResponse.isSuccessful || taxonomyResponse.body() == null) {
                 val errorMsg = "Failed to fetch taxonomy details for page $currentDetailsPage."
-                Log.e(TAG, errorMsg)
+                Log.e(TAG, errorMsg + " Code: ${taxonomyResponse.code()} Body: ${taxonomyResponse.errorBody()?.string()}")
                 _uiState.update {
-                    if (it is HotspotBirdListUiState.Success) it.copy(isLoadingMore = false) // Stop loading more indicator
-                    else HotspotBirdListUiState.Error(errorMsg) // If not success, set to error
+                    if (it is HotspotBirdListUiState.Success) it.copy(isLoadingMore = false)
+                    else HotspotBirdListUiState.Error(errorMsg)
                 }
+                isLoadingDetails = false
                 return
             }
             val taxonomyPageList = taxonomyResponse.body()!!
@@ -239,27 +235,34 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
 
             existingBirds.addAll(birdInfoDetailsForPage)
             currentDetailsPage++
-            allDetailsLoaded = endIndex >= allSpeciesCodesForHotspot.size || birdInfoDetailsForPage.isEmpty()
+            allDetailsLoaded = endIndex >= allSpeciesCodesForHotspot.size
 
             val finalBirdList = existingBirds.distinctBy { it.speciesCode }.sortedWith(
                 compareByDescending<BirdSpeciesInfo> { it.isRecent }
                     .thenBy { it.commonName }
             )
             _uiState.value = HotspotBirdListUiState.Success(finalBirdList, canLoadMore = !allDetailsLoaded, isLoadingMore = false)
-            Log.d(TAG, "Page $currentDetailsPage loaded. Total birds: ${finalBirdList.size}. Can load more: ${!allDetailsLoaded}")
+            Log.d(TAG, "Page ${currentDetailsPage-1} loaded. Total birds: ${finalBirdList.size}. Can load more: ${!allDetailsLoaded}")
 
         } catch (e: Exception) {
             if (e is CancellationException) {
                 Log.i(TAG, "Detail fetch for page $currentDetailsPage was cancelled.")
-                _uiState.update { if (it is HotspotBirdListUiState.Success) it.copy(isLoadingMore = false) else it }
             } else {
                 val errorMsg = "Error loading page $currentDetailsPage details: ${e.localizedMessage}"
                 Log.e(TAG, errorMsg, e)
+                // If it's an error during "load more", keep existing data but stop loading more for now.
+                // If it's an initial load error, it would have been caught earlier or will make _uiState an Error state.
                 _uiState.update {
-                    if (it is HotspotBirdListUiState.Success) it.copy(isLoadingMore = false) // Stop loading more indicator
-                    else HotspotBirdListUiState.Error(errorMsg)
+                    if (it is HotspotBirdListUiState.Success) {
+                        it.copy(isLoadingMore = false, canLoadMore = false) // Stop further loading on error
+                    } else {
+                        // If not already Success (e.g., was Loading), transition to Error
+                        HotspotBirdListUiState.Error(errorMsg)
+                    }
                 }
             }
+        } finally {
+            isLoadingDetails = false // Ensure this is always reset
         }
     }
 
@@ -285,12 +288,14 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
     fun refreshData() {
         if (!initialLocId.isNullOrBlank()) {
             Log.i(TAG, "REFRESH_TRIGGERED: Refreshing all data for initialLocId: '$initialLocId'")
+            // Reset state variables before fetching
+            allSpeciesCodesForHotspot = emptyList()
+            recentObsMapForHotspot = emptyMap()
             fetchAllSpeciesCodesAndInitialDetails(initialLocId)
         } else {
             Log.e(TAG, "REFRESH_FAIL: Cannot refresh, initialLocId is missing or blank.")
-            if (_uiState.value !is HotspotBirdListUiState.Error) {
-                _uiState.value =
-                    HotspotBirdListUiState.Error("Cannot refresh: Hotspot ID is invalid.")
+            if (_uiState.value !is HotspotBirdListUiState.Error) { // Avoid overwriting an existing error if locId was never valid
+                _uiState.value = HotspotBirdListUiState.Error("Cannot refresh: Hotspot ID is invalid.")
             }
         }
     }

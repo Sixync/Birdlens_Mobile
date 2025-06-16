@@ -48,8 +48,8 @@ import kotlinx.coroutines.flow.debounce
 @Composable
 fun HotspotBirdListScreen(
     navController: NavController,
-    hotspotId: String?, // This is the locId from eBird
-    viewModel: HotspotBirdListViewModel // ViewModel will be automatically created with SavedStateHandle
+    hotspotId: String?,
+    viewModel: HotspotBirdListViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -106,17 +106,7 @@ fun HotspotBirdListScreen(
                 .background(VeryDarkGreenBase)
         ) {
             when (val state = uiState) {
-                is HotspotBirdListUiState.Idle -> { // Handle Idle state
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // You can use a CircularProgressIndicator or a specific message
-                            CircularProgressIndicator(color = TextWhite)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(stringResource(R.string.initializing), color = TextWhite.copy(alpha = 0.7f))
-                        }
-                    }
-                }
-                is HotspotBirdListUiState.Loading -> {
+                is HotspotBirdListUiState.Idle, is HotspotBirdListUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
                 }
                 is HotspotBirdListUiState.Error -> {
@@ -248,7 +238,6 @@ fun BirdListItem(
         }
     }
 }
-
 
 @SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true, device = "spec:width=360dp,height=740dp,dpi=480")

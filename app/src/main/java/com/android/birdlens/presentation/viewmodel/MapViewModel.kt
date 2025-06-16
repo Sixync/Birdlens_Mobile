@@ -17,7 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive // Import for isActive check
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -60,11 +60,12 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         val VIETNAM_INITIAL_CENTER = LatLng(16.047079, 108.220825)
         const val HOME_BUTTON_ZOOM_LEVEL = 6.0f
         private const val CAMERA_IDLE_DEBOUNCE_MS = 750L
-        private const val SIGNIFICANT_PAN_THRESHOLD_DEGREES = 0.25
+        private const val SIGNIFICANT_PAN_THRESHOLD_DEGREES = 0.25 // Threshold for what's a "significant" move
         const val COUNTRY_CODE_VIETNAM = "VN"
         private const val TAG = "MapViewModel"
         private const val SEARCH_DEBOUNCE_MS = 300L
         const val MAX_COMPARISON_ITEMS = 3
+        private const val MARKER_INTERACTION_LOCK_DURATION_MS = 1500L // How long to suppress refetch after marker click
     }
 
     private var fetchJob: Job? = null
@@ -72,6 +73,10 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private var lastFetchedCenter: LatLng? = null
     private var areHotspotsVisible = false
     private var isSearchActive = false
+
+    // Flag to indicate a marker interaction is likely causing map movement
+    private var isMarkerInteractionInProgress = false
+    private var markerInteractionResetJob: Job? = null
 
 
     fun onSearchQueryChanged(query: String) {
@@ -101,7 +106,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         searchJob?.cancel()
         _searchResults.value = emptyList()
         isSearchActive = true
-        fetchJob?.cancel()
+        fetchJob?.cancel() // Cancel any ongoing general hotspot fetching
 
         fetchJob = viewModelScope.launch {
             _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_local_finding, query))
@@ -113,7 +118,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     fetchHotspotsForSpeciesCode(foundBird.speciesCode, foundBird.commonName)
                 } else {
                     _uiState.value = MapUiState.Error(context.getString(R.string.map_search_error_not_found, query))
-                    isSearchActive = false
+                    isSearchActive = false // Reset search active if bird not found
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) {
@@ -131,43 +136,88 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     fun onSearchQueryCleared(currentCenter: LatLng) {
         _searchQuery.value = ""
         _searchResults.value = emptyList()
-        isSearchActive = false
-        requestHotspotsForCurrentView(currentCenter, (_uiState.value as? MapUiState.Success)?.zoomLevelContext ?: SHOW_HOTSPOTS_MIN_ZOOM_LEVEL)
+        if (isSearchActive) {
+            isSearchActive = false
+            fetchJob?.cancel() // Cancel species-specific hotspot fetch
+            // Trigger a general hotspot fetch for the current view
+            requestHotspotsForCurrentView(currentCenter, (_uiState.value as? MapUiState.Success)?.zoomLevelContext ?: SHOW_HOTSPOTS_MIN_ZOOM_LEVEL, forceRefresh = true)
+        }
     }
+
+    // Call this from MapScreen when a marker or info window is tapped
+    fun notifyMarkerInteraction() {
+        isMarkerInteractionInProgress = true
+        Log.d(TAG, "Marker interaction notified. Suppressing refetch temporarily.")
+        markerInteractionResetJob?.cancel()
+        markerInteractionResetJob = viewModelScope.launch {
+            delay(MARKER_INTERACTION_LOCK_DURATION_MS)
+            if (isMarkerInteractionInProgress) { // Check if it wasn't cleared by some other logic
+                isMarkerInteractionInProgress = false
+                Log.d(TAG, "Marker interaction lock auto-expired.")
+            }
+        }
+    }
+
 
     fun requestHotspotsForCurrentView(center: LatLng, zoom: Float, forceRefresh: Boolean = false) {
         if (isSearchActive && !forceRefresh) {
-            Log.d(TAG, "Search is active. Ignoring requestHotspotsForCurrentView. forceRefresh=$forceRefresh")
+            Log.d(TAG, "Search is active. Ignoring general hotspot request. forceRefresh=$forceRefresh")
             return
         }
 
-        fetchJob?.cancel() // Cancel any existing job, always if forcing refresh or if it's a new type of request
-        Log.d(TAG, "Previous fetchJob cancelled. New request for center: $center, zoom: $zoom, forceRefresh: $forceRefresh")
+        // If a marker interaction just happened AND it's not a user-forced refresh,
+        // skip this opportunistic fetch to prevent reloading due to map centering on marker.
+        if (isMarkerInteractionInProgress && !forceRefresh) {
+            Log.d(TAG, "Marker interaction lock is active. Skipping refetch for center: $center, zoom: $zoom.")
+            // We don't clear the lock here; let the timer or a significant user pan do it.
+            // Update zoom context if needed, but don't fetch.
+            (_uiState.value as? MapUiState.Success)?.let {
+                if (abs(it.zoomLevelContext - zoom) > 0.1f || it.fetchedCenter != center) { // Only update if context really changed
+                    _uiState.value = it.copy(zoomLevelContext = zoom, fetchedCenter = center)
+                }
+            }
+            return
+        }
+
+
+        fetchJob?.cancel()
+        Log.d(TAG, "Preparing to fetch. Center: $center, Zoom: $zoom, ForceRefresh: $forceRefresh, MarkerInteraction: $isMarkerInteractionInProgress")
 
         fetchJob = viewModelScope.launch {
-            if (!forceRefresh) { // Only debounce if not a forced refresh triggered by user action
+            if (!forceRefresh) {
                 delay(CAMERA_IDLE_DEBOUNCE_MS)
             }
 
-            if (!isActive) { // Check if the coroutine itself was cancelled during the delay
-                Log.d(TAG, "Job for center $center, zoom $zoom, forceRefresh $forceRefresh was cancelled before network processing.")
+            if (!isActive) {
+                Log.d(TAG, "Job for center $center, zoom $zoom was cancelled before network processing.")
                 return@launch
             }
 
-            if (zoom < SHOW_HOTSPOTS_MIN_ZOOM_LEVEL && !forceRefresh) {
+            if (zoom < SHOW_HOTSPOTS_MIN_ZOOM_LEVEL && !forceRefresh && !isSearchActive) {
                 if (areHotspotsVisible || (_uiState.value as? MapUiState.Success)?.hotspots?.isNotEmpty() == true) {
-                    _uiState.value = MapUiState.Success(emptyList(), zoom, center, 0)
+                    _uiState.value = MapUiState.Success(emptyList(), zoom, center, 0) // Clear hotspots
                     Log.d(TAG, "Zoom ($zoom) < threshold. Hiding hotspots. forceRefresh=$forceRefresh")
                 }
                 areHotspotsVisible = false
-                // Don't nullify lastFetchedCenter here, let significant change logic handle it.
                 return@launch
             }
 
             val centerChangedSignificantly = lastFetchedCenter == null || isCenterChangeSignificant(center, lastFetchedCenter!!)
-            val viewRequiresUpdate = !areHotspotsVisible || centerChangedSignificantly
+            // View requires update if:
+            // - It's a forced refresh.
+            // - Hotspots aren't currently visible (e.g., after zooming in).
+            // - The center of the map has changed significantly since the last fetch.
+            val viewRequiresUpdate = forceRefresh || !areHotspotsVisible || centerChangedSignificantly
 
-            if (forceRefresh || viewRequiresUpdate) {
+            if (viewRequiresUpdate) {
+                // If this fetch is happening despite a recent marker interaction (e.g. forceRefresh or significant pan),
+                // then the interaction lock should be cleared as the user's intent to refresh/move is overriding.
+                if (isMarkerInteractionInProgress) {
+                    Log.d(TAG, "Proceeding with fetch despite recent marker interaction due to forceRefresh or significant pan. Clearing lock.")
+                    isMarkerInteractionInProgress = false
+                    markerInteractionResetJob?.cancel()
+                }
+
                 _uiState.value = MapUiState.Loading(if (forceRefresh) context.getString(R.string.map_toast_refreshing_hotspots) else null)
                 Log.d(TAG, "Fetching hotspots. Zoom: $zoom, Force: $forceRefresh, ViewRequiresUpdate: $viewRequiresUpdate (areHotspotsVisible=$areHotspotsVisible, centerChanged=$centerChangedSignificantly)")
                 try {
@@ -176,25 +226,22 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                         radiusKm = HOTSPOT_FETCH_RADIUS_KM,
                         currentBounds = null,
                         countryCodeFilter = COUNTRY_CODE_VIETNAM,
-                        forceRefresh = forceRefresh // Pass down forceRefresh
+                        forceRefresh = forceRefresh
                     ).sortedByDescending { it.numSpeciesAllTime ?: 0 }
 
-                    if (!isActive) { // Check again after the potentially long network call
-                        Log.d(TAG, "Job for center $center, zoom $zoom, forceRefresh $forceRefresh was cancelled DURING/AFTER network call in ViewModel.")
+                    if (!isActive) {
+                        Log.d(TAG, "Job for center $center, zoom $zoom was cancelled DURING/AFTER network call.")
                         return@launch
                     }
 
                     _uiState.value = MapUiState.Success(fetchedHotspots, zoom, center, HOTSPOT_FETCH_RADIUS_KM)
                     areHotspotsVisible = true
-                    lastFetchedCenter = center
+                    lastFetchedCenter = center // Update last fetched center
                     Log.d(TAG, "Fetch successful. Showing ${fetchedHotspots.size} hotspots. forceRefresh=$forceRefresh")
 
                 } catch (e: Exception) {
                     if (e is CancellationException) {
-                        Log.i(TAG, "Fetch job for $center, zoom $zoom, forceRefresh $forceRefresh was cancelled (repo level or during VM processing): ${e.message}")
-                        // If UI was loading, and this was cancelled, it might be good to revert to Idle or previous Success if available
-                        // For now, let the next valid event update the UI. If no new event, UI stays Loading or previous Error.
-                        // A more robust solution might involve temporarily storing previous valid state.
+                        Log.i(TAG, "Fetch job for $center, zoom $zoom was cancelled (repo level or during VM processing): ${e.message}")
                     } else {
                         val errorMsg = context.getString(R.string.map_fetch_error_generic, e.localizedMessage ?: context.getString(R.string.error_unknown))
                         _uiState.value = MapUiState.Error(errorMsg)
@@ -204,7 +251,9 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 Log.d(TAG, "View has not changed enough and not forcing refresh. Not re-fetching. Zoom: $zoom. Current center: $center, Last center: $lastFetchedCenter")
                 (_uiState.value as? MapUiState.Success)?.let {
-                    _uiState.value = it.copy(zoomLevelContext = zoom, fetchedCenter = center) // Update context
+                    if (abs(it.zoomLevelContext - zoom) > 0.1f || it.fetchedCenter != center) {
+                        _uiState.value = it.copy(zoomLevelContext = zoom, fetchedCenter = center)
+                    }
                 }
             }
         }
@@ -212,25 +261,28 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun fetchHotspotsForSpeciesCode(speciesCode: String, birdDisplayName: String) {
         viewModelScope.launch {
-            _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_ai_finding, birdDisplayName)) // Keep specific loading message
+            // Keep the specific loading message for species search
+            _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_ai_finding, birdDisplayName))
             Log.d(TAG, "Fetching hotspots for speciesCode: '$speciesCode'")
             try {
                 val hotspotsWithBird = hotspotRepository.getHotspotsForSpeciesInCountry(
                     speciesCode = speciesCode,
-                    countryCode = COUNTRY_CODE_VIETNAM
+                    countryCode = COUNTRY_CODE_VIETNAM // Ensure this is the desired region
                 )
 
-                if (!isActive) { // Check for cancellation
+                if (!isActive) {
                     Log.i(TAG, "Species hotspot fetch cancelled for $speciesCode")
                     return@launch
                 }
 
                 if (hotspotsWithBird.isNotEmpty()) {
-                    _uiState.value = MapUiState.Success(hotspotsWithBird, HOME_BUTTON_ZOOM_LEVEL, VIETNAM_INITIAL_CENTER, 0)
-                    areHotspotsVisible = true
+                    // For species search, zoom level and center might be broader initially
+                    _uiState.value = MapUiState.Success(hotspotsWithBird, HOME_BUTTON_ZOOM_LEVEL, VIETNAM_INITIAL_CENTER, 0) // Radius 0 indicates it's not a geo-radius fetch
+                    areHotspotsVisible = true // Hotspots are now visible
+                    lastFetchedCenter = null // Reset last fetched center for general browsing, or set to an average if desired
                 } else {
                     _uiState.value = MapUiState.Error(context.getString(R.string.map_search_error_no_hotspots, birdDisplayName))
-                    isSearchActive = false
+                    isSearchActive = false // Reset search if no hotspots found for the species
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) {
@@ -248,7 +300,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private fun isCenterChangeSignificant(newCenter: LatLng, oldCenter: LatLng): Boolean {
         val latDiff = abs(newCenter.latitude - oldCenter.latitude)
         val lngDiff = abs(newCenter.longitude - oldCenter.longitude)
-        return latDiff > SIGNIFICANT_PAN_THRESHOLD_DEGREES || lngDiff > SIGNIFICANT_PAN_THRESHOLD_DEGREES
+        val significant = latDiff > SIGNIFICANT_PAN_THRESHOLD_DEGREES || lngDiff > SIGNIFICANT_PAN_THRESHOLD_DEGREES
+        if (significant) {
+            Log.d(TAG, "Center changed significantly: New=$newCenter, Old=$oldCenter")
+        }
+        return significant
     }
 
     fun clearHotspotCache() {
@@ -257,7 +313,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             lastFetchedCenter = null
             areHotspotsVisible = false
             Log.i(TAG, "Hotspot cache cleared.")
-            // Trigger a refresh for the current view after clearing
             val currentUiStateValue = _uiState.value
             val currentCenter = (currentUiStateValue as? MapUiState.Success)?.fetchedCenter ?: VIETNAM_INITIAL_CENTER
             val currentZoom = (currentUiStateValue as? MapUiState.Success)?.zoomLevelContext ?: HOME_BUTTON_ZOOM_LEVEL
@@ -289,15 +344,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                 currentSelection.add(hotspot)
                 Log.d(TAG, "Hotspot selected: ${hotspot.locName}")
             } else {
-                viewModelScope.launch { // To show Toast or update UI state for error
-                    // Using a more specific error state or event might be better for UI
+                viewModelScope.launch {
                     val errorMsg = context.getString(R.string.map_compare_max_items_toast, MAX_COMPARISON_ITEMS)
-                    // For now, just logging and maybe a short-lived error state or event
                     Log.w(TAG, errorMsg)
-                    // If you have a way to show transient messages:
-                    // _transientMessage.value = errorMsg
-                    // Or if MapUiState.Error is acceptable for this:
-                    _uiState.value = MapUiState.Error(errorMsg) // This might be too disruptive
+                    // Consider a transient error message for the UI if possible
+                    // For now, just preventing addition.
                 }
             }
         }
