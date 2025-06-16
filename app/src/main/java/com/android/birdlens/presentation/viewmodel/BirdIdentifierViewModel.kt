@@ -48,7 +48,7 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
 
     private val generativeVisionModel: GenerativeModel by lazy {
         GenerativeModel(
-            modelName = "gemini 2.0 Flash",
+            modelName = "gemini-2.0-flash",
             apiKey = BuildConfig.GEMINI_API_KEY
         )
     }
