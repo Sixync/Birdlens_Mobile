@@ -48,7 +48,7 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
 
     private val generativeVisionModel: GenerativeModel by lazy {
         GenerativeModel(
-            modelName = "gemini-pro-vision",
+            modelName = "gemini-1.5-pro",
             apiKey = BuildConfig.GEMINI_API_KEY
         )
     }
