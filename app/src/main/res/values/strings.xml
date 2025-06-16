@@ -289,4 +289,13 @@
     <string name="map_fetch_error_generic">Error fetching data: %1$s</string>
     <string name="map_compare_max_items_toast">You can select up to %1$d hotspots for comparison.</string>
 
+
+    <string name="map_search_scope_home">My Home (%1$s)</string>
+    <string name="map_search_scope_current_region">Current Map Region</string>
+    <string name="map_search_scope_global">Global (Current View)</string>
+    <string name="map_select_search_scope_title">Select Species Search Scope</string>
+    <string name="map_search_ai_finding_region">Finding locations for %1$s in %2$s…</string>
+    <string name="map_search_error_no_hotspots_region">No recent observations of \'%1$s\' found in %2$s.</string>
+    <string name="settings_change_home_country">Change Home Country</string>
+    <string name="dialog_select_home_country">Select Home Country</string>
 </resources>

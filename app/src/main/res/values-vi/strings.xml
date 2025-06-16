@@ -285,4 +285,12 @@
     <string name="map_fetch_error_generic">Lỗi tải dữ liệu: %1$s</string>
     <string name="map_compare_max_items_toast">Bạn có thể chọn tối đa %1$d điểm nóng để so sánh.</string>
 
+    <string name="map_search_scope_home">Nhà của tôi (%1$s)</string>
+    <string name="map_search_scope_current_region">Khu vực Bản đồ Hiện tại</string>
+    <string name="map_search_scope_global">Toàn cầu (Khu vực Hiện tại)</string>
+    <string name="map_select_search_scope_title">Chọn Phạm vi Tìm kiếm Loài</string>
+    <string name="map_search_ai_finding_region">Đang tìm vị trí cho %1$s tại %2$s…</string>
+    <string name="map_search_error_no_hotspots_region">Không tìm thấy quan sát gần đây của \'%1$s\' tại %2$s.</string>
+    <string name="settings_change_home_country">Thay đổi Quốc gia Mặc định</string>
+    <string name="dialog_select_home_country">Chọn Quốc gia Mặc định</string>
 </resources>
