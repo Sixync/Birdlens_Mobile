@@ -256,4 +256,32 @@
 
     <!-- admin management -->
     <string name="admin_manage_subscriptions">Quản lý Gói đăng ký</string>
+
+
+    <string name="map_action_start_compare">Bắt đầu Chế độ So sánh</string>
+    <string name="map_action_exit_compare">Thoát Chế độ So sánh</string>
+    <string name="map_compare_selected_info">Đã chọn để So sánh: %1$d/%2$d</string>
+    <string name="map_compare_clear_selection">Xóa</string>
+    <string name="map_compare_button_text">So sánh (%1$d)</string>
+    <string name="map_compare_toast_min_selection">Chọn ít nhất 2 điểm nóng để so sánh.</string>
+    <string name="map_compare_set_target_species">Đặt Loài Mục tiêu</string>
+    <string name="map_compare_target_species_dialog_title">Đặt Loài Mục tiêu</string>
+    <string name="map_compare_target_species_placeholder">Nhập tên chim (ví dụ: Chào mào)</string>
+    <string name="map_compare_confirm">Xác nhận</string>
+    <string name="map_compare_cancel">Hủy</string>
+    <string name="hotspot_comparison_title">So sánh Điểm nóng</string>
+    <string name="hotspot_comparison_metric_all_time_species">Tổng số Loài (Từ trước đến nay)</string>
+    <string name="hotspot_comparison_metric_latest_obs">Quan sát Mới nhất</string>
+    <string name="hotspot_comparison_metric_recent_sightings">Quan sát Gần đây</string>
+    <string name="hotspot_comparison_metric_target_species">Mục tiêu: %1$s</string>
+    <string name="hotspot_comparison_target_seen_recently">✓ Đã thấy gần đây (%1$s)</string>
+    <string name="hotspot_comparison_target_potential">○ Có tiềm năng (đã ghi nhận trước đây)</string>
+    <string name="hotspot_comparison_target_not_recorded">✗ Chưa ghi nhận</string>
+    <string name="hotspot_comparison_metric_accessibility">Tiếp cận</string>
+    <string name="hotspot_comparison_metric_best_time">Thời gian Tốt nhất để Ghé thăm</string>
+    <string name="hotspot_comparison_no_data">Không có dữ liệu để so sánh. Vui lòng chọn các điểm nóng.</string>
+    <string name="hotspot_comparison_select_hotspots">Chọn các điểm nóng để so sánh.</string>
+    <string name="hotspot_comparison_error_fetch">Không thể tải dữ liệu cho tất cả các điểm nóng đã chọn.</string>
+    <string name="map_fetch_error_generic">Lỗi tải dữ liệu: %1$s</string>
+    <string name="map_compare_max_items_toast">Bạn có thể chọn tối đa %1$d điểm nóng để so sánh.</string>
 </resources>

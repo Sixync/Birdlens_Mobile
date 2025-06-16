@@ -17,13 +17,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive // Import for isActive check
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 
 sealed class MapUiState {
     data object Idle : MapUiState()
-    data class Loading(val message: String? = null) : MapUiState() // Add message to loading state
+    data class Loading(val message: String? = null) : MapUiState()
     data class Success(
         val hotspots: List<EbirdNearbyHotspot>,
         val zoomLevelContext: Float,
@@ -41,11 +42,17 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val birdSpeciesRepository = BirdSpeciesRepository(application.applicationContext)
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-    private val context = application.applicationContext // For string resources
+    private val context = application.applicationContext
 
-    // New state for search recommendations
     private val _searchResults = MutableStateFlow<List<BirdSpecies>>(emptyList())
     val searchResults: StateFlow<List<BirdSpecies>> = _searchResults.asStateFlow()
+
+    private val _isCompareModeActive = MutableStateFlow(false)
+    val isCompareModeActive: StateFlow<Boolean> = _isCompareModeActive.asStateFlow()
+
+    private val _selectedHotspotsForComparison = MutableStateFlow<List<EbirdNearbyHotspot>>(emptyList())
+    val selectedHotspotsForComparison: StateFlow<List<EbirdNearbyHotspot>> = _selectedHotspotsForComparison.asStateFlow()
+
 
     companion object {
         const val SHOW_HOTSPOTS_MIN_ZOOM_LEVEL = 7.5f
@@ -56,11 +63,12 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         private const val SIGNIFICANT_PAN_THRESHOLD_DEGREES = 0.25
         const val COUNTRY_CODE_VIETNAM = "VN"
         private const val TAG = "MapViewModel"
-        private const val SEARCH_DEBOUNCE_MS = 300L // Debounce for search input
+        private const val SEARCH_DEBOUNCE_MS = 300L
+        const val MAX_COMPARISON_ITEMS = 3
     }
 
     private var fetchJob: Job? = null
-    private var searchJob: Job? = null // Job for debounced search
+    private var searchJob: Job? = null
     private var lastFetchedCenter: LatLng? = null
     private var areHotspotsVisible = false
     private var isSearchActive = false
@@ -68,44 +76,39 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
-        searchJob?.cancel() // Cancel previous search job
+        searchJob?.cancel()
         if (query.isNotBlank()) {
             searchJob = viewModelScope.launch {
-                delay(SEARCH_DEBOUNCE_MS) // Debounce to avoid querying on every keystroke
+                delay(SEARCH_DEBOUNCE_MS)
                 try {
                     val results = birdSpeciesRepository.searchBirds(query)
                     _searchResults.value = results
                     Log.d(TAG, "Local search for '$query' found ${results.size} results.")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error searching for birds in local DB: ${e.message}", e)
-                    _searchResults.value = emptyList() // Clear results on error
+                    _searchResults.value = emptyList()
                 }
             }
         } else {
-            _searchResults.value = emptyList() // Clear results if query is blank
+            _searchResults.value = emptyList()
         }
     }
 
     fun onBirdSearchSubmitted() {
         val query = _searchQuery.value.trim()
-        if (query.isBlank()) {
-            return
-        }
+        if (query.isBlank()) return
 
         searchJob?.cancel()
-        _searchResults.value = emptyList() // Hide recommendations after submission
-
+        _searchResults.value = emptyList()
         isSearchActive = true
         fetchJob?.cancel()
+
         fetchJob = viewModelScope.launch {
             _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_local_finding, query))
             try {
-                // Search the local database for the bird
                 val searchResults = birdSpeciesRepository.searchBirds(query)
-
                 if (searchResults.isNotEmpty()) {
                     val foundBird = searchResults.first()
-                    // Update loading message to show the found bird name
                     _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_ai_finding, foundBird.commonName))
                     fetchHotspotsForSpeciesCode(foundBird.speciesCode, foundBird.commonName)
                 } else {
@@ -125,84 +128,91 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
     fun onSearchQueryCleared(currentCenter: LatLng) {
         _searchQuery.value = ""
-        _searchResults.value = emptyList() // Clear recommendations
+        _searchResults.value = emptyList()
         isSearchActive = false
-        // Re-fetch all hotspots for the current view to restore normal map behavior
         requestHotspotsForCurrentView(currentCenter, (_uiState.value as? MapUiState.Success)?.zoomLevelContext ?: SHOW_HOTSPOTS_MIN_ZOOM_LEVEL)
     }
 
-
-    fun requestHotspotsForCurrentView(center: LatLng, zoom: Float) {
-        // If a search is active, we must not cancel the ongoing search job.
-        // So we exit this function immediately.
-        if (isSearchActive) {
-            Log.d(TAG, "Search is active. Ignoring requestHotspotsForCurrentView to prevent cancellation of search job.")
+    fun requestHotspotsForCurrentView(center: LatLng, zoom: Float, forceRefresh: Boolean = false) {
+        if (isSearchActive && !forceRefresh) {
+            Log.d(TAG, "Search is active. Ignoring requestHotspotsForCurrentView. forceRefresh=$forceRefresh")
             return
         }
 
-        fetchJob?.cancel()
-        fetchJob = viewModelScope.launch {
-            delay(CAMERA_IDLE_DEBOUNCE_MS)
+        fetchJob?.cancel() // Cancel any existing job, always if forcing refresh or if it's a new type of request
+        Log.d(TAG, "Previous fetchJob cancelled. New request for center: $center, zoom: $zoom, forceRefresh: $forceRefresh")
 
-            if (zoom < SHOW_HOTSPOTS_MIN_ZOOM_LEVEL) {
-                if (areHotspotsVisible) {
+        fetchJob = viewModelScope.launch {
+            if (!forceRefresh) { // Only debounce if not a forced refresh triggered by user action
+                delay(CAMERA_IDLE_DEBOUNCE_MS)
+            }
+
+            if (!isActive) { // Check if the coroutine itself was cancelled during the delay
+                Log.d(TAG, "Job for center $center, zoom $zoom, forceRefresh $forceRefresh was cancelled before network processing.")
+                return@launch
+            }
+
+            if (zoom < SHOW_HOTSPOTS_MIN_ZOOM_LEVEL && !forceRefresh) {
+                if (areHotspotsVisible || (_uiState.value as? MapUiState.Success)?.hotspots?.isNotEmpty() == true) {
                     _uiState.value = MapUiState.Success(emptyList(), zoom, center, 0)
-                    areHotspotsVisible = false
-                    lastFetchedCenter = null
-                    Log.d(TAG, "Zoom level ($zoom) is below threshold ($SHOW_HOTSPOTS_MIN_ZOOM_LEVEL). Hiding hotspots.")
-                } else {
-                    (_uiState.value as? MapUiState.Success)?.let {
-                        if (it.hotspots.isEmpty()) {
-                            _uiState.value = it.copy(zoomLevelContext = zoom, fetchedCenter = center, fetchedRadiusKm = 0)
-                        }
-                    }
+                    Log.d(TAG, "Zoom ($zoom) < threshold. Hiding hotspots. forceRefresh=$forceRefresh")
                 }
+                areHotspotsVisible = false
+                // Don't nullify lastFetchedCenter here, let significant change logic handle it.
                 return@launch
             }
 
             val centerChangedSignificantly = lastFetchedCenter == null || isCenterChangeSignificant(center, lastFetchedCenter!!)
+            val viewRequiresUpdate = !areHotspotsVisible || centerChangedSignificantly
 
-            if (!areHotspotsVisible || centerChangedSignificantly) {
-                _uiState.value = MapUiState.Loading()
-                Log.d(TAG, "Zoom level ($zoom) is sufficient. Fetching hotspots. New view required: ${!areHotspotsVisible}, Center changed: $centerChangedSignificantly")
+            if (forceRefresh || viewRequiresUpdate) {
+                _uiState.value = MapUiState.Loading(if (forceRefresh) context.getString(R.string.map_toast_refreshing_hotspots) else null)
+                Log.d(TAG, "Fetching hotspots. Zoom: $zoom, Force: $forceRefresh, ViewRequiresUpdate: $viewRequiresUpdate (areHotspotsVisible=$areHotspotsVisible, centerChanged=$centerChangedSignificantly)")
                 try {
                     val fetchedHotspots = hotspotRepository.getNearbyHotspots(
                         center = center,
                         radiusKm = HOTSPOT_FETCH_RADIUS_KM,
                         currentBounds = null,
-                        countryCodeFilter = COUNTRY_CODE_VIETNAM
+                        countryCodeFilter = COUNTRY_CODE_VIETNAM,
+                        forceRefresh = forceRefresh // Pass down forceRefresh
                     ).sortedByDescending { it.numSpeciesAllTime ?: 0 }
+
+                    if (!isActive) { // Check again after the potentially long network call
+                        Log.d(TAG, "Job for center $center, zoom $zoom, forceRefresh $forceRefresh was cancelled DURING/AFTER network call in ViewModel.")
+                        return@launch
+                    }
 
                     _uiState.value = MapUiState.Success(fetchedHotspots, zoom, center, HOTSPOT_FETCH_RADIUS_KM)
                     areHotspotsVisible = true
                     lastFetchedCenter = center
-                    Log.d(TAG, "Fetch successful. Showing ${fetchedHotspots.size} hotspots.")
+                    Log.d(TAG, "Fetch successful. Showing ${fetchedHotspots.size} hotspots. forceRefresh=$forceRefresh")
 
                 } catch (e: Exception) {
                     if (e is CancellationException) {
-                        Log.d(TAG, "Fetch job cancelled for zoom $zoom.")
-                        return@launch
+                        Log.i(TAG, "Fetch job for $center, zoom $zoom, forceRefresh $forceRefresh was cancelled (repo level or during VM processing): ${e.message}")
+                        // If UI was loading, and this was cancelled, it might be good to revert to Idle or previous Success if available
+                        // For now, let the next valid event update the UI. If no new event, UI stays Loading or previous Error.
+                        // A more robust solution might involve temporarily storing previous valid state.
+                    } else {
+                        val errorMsg = context.getString(R.string.map_fetch_error_generic, e.localizedMessage ?: context.getString(R.string.error_unknown))
+                        _uiState.value = MapUiState.Error(errorMsg)
+                        Log.e(TAG, "Exception fetching hotspots: $errorMsg", e)
                     }
-                    val errorMsg = "Exception fetching hotspots: ${e.localizedMessage}"
-                    _uiState.value = MapUiState.Error(errorMsg)
-                    Log.e(TAG, errorMsg, e)
                 }
             } else {
-                Log.d(TAG, "View has not changed enough. Not re-fetching.")
+                Log.d(TAG, "View has not changed enough and not forcing refresh. Not re-fetching. Zoom: $zoom. Current center: $center, Last center: $lastFetchedCenter")
                 (_uiState.value as? MapUiState.Success)?.let {
-                    _uiState.value = it.copy(zoomLevelContext = zoom)
+                    _uiState.value = it.copy(zoomLevelContext = zoom, fetchedCenter = center) // Update context
                 }
             }
         }
     }
 
     private fun fetchHotspotsForSpeciesCode(speciesCode: String, birdDisplayName: String) {
-        // This function is now private and part of the search flow.
-        // It's called after a speciesCode has been successfully found.
         viewModelScope.launch {
+            _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_ai_finding, birdDisplayName)) // Keep specific loading message
             Log.d(TAG, "Fetching hotspots for speciesCode: '$speciesCode'")
             try {
                 val hotspotsWithBird = hotspotRepository.getHotspotsForSpeciesInCountry(
@@ -210,28 +220,30 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     countryCode = COUNTRY_CODE_VIETNAM
                 )
 
+                if (!isActive) { // Check for cancellation
+                    Log.i(TAG, "Species hotspot fetch cancelled for $speciesCode")
+                    return@launch
+                }
+
                 if (hotspotsWithBird.isNotEmpty()) {
                     _uiState.value = MapUiState.Success(hotspotsWithBird, HOME_BUTTON_ZOOM_LEVEL, VIETNAM_INITIAL_CENTER, 0)
                     areHotspotsVisible = true
-                    // Keep isSearchActive = true until the user clears it
                 } else {
                     _uiState.value = MapUiState.Error(context.getString(R.string.map_search_error_no_hotspots, birdDisplayName))
-                    isSearchActive = false // Reset search state on failure
+                    isSearchActive = false
                 }
-
             } catch (e: Exception) {
                 if (e is CancellationException) {
-                    Log.i(TAG, "Bird hotspot fetch job was cancelled.")
-                    return@launch
+                    Log.i(TAG, "Bird hotspot fetch job for $speciesCode was cancelled: ${e.message}")
+                } else {
+                    val errorMsg = context.getString(R.string.map_fetch_error_generic, e.localizedMessage ?: context.getString(R.string.error_unknown))
+                    _uiState.value = MapUiState.Error(errorMsg)
+                    isSearchActive = false
+                    Log.e(TAG, "Exception fetching hotspots for species $speciesCode: $errorMsg", e)
                 }
-                val errorMsg = "Exception fetching hotspots for species: ${e.localizedMessage}"
-                _uiState.value = MapUiState.Error(errorMsg)
-                isSearchActive = false // Reset search state on failure
-                Log.e(TAG, errorMsg, e)
             }
         }
     }
-
 
     private fun isCenterChangeSignificant(newCenter: LatLng, oldCenter: LatLng): Boolean {
         val latDiff = abs(newCenter.latitude - oldCenter.latitude)
@@ -245,6 +257,55 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             lastFetchedCenter = null
             areHotspotsVisible = false
             Log.i(TAG, "Hotspot cache cleared.")
+            // Trigger a refresh for the current view after clearing
+            val currentUiStateValue = _uiState.value
+            val currentCenter = (currentUiStateValue as? MapUiState.Success)?.fetchedCenter ?: VIETNAM_INITIAL_CENTER
+            val currentZoom = (currentUiStateValue as? MapUiState.Success)?.zoomLevelContext ?: HOME_BUTTON_ZOOM_LEVEL
+            requestHotspotsForCurrentView(currentCenter, currentZoom, forceRefresh = true)
         }
+    }
+
+    fun toggleCompareMode() {
+        _isCompareModeActive.value = !_isCompareModeActive.value
+        if (!_isCompareModeActive.value) {
+            _selectedHotspotsForComparison.value = emptyList()
+        }
+        Log.d(TAG, "Compare mode toggled. Active: ${_isCompareModeActive.value}")
+    }
+
+    fun onHotspotSelectedForComparison(hotspot: EbirdNearbyHotspot) {
+        if (!_isCompareModeActive.value) {
+            Log.d(TAG, "Compare mode not active. Ignoring hotspot selection.")
+            return
+        }
+        val currentSelection = _selectedHotspotsForComparison.value.toMutableList()
+        val alreadySelected = currentSelection.any { it.locId == hotspot.locId }
+
+        if (alreadySelected) {
+            currentSelection.removeAll { it.locId == hotspot.locId }
+            Log.d(TAG, "Hotspot deselected: ${hotspot.locName}")
+        } else {
+            if (currentSelection.size < MAX_COMPARISON_ITEMS) {
+                currentSelection.add(hotspot)
+                Log.d(TAG, "Hotspot selected: ${hotspot.locName}")
+            } else {
+                viewModelScope.launch { // To show Toast or update UI state for error
+                    // Using a more specific error state or event might be better for UI
+                    val errorMsg = context.getString(R.string.map_compare_max_items_toast, MAX_COMPARISON_ITEMS)
+                    // For now, just logging and maybe a short-lived error state or event
+                    Log.w(TAG, errorMsg)
+                    // If you have a way to show transient messages:
+                    // _transientMessage.value = errorMsg
+                    // Or if MapUiState.Error is acceptable for this:
+                    _uiState.value = MapUiState.Error(errorMsg) // This might be too disruptive
+                }
+            }
+        }
+        _selectedHotspotsForComparison.value = currentSelection
+    }
+
+    fun clearComparisonSelection() {
+        _selectedHotspotsForComparison.value = emptyList()
+        Log.d(TAG, "Comparison selection cleared.")
     }
 }

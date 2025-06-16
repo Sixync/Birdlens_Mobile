@@ -1,12 +1,10 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/AppNavigation.kt
-// EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/AppNavigation.kt
 package com.android.birdlens.presentation.navigation
 
 import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -25,7 +23,7 @@ import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
 import com.android.birdlens.presentation.ui.screens.birdidentifier.BirdIdentifierScreen
 import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
-// Import CreatePostScreen
+import com.android.birdlens.presentation.ui.screens.comparison.HotspotComparisonScreen // Import the screen
 import com.android.birdlens.presentation.ui.screens.community.CreatePostScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
 import com.android.birdlens.presentation.ui.screens.emailverification.EmailVerificationScreen
@@ -48,12 +46,15 @@ import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
 import com.android.birdlens.presentation.viewmodel.AdminSubscriptionViewModel
 import com.android.birdlens.presentation.viewmodel.BirdIdentifierViewModel
-// Import CommunityViewModel for CreatePostScreen if not already imported for CommunityScreen
 import com.android.birdlens.presentation.viewmodel.CommunityViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModelFactory
+import com.android.birdlens.presentation.viewmodel.HotspotComparisonViewModel
+import com.android.birdlens.presentation.viewmodel.HotspotComparisonViewModelFactory // Import the factory
 import com.android.birdlens.presentation.viewmodel.MapViewModel
 import com.android.birdlens.presentation.viewmodel.HotspotBirdListViewModel
+import com.android.birdlens.presentation.viewmodel.TourViewModel
+
 
 @Composable
 fun AppNavigation(
@@ -62,7 +63,6 @@ fun AppNavigation(
     modifier: Modifier = Modifier
 ) {
     val application = LocalContext.current.applicationContext as Application
-    // Obtain CommunityViewModel once, it can be shared if CreatePostScreen is conceptually part of Community feature
     val communityViewModel: CommunityViewModel = viewModel()
 
     NavHost(
@@ -85,7 +85,7 @@ fun AppNavigation(
             )
         }
         composable(Screen.Register.route) {
-            val accountInfoViewModel: AccountInfoViewModel = viewModel()
+            // val accountInfoViewModel: AccountInfoViewModel = viewModel() // Not typically needed directly in RegisterScreen itself
             RegisterScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
@@ -137,18 +137,20 @@ fun AppNavigation(
 
         composable(Screen.Tour.route) {
             val eventViewModel: EventViewModel = viewModel()
+            val tourViewModel: TourViewModel = viewModel() // Added TourViewModel for this screen
             TourScreen(
                 navController = navController,
                 onNavigateToAllEvents = { navController.navigate(Screen.AllEventsList.route) },
                 onNavigateToAllTours = { navController.navigate(Screen.AllToursList.route) },
-                onNavigateToPopularTours = { navController.navigate(Screen.AllToursList.route) },
-                onTourItemClick = { tourIdAsInt ->
-                    navController.navigate(Screen.TourDetail.createRoute(tourIdAsInt.toLong()))
+                onNavigateToPopularTours = { navController.navigate(Screen.AllToursList.route) }, // Can be same as AllTours or a filtered view
+                onTourItemClick = { tourIdAsLong -> // Changed from tourIdAsInt
+                    navController.navigate(Screen.TourDetail.createRoute(tourIdAsLong))
                 },
                 onEventItemClick = { eventId ->
                     navController.navigate(Screen.EventDetail.createRoute(eventId))
                 },
-                eventViewModel = eventViewModel
+                eventViewModel = eventViewModel,
+                tourViewModel = tourViewModel // Pass it here
             )
         }
         composable(Screen.AllEventsList.route) {
@@ -162,11 +164,13 @@ fun AppNavigation(
             )
         }
         composable(Screen.AllToursList.route) {
+            val tourViewModel: TourViewModel = viewModel() // Added TourViewModel
             AllToursListScreen(
                 navController = navController,
                 onTourItemClick = { tourIdAsLong ->
                     navController.navigate(Screen.TourDetail.createRoute(tourIdAsLong))
-                }
+                },
+                tourViewModel = tourViewModel // Pass it
             )
         }
         composable(
@@ -174,7 +178,8 @@ fun AppNavigation(
             arguments = listOf(navArgument("tourId") { type = NavType.LongType })
         ) { backStackEntry ->
             val tourId = backStackEntry.arguments?.getLong("tourId") ?: -1L
-            TourDetailScreen(navController = navController, tourId = tourId, tourViewModel = viewModel())
+            val tourViewModel: TourViewModel = viewModel() // Instantiate TourViewModel
+            TourDetailScreen(navController = navController, tourId = tourId, tourViewModel = tourViewModel)
         }
         composable(
             route = Screen.PickDays.route,
@@ -194,18 +199,17 @@ fun AppNavigation(
             MapScreen(navController = navController, mapViewModel = mapViewModel)
         }
         composable(Screen.Community.route) {
-            // Provide the shared CommunityViewModel instance here
             CommunityScreen(navController = navController, communityViewModel = communityViewModel)
         }
-        // Add composable for CreatePostScreen
         composable(Screen.CreatePost.route) {
-            // Provide the shared CommunityViewModel instance here too
             CreatePostScreen(navController = navController, communityViewModel = communityViewModel)
         }
         composable(Screen.Settings.route) {
+            val accountInfoViewModel: AccountInfoViewModel = viewModel() // For subscription status in settings
             SettingsScreen(
                 navController = navController,
-                googleAuthViewModel = googleAuthViewModel
+                googleAuthViewModel = googleAuthViewModel,
+                accountInfoViewModel = accountInfoViewModel // Pass it
             )
         }
         composable(Screen.AccountInfo.route) {
@@ -220,17 +224,17 @@ fun AppNavigation(
             route = Screen.EventDetail.route,
             arguments = listOf(navArgument("eventId") { type = NavType.LongType })
         ) { backStackEntry ->
-            val eventId = backStackEntry.arguments?.getLong("eventId") ?: -1L
+            // val eventId = backStackEntry.arguments?.getLong("eventId") ?: -1L // Already handled by factory
             val eventDetailViewModel: EventDetailViewModel = viewModel(
                 factory = EventDetailViewModelFactory(
                     application,
-                    backStackEntry, // pass the NavBackStackEntry as SavedStateRegistryOwner
-                    backStackEntry.arguments // pass the arguments as defaultArgs
+                    backStackEntry,
+                    backStackEntry.arguments
                 )
             )
             EventDetailScreen(
                 navController = navController,
-                eventId = eventId,
+                eventId = backStackEntry.arguments?.getLong("eventId") ?: -1L, // Still need to pass it for direct use if any
                 eventDetailViewModel = eventDetailViewModel
             )
         }
@@ -239,15 +243,14 @@ fun AppNavigation(
             route = Screen.BirdInfo.route,
             arguments = listOf(navArgument("speciesCode") { type = NavType.StringType })
         ) { backStackEntry ->
-            // Correct ViewModel instantiation with SavedStateHandle for BirdInfoViewModel
             val birdInfoViewModel: BirdInfoViewModel = viewModel(
                 factory = viewModelFactory {
-                    initializer { BirdInfoViewModel(createSavedStateHandle()) } // Use createSavedStateHandle()
+                    initializer { BirdInfoViewModel(createSavedStateHandle()) }
                 }
             )
             BirdInfoScreen(
                 navController = navController,
-                viewModel = birdInfoViewModel // Pass the correctly instantiated ViewModel
+                viewModel = birdInfoViewModel
             )
         }
 
@@ -255,8 +258,7 @@ fun AppNavigation(
             route = Screen.HotspotBirdList.route,
             arguments = listOf(navArgument("hotspotId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val hotspotId = backStackEntry.arguments?.getString("hotspotId") // Retrieve hotspotId
-            // Correct ViewModel instantiation for HotspotBirdListViewModel
+            // val hotspotId = backStackEntry.arguments?.getString("hotspotId") // Already handled by factory
             val hotspotBirdListViewModel: HotspotBirdListViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { HotspotBirdListViewModel(createSavedStateHandle()) }
@@ -264,7 +266,7 @@ fun AppNavigation(
             )
             HotspotBirdListScreen(
                 navController = navController,
-                hotspotId = hotspotId, // Pass hotspotId
+                hotspotId = backStackEntry.arguments?.getString("hotspotId"),
                 viewModel = hotspotBirdListViewModel
             )
         }
@@ -284,6 +286,21 @@ fun AppNavigation(
             CreateSubscriptionScreen(
                 navController = navController,
                 adminSubscriptionViewModel = adminSubscriptionViewModel
+            )
+        }
+        // Corrected Composable for HotspotComparisonScreen
+        composable(
+            route = Screen.HotspotComparison.route, // Use the object directly
+            arguments = listOf(navArgument("locIds") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val locIdsString = backStackEntry.arguments?.getString("locIds")
+            val locIdsList = locIdsString?.split(",")?.filter { it.isNotBlank() } ?: emptyList() // Ensure no blank IDs
+            val comparisonViewModel: HotspotComparisonViewModel = viewModel(
+                factory = HotspotComparisonViewModelFactory(application, locIdsList)
+            )
+            HotspotComparisonScreen( // Make sure this screen is imported
+                navController = navController,
+                viewModel = comparisonViewModel
             )
         }
     }

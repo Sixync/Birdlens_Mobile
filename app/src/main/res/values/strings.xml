@@ -260,4 +260,33 @@
     <string name="subscription_tier_unknown">Unknown</string>
     <string name="loading_ellipsis">Loading…</string>
     <string name="settings_my_subscription">My Subscription</string>
+
+
+    <string name="map_action_start_compare">Start Compare Mode</string>
+    <string name="map_action_exit_compare">Exit Compare Mode</string>
+    <string name="map_compare_selected_info">Selected for Comparison: %1$d/%2$d</string>
+    <string name="map_compare_clear_selection">Clear</string>
+    <string name="map_compare_button_text">Compare (%1$d)</string>
+    <string name="map_compare_toast_min_selection">Select at least 2 hotspots to compare.</string>
+    <string name="map_compare_set_target_species">Set Target Species</string>
+    <string name="map_compare_target_species_dialog_title">Set Target Species</string>
+    <string name="map_compare_target_species_placeholder">Enter bird name (e.g., Blue Jay)</string>
+    <string name="map_compare_confirm">Confirm</string>
+    <string name="map_compare_cancel">Cancel</string>
+    <string name="hotspot_comparison_title">Hotspot Comparison</string>
+    <string name="hotspot_comparison_metric_all_time_species">All-Time Species</string>
+    <string name="hotspot_comparison_metric_latest_obs">Latest Observation</string>
+    <string name="hotspot_comparison_metric_recent_sightings">Recent Sightings</string>
+    <string name="hotspot_comparison_metric_target_species">Target: %1$s</string>
+    <string name="hotspot_comparison_target_seen_recently">✓ Seen recently (%1$s)</string>
+    <string name="hotspot_comparison_target_potential">○ Potential (recorded previously)</string>
+    <string name="hotspot_comparison_target_not_recorded">✗ Not recorded</string>
+    <string name="hotspot_comparison_metric_accessibility">Accessibility</string>
+    <string name="hotspot_comparison_metric_best_time">Best Time to Visit</string>
+    <string name="hotspot_comparison_no_data">No data to compare. Please select hotspots.</string>
+    <string name="hotspot_comparison_select_hotspots">Select hotspots to compare.</string>
+    <string name="hotspot_comparison_error_fetch">Failed to fetch data for all selected hotspots.</string>
+    <string name="map_fetch_error_generic">Error fetching data: %1$s</string>
+    <string name="map_compare_max_items_toast">You can select up to %1$d hotspots for comparison.</string>
+
 </resources>

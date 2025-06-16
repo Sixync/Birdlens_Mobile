@@ -40,6 +40,10 @@ sealed class Screen(val route: String) {
     data object BirdIdentifier : Screen("bird_identifier_screen")
     data object AdminSubscriptionList : Screen("admin_subscription_list_screen")
     data object AdminCreateSubscription : Screen("admin_create_subscription_screen")
-    // Add new screen for creating posts
     data object CreatePost : Screen("create_post_screen")
+
+    // Corrected definition for HotspotComparison
+    data object HotspotComparison : Screen("hotspot_comparison_screen/{locIds}") {
+        fun createRoute(locIds: List<String>) = "hotspot_comparison_screen/${locIds.joinToString(",")}"
+    }
 }

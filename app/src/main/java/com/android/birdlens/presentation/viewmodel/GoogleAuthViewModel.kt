@@ -114,7 +114,7 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
                     val idTokenResult = firebaseUser.getIdToken(true).await()
                     val firebaseIdToken = idTokenResult.token
                     if (firebaseIdToken != null) {
-                        Log.d("AuthVM", "Firebase ID Token obtained (first 15 chars): ${firebaseIdToken.take(15)}...")
+                        Log.d("AuthVM", "Firebase ID Token obtained : ${firebaseIdToken}")
                         tokenManager.saveFirebaseIdToken(firebaseIdToken)
                         _firebaseSignInState.value = FirebaseSignInState.Success(firebaseUser, firebaseIdToken)
                     } else {

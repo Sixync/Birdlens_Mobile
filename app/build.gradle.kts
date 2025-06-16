@@ -163,6 +163,7 @@ dependencies {
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
     implementation(libs.generativeai)
+    implementation(libs.androidx.compose.material)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

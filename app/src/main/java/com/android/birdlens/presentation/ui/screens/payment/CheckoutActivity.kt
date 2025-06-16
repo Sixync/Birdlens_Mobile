@@ -59,7 +59,9 @@ import kotlin.coroutines.suspendCoroutine
 
 class CheckoutActivity : ComponentActivity() {
     companion object {
-        private const val BACKEND_URL = "http://10.0.2.2"
+        private const val BACKEND_URL = "http://20.191.153.166/"
+        //http://20.191.153.166/
+        //http://10.0.2.2/ localhost
         private const val TAG = "CheckoutActivity"
     }
 
