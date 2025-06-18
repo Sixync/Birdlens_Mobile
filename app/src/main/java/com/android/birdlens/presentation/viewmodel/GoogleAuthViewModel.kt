@@ -36,8 +36,9 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     private val _firebaseSignInState = MutableStateFlow<FirebaseSignInState>(FirebaseSignInState.Idle)
     val firebaseSignInState: StateFlow<FirebaseSignInState> = _firebaseSignInState.asStateFlow()
 
-    private val _emailVerificationState = MutableStateFlow<EmailVerificationState>(EmailVerificationState.Idle)
-    val emailVerificationState: StateFlow<EmailVerificationState> = _emailVerificationState.asStateFlow()
+    // Logic: The entire state and logic for email verification are removed from the ViewModel.
+    // private val _emailVerificationState = MutableStateFlow<EmailVerificationState>(EmailVerificationState.Idle)
+    // val emailVerificationState: StateFlow<EmailVerificationState> = _emailVerificationState.asStateFlow()
 
 
     fun registerUser(registerRequest: RegisterRequest) {
@@ -132,34 +133,7 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun verifyEmailToken(token: String, userId: String) {
-        _emailVerificationState.value = EmailVerificationState.Loading
-        Log.d("AuthVM", "Verifying email with token: $token for user_id: $userId")
-        viewModelScope.launch {
-            try {
-                val response = apiService.verifyEmail(token, userId)
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
-                    if (!apiResponse.error) {
-                        _emailVerificationState.value = EmailVerificationState.Success(apiResponse.message ?: "Email verified successfully!")
-                        Log.i("AuthVM", "Email verification success: ${apiResponse.message}")
-                    } else {
-                        _emailVerificationState.value = EmailVerificationState.Error(apiResponse.message ?: "Email verification failed.")
-                        Log.e("AuthVM", "Email verification API error: ${apiResponse.message}")
-                    }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Error ${response.code()}")
-                    _emailVerificationState.value = EmailVerificationState.Error(extractedMessage)
-                    Log.e("AuthVM", "Email verification HTTP error: ${response.code()} - Full error body: $errorBody")
-                }
-            } catch (e: Exception) {
-                _emailVerificationState.value = EmailVerificationState.Error("Exception: ${e.localizedMessage ?: "Network request failed"}")
-                Log.e("AuthVM", "Email verification exception", e)
-            }
-        }
-    }
-
+    // Logic: The verifyEmailToken function has been removed.
 
     fun signOut(context: Context) {
         viewModelScope.launch {
@@ -178,13 +152,15 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
 
     fun resetBackendAuthState() { _backendAuthState.value = BackendAuthState.Idle }
     fun resetFirebaseSignInState() { _firebaseSignInState.value = FirebaseSignInState.Idle }
-    fun resetEmailVerificationState() { _emailVerificationState.value = EmailVerificationState.Idle }
+
+    // Logic: The function to reset email verification state has been removed.
+    // fun resetEmailVerificationState() { _emailVerificationState.value = EmailVerificationState.Idle }
 
 
     private fun resetAllAuthStates() {
         resetBackendAuthState()
         resetFirebaseSignInState()
-        resetEmailVerificationState()
+        // Logic: The call to reset email verification state has been removed.
     }
 
     fun getCurrentFirebaseUser(): FirebaseUser? = auth.currentUser
@@ -206,10 +182,5 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
         data class Error(val message: String) : FirebaseSignInState()
     }
 
-    sealed class EmailVerificationState {
-        data object Idle : EmailVerificationState()
-        data object Loading : EmailVerificationState()
-        data class Success(val message: String) : EmailVerificationState()
-        data class Error(val message: String) : EmailVerificationState()
-    }
+    // Logic: The EmailVerificationState sealed class has been removed.
 }

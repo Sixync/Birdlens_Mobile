@@ -29,7 +29,7 @@
     <string name="forgot_password_prompt">Quên mật khẩu?</string>
     <string name="click_here">Nhấn vào đây</string>
     <string name="login_error_credentials">Vui lòng nhập email và mật khẩu</string>
-
+    <string name="welcome_user">Đăng nhập với %1$s</string>
     <!-- Register Screen -->
     <string name="create_account_title">TẠO TÀI KHOẢN</string>
     <string name="first_name_placeholder">Tên</string>
@@ -52,11 +52,13 @@
     <string name="welcome_to_app">Chào mừng đến với BirdLens</string>
 
     <!-- Bottom Navigation -->
-    <string name="bottom_nav_settings">Cài đặt</string>
+    <string name="bottom_nav_home">Trang chủ</string>
     <string name="bottom_nav_community">Cộng đồng</string>
     <string name="bottom_nav_map">Bản đồ</string>
+    <string name="bottom_nav_premium">Cao cấp</string>
+    <string name="bottom_nav_me">Cá nhân</string>
     <string name="bottom_nav_marketplace">Chợ</string>
-    <string name="bottom_nav_tours">Chuyến đi</string>
+    <string name="bottom_nav_tours">Chuyến tham quan</string>
 
     <!-- Settings Screen -->
     <string name="settings_title">Cài đặt</string>

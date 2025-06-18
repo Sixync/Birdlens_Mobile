@@ -1,12 +1,11 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/loginsuccess/LoginSuccessScreen.kt
 package com.android.birdlens.presentation.ui.screens.loginsuccess
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.CheckCircle // Example icon
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,17 +26,17 @@ import com.android.birdlens.presentation.ui.components.AuthScreenLayout
 import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.ui.theme.*
+import kotlinx.coroutines.delay
 
 @Composable
 fun LoginSuccessScreen(
-    navController: NavController, // Added NavController
-    accountInfoViewModel: AccountInfoViewModel, // Added AccountInfoViewModel
+    navController: NavController,
+    accountInfoViewModel: AccountInfoViewModel,
     modifier: Modifier = Modifier
 ) {
     val accountState by accountInfoViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Fetch current user info when the screen is first composed after login/registration
     LaunchedEffect(key1 = Unit) {
         accountInfoViewModel.fetchCurrentUser()
     }
@@ -45,6 +44,13 @@ fun LoginSuccessScreen(
     LaunchedEffect(accountState) {
         when (val state = accountState) {
             is AccountInfoUiState.Success -> {
+                // Logic: Show a user-friendly welcome toast with the user's name before navigating.
+                val welcomeMessage = context.getString(R.string.welcome_user, state.user.firstName)
+                Toast.makeText(context, welcomeMessage, Toast.LENGTH_SHORT).show()
+
+                // A small delay to ensure the toast is visible before the screen changes.
+                delay(500) // 0.5 seconds
+
                 if (state.user.emailVerified) {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
@@ -57,9 +63,7 @@ fun LoginSuccessScreen(
                 }
             }
             is AccountInfoUiState.Error -> {
-                // Handle error fetching user profile, perhaps navigate to login with error
-                // Or allow retry. For now, fallback to login.
-                // Toast.makeText(context, "Error fetching profile: ${state.message}. Please login again.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Error fetching profile: ${state.message}. Please log in again.", Toast.LENGTH_LONG).show()
                 navController.navigate(Screen.Login.route) {
                     popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
@@ -136,20 +140,5 @@ fun LoginSuccessScreen(
         }
         Spacer(modifier = Modifier.weight(0.5f)) // Some space at the bottom
         Spacer(modifier = Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp))
-    }
-}
-
-// Preview remains largely the same, but it won't show the actual navigation logic.
-@Preview(showBackground = true, device = "spec:width=360dp,height=640dp,dpi=480")
-@Composable
-fun LoginSuccessScreenPreview() {
-    BirdlensTheme {
-        // For preview, AccountInfoViewModel will likely be in Idle or Loading state initially
-        val mockNavController = rememberNavController()
-        val mockAccountInfoViewModel: AccountInfoViewModel = viewModel()
-        LoginSuccessScreen(
-            navController = mockNavController,
-            accountInfoViewModel = mockAccountInfoViewModel
-        )
     }
 }

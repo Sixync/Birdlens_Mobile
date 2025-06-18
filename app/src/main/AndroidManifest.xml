@@ -45,16 +45,6 @@
             </intent-filter>
 
 
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data android:scheme="birdlens"
-                    android:host="deeplink"
-                    android:pathPrefix="/auth/confirm-email" />
-            </intent-filter>
-
             <!-- This intent filter now correctly handles the custom app scheme for password resets -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

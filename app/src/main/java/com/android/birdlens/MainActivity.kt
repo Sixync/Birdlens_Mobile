@@ -1,7 +1,6 @@
 // EXE201/app/src/main/java/com/android/birdlens/MainActivity.kt
 package com.android.birdlens
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -48,7 +47,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG_ADS = "MainActivityAds"
-        private const val TAG_DEEPLINK = "MainActivityDeepLink"
+        // Logic: Removed the TAG_DEEPLINK as it's no longer used.
         private const val TAG_AUTH = "MainActivityAuth" // Tag for auth events
     }
 
@@ -133,75 +132,20 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
-            // Handle initial intent in onCreate, after NavController is set up by setContent
-            handleIntent(intent)
+            // Logic: Removed the call to handleIntent as it's no longer needed.
+            // The NavController handles other deep links like password reset automatically.
         }
     }
 
     override fun onNewIntent(intent: Intent) { // Correct non-nullable Intent
         super.onNewIntent(intent)
-        Log.d(TAG_DEEPLINK, "onNewIntent called with: $intent")
-        setIntent(intent) // Update the activity's current intent to this new one
-        handleIntent(intent) // Process the new intent
+        // Logic: The body of this method is now empty but the override is kept.
+        // The Jetpack Navigation component handles deep links automatically when the activity is launched with a new intent.
+        // No manual parsing is needed here anymore.
+        Log.d(TAG_AUTH, "onNewIntent called with: $intent. Navigation Component will handle deep links.")
     }
 
-    @SuppressLint("RestrictedApi")
-    private fun handleIntent(intent: Intent?) {
-        val currentIntent = intent ?: run {
-            Log.d(TAG_DEEPLINK, "handleIntent: intent is null, exiting.")
-            return
-        }
-
-        val action = currentIntent.action
-        val data = currentIntent.data
-        Log.d(TAG_DEEPLINK, "handleIntent: action=$action, data=$data")
-        Log.d(TAG_DEEPLINK, "handleIntent: RAW DATA URI AS STRING: ${data?.toString()}") // Log the raw URI
-
-        if (Intent.ACTION_VIEW == action && data != null) {
-            val scheme = data.scheme
-            val host = data.host
-            val path = data.path
-            Log.d(TAG_DEEPLINK, "Parsed from deep link - Scheme: $scheme, Host: $host, Path: $path")
-
-            val expectedScheme = "birdlens"
-            val expectedHost = "deeplink"
-            val expectedPath = "/auth/confirm-email"
-            Log.d(TAG_DEEPLINK, "Comparing with - Expected Scheme: $expectedScheme, Expected Host: $expectedHost, Expected Path: $expectedPath")
-
-
-            if (scheme == expectedScheme && host == expectedHost && path == expectedPath) {
-                Log.d(TAG_DEEPLINK, "Deep link structure MATCHED.")
-                val token = data.getQueryParameter("token")
-                val userId = data.getQueryParameter("user_id") // This is the standard Android way
-                Log.d(TAG_DEEPLINK, "Extracted token: $token, userId: $userId")
-
-                if (token != null && userId != null) {
-                    // Check if navController is initialized. It should be if setContent has run.
-                    if (::navController.isInitialized) {
-                        Log.d(TAG_DEEPLINK, "NavController is initialized. Attempting to navigate to EmailVerificationScreen.")
-                        Log.d(TAG_DEEPLINK, "Current NavController graph: ${navController.graph.route}, Start Destination: ${navController.graph.startDestinationRoute}")
-                        Log.d(TAG_DEEPLINK, "Current NavController backstack: ${navController.currentBackStack.value.joinToString { it.destination.route ?: "null" }}")
-
-                        navController.navigate(Screen.EmailVerification.createRoute(token, userId)) {
-                            // Optional: Consider popping up to a known screen if needed, or launching as single top
-                            // popUpTo(Screen.Welcome.route)
-                            // launchSingleTop = true
-                        }
-                        Log.d(TAG_DEEPLINK, "Navigation to EmailVerificationScreen attempted.")
-                    } else {
-                        Log.e(TAG_DEEPLINK, "NavController NOT initialized when trying to handle deep link. This is unexpected if setContent has completed.")
-                    }
-                } else {
-                    Log.w(TAG_DEEPLINK, "Token or userId missing in parsed deep link data. URI was: ${data.toString()}")
-                }
-            } else {
-                Log.w(TAG_DEEPLINK, "Deep link structure MISMATCHED. URI received: ${data.toString()}")
-            }
-        } else {
-            Log.d(TAG_DEEPLINK, "Intent is not ACTION_VIEW or data is null. Not a deep link for email verification.")
-        }
-    }
-
+    // Logic: The entire handleIntent method has been removed as it was only for email verification deep linking.
 
     fun triggerInterstitialAd() {
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
@@ -221,9 +165,6 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         Log.d(TAG_ADS, "onResume: Current shouldShowAds state: ${_shouldShowAds.value}. Ad display is event-driven.")
-        // If the activity was launched by a deep link that wasn't processed in onCreate (e.g. complex launch scenarios),
-        // you might consider calling handleIntent(intent) here too, but usually onCreate/onNewIntent cover it.
-        // handleIntent(intent) // Potentially redundant, but can be a safeguard if onCreate's call is missed.
     }
 
     override fun onPause() {

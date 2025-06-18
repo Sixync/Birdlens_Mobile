@@ -5,18 +5,15 @@ sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome_screen")
     data object Login : Screen("login_screen")
     data object Register : Screen("register_screen")
-    data object ForgotPassword : Screen("forgot_password_screen") // New
-    data object ResetPassword : Screen("reset_password_screen/{token}") { // New
+    data object ForgotPassword : Screen("forgot_password_screen")
+    data object ResetPassword : Screen("reset_password_screen/{token}") {
         fun createRoute(token: String) = "reset_password_screen/$token"
     }
     data object LoginSuccess : Screen("login_success_screen")
     data object PleaseVerifyEmail : Screen("please_verify_email_screen/{email}") {
         fun createRoute(email: String) = "please_verify_email_screen/$email"
     }
-    data object EmailVerification : Screen("email_verification_screen?token={token}&user_id={user_id}") {
-        fun createRoute(token: String, userId: String) = "email_verification_screen?token=$token&user_id=$userId"
-    }
-    // Change: Renamed Tour to Home as it's the main entry point now. The screen it points to remains the same.
+    // Logic: The EmailVerification screen route has been completely removed.
     data object Home : Screen("home_screen")
     data object AllEventsList : Screen("all_events_list_screen")
     data object AllToursList : Screen("all_tours_list_screen")
@@ -33,9 +30,7 @@ sealed class Screen(val route: String) {
     data object Marketplace : Screen("marketplace_screen")
     data object Map : Screen("map_screen")
     data object Community : Screen("community_screen")
-    // Change: Settings is no longer a main bottom nav item. It will be accessed from the 'Me' screen.
     data object Settings : Screen("settings_screen")
-    // Change: AccountInfo is now the 'Me' tab. The route is updated for clarity.
     data object Me : Screen("me_screen")
     data object BirdInfo : Screen("bird_info_screen/{speciesCode}") {
         fun createRoute(speciesCode: String) = "bird_info_screen/$speciesCode"
@@ -49,11 +44,9 @@ sealed class Screen(val route: String) {
     data object AdminCreateSubscription : Screen("admin_create_subscription_screen")
     data object CreatePost : Screen("create_post_screen")
 
-    // Corrected definition for HotspotComparison
     data object HotspotComparison : Screen("hotspot_comparison_screen/{locIds}") {
         fun createRoute(locIds: List<String>) = "hotspot_comparison_screen/${locIds.joinToString(",")}"
     }
 
-    // Add: A new screen for premium features.
     data object Premium : Screen("premium_screen")
 }

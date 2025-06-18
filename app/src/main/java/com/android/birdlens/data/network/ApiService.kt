@@ -43,14 +43,6 @@ interface ApiService {
     @GET("users/me")
     suspend fun getCurrentUser(): Response<GenericApiResponse<UserResponse>>
 
-    // This is for email verification, not password reset. The path in the backend is /verify-email, not /email-verification.
-    // The backend uses a GET request for verification.
-    @GET("auth/verify-email")
-    suspend fun verifyEmail(
-        @Query("token") token: String,
-        @Query("user_id") userId: String
-    ): Response<GenericApiResponse<Unit?>> // Backend returns HTML, so we might need a different handler or just check status code. For now, assume a generic response can be handled.
-
     @POST("auth/forgot-password")
     suspend fun forgotPassword(@Body forgotPasswordRequest: ForgotPasswordRequest): Response<GenericApiResponse<Unit?>>
 

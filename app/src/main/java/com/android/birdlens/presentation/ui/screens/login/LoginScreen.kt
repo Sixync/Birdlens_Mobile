@@ -60,8 +60,9 @@ fun LoginScreen(
     LaunchedEffect(firebaseSignInState) {
         when (val state = firebaseSignInState) {
             is GoogleAuthViewModel.FirebaseSignInState.Success -> {
-                Toast.makeText(context, "Firebase Sign-In Success: ${state.firebaseUser.uid}", Toast.LENGTH_SHORT).show()
-                Log.d("LoginScreen", "Firebase ID Token: ${state.firebaseIdToken.take(15)}...")
+                // Logic: Removed the Toast message showing the Firebase UID.
+                // Instead, just log the success for debugging purposes. The next screen will show a user-friendly message.
+                Log.d("LoginScreen", "Firebase Sign-In Success for user: ${state.firebaseUser.uid}")
                 navController.navigate(Screen.LoginSuccess.route) {
                     popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
@@ -99,7 +100,6 @@ fun LoginScreen(
     val passwordPlaceholderText = stringResource(id = R.string.password_placeholder)
     val forgotPasswordPromptText = stringResource(id = R.string.forgot_password_prompt)
     val clickHereText = stringResource(id = R.string.click_here)
-    // val loginWithGoogleText = stringResource(id = R.string.login_with_google) // If social buttons are used
 
     AuthScreenLayout(
         modifier = modifier,
@@ -167,7 +167,6 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Fix: Define the annotatedString once to be used by both text and onClick
                 val annotatedString = buildAnnotatedString {
                     withStyle(style = SpanStyle(color = TextWhite.copy(alpha = 0.8f), fontSize = 13.sp)) {
                         append(forgotPasswordPromptText + " ")
@@ -182,7 +181,6 @@ fun LoginScreen(
                 ClickableText(
                     text = annotatedString,
                     onClick = { offset ->
-                        // Correctly check for the annotation on the annotatedString that was clicked
                         annotatedString.getStringAnnotations(tag = "CLICK_HERE", start = offset, end = offset)
                             .firstOrNull()?.let {
                                 onForgotPassword()
@@ -216,15 +214,6 @@ fun LoginScreen(
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
-
-                // Example if you re-add social login buttons:
-                // SocialLoginButton(
-                //     text = loginWithGoogleText,
-                //     onClick = { /* ... */ },
-                //     // ...
-                // )
-                // Spacer(modifier = Modifier.height(12.dp))
-
 
                 if (isLoading) {
                     Spacer(modifier = Modifier.height(16.dp))

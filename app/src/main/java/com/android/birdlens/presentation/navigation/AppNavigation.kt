@@ -26,7 +26,7 @@ import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.comparison.HotspotComparisonScreen
 import com.android.birdlens.presentation.ui.screens.community.CreatePostScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
-import com.android.birdlens.presentation.ui.screens.emailverification.EmailVerificationScreen
+// Logic: The import for the EmailVerificationScreen is no longer needed.
 import com.android.birdlens.presentation.ui.screens.eventdetail.EventDetailScreen
 import com.android.birdlens.presentation.ui.screens.forgotpassword.ForgotPasswordScreen
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
@@ -54,11 +54,6 @@ fun AppNavigation(
     val application = LocalContext.current.applicationContext as Application
     val communityViewModel: CommunityViewModel = viewModel()
 
-    // Logic: The NavHost startDestination is now Screen.Welcome.route, which is correct.
-    // The routes have been updated to use the new Screen object definitions.
-    // A new composable for Screen.Premium.route has been added.
-    // The old TourScreen is now hosted under the Screen.Home.route.
-    // The old AccountInfoScreen is now hosted under the Screen.Me.route.
     NavHost(
         navController = navController,
         startDestination = Screen.Welcome.route,
@@ -116,31 +111,8 @@ fun AppNavigation(
             )
         }
 
-        composable(
-            route = Screen.EmailVerification.route,
-            arguments = listOf(
-                navArgument("token") {
-                    type = NavType.StringType
-                    nullable = true
-                },
-                navArgument("user_id") {
-                    type = NavType.StringType
-                    nullable = true
-                }
-            ),
-            deepLinks = listOf(navDeepLink {
-                uriPattern = "birdlens://deeplink/auth/confirm-email?token={token}&user_id={user_id}"
-            })
-        ) { backStackEntry ->
-            EmailVerificationScreen(
-                navController = navController,
-                token = backStackEntry.arguments?.getString("token"),
-                userId = backStackEntry.arguments?.getString("user_id"),
-                googleAuthViewModel = googleAuthViewModel
-            )
-        }
+        // Logic: The composable block for Screen.EmailVerification has been removed entirely.
 
-        // Changed: The 'Tour' screen is now the 'Home' screen in the navigation graph.
         composable(Screen.Home.route) {
             val eventViewModel: EventViewModel = viewModel()
             val tourViewModel: TourViewModel = viewModel()
@@ -218,7 +190,6 @@ fun AppNavigation(
                 accountInfoViewModel = accountInfoViewModel
             )
         }
-        // Changed: The 'AccountInfo' screen is now the 'Me' screen.
         composable(Screen.Me.route) {
             val accountInfoViewModel: AccountInfoViewModel = viewModel()
             AccountInfoScreen(
@@ -307,7 +278,6 @@ fun AppNavigation(
                 viewModel = comparisonViewModel
             )
         }
-        // Add: Add the new Premium screen to the navigation graph.
         composable(Screen.Premium.route) {
             val subscriptionViewModel: SubscriptionViewModel = viewModel()
             val accountInfoViewModel: AccountInfoViewModel = viewModel()
