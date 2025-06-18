@@ -42,14 +42,6 @@ import com.android.birdlens.presentation.ui.components.AuthScreenLayout
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
 
-
-// --- DEVELOPMENT ONLY ---
-// Define developer bypass credentials.
-// WARNING: REMOVE THIS AND THE BYPASS LOGIC BEFORE PRODUCTION.
-private const val DEV_BYPASS_EMAIL = "dev@bypass.local"
-private const val DEV_BYPASS_PASSWORD = "bypass123"
-// --- END DEVELOPMENT ONLY ---
-
 @Composable
 fun LoginScreen(
     navController: NavController,
@@ -175,19 +167,23 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Fix: Define the annotatedString once to be used by both text and onClick
+                val annotatedString = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = TextWhite.copy(alpha = 0.8f), fontSize = 13.sp)) {
+                        append(forgotPasswordPromptText + " ")
+                    }
+                    pushStringAnnotation(tag = "CLICK_HERE", annotation = "forgot_password")
+                    withStyle(style = SpanStyle(color = ClickableLinkText, fontWeight = FontWeight.Bold, fontSize = 13.sp)) {
+                        append(clickHereText)
+                    }
+                    pop()
+                }
+
                 ClickableText(
-                    text = buildAnnotatedString {
-                        withStyle(style = SpanStyle(color = TextWhite.copy(alpha = 0.8f), fontSize = 13.sp)) {
-                            append(forgotPasswordPromptText + " ")
-                        }
-                        pushStringAnnotation(tag = "CLICK_HERE", annotation = "forgot_password")
-                        withStyle(style = SpanStyle(color = ClickableLinkText, fontWeight = FontWeight.Bold, fontSize = 13.sp)) {
-                            append(clickHereText)
-                        }
-                        pop()
-                    },
+                    text = annotatedString,
                     onClick = { offset ->
-                        buildAnnotatedString {}.getStringAnnotations(tag = "CLICK_HERE", start = offset, end = offset)
+                        // Correctly check for the annotation on the annotatedString that was clicked
+                        annotatedString.getStringAnnotations(tag = "CLICK_HERE", start = offset, end = offset)
                             .firstOrNull()?.let {
                                 onForgotPassword()
                             }
@@ -199,17 +195,7 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        // --- DEVELOPMENT ONLY BYPASS ---
-                        // WARNING: REMOVE THIS BEFORE PRODUCTION.
-                        if (email == DEV_BYPASS_EMAIL && password == DEV_BYPASS_PASSWORD) {
-                            Toast.makeText(context, "Developer Bypass Active!", Toast.LENGTH_LONG).show()
-                            // Clear any potentially stored tokens from previous sessions if any
-                            com.android.birdlens.data.TokenManager.getInstance(context.applicationContext).clearTokens()
-                            navController.navigate(Screen.LoginSuccess.route) {
-                                popUpTo(Screen.Welcome.route) { inclusive = true }
-                            }
-                            // --- END DEVELOPMENT ONLY BYPASS ---
-                        } else if (email.isNotBlank() && password.isNotBlank()) {
+                        if (email.isNotBlank() && password.isNotBlank()) {
                             googleAuthViewModel.loginUser(LoginRequest(email, password))
                         } else {
                             Toast.makeText(context, loginErrorCredentialsText, Toast.LENGTH_SHORT).show()
