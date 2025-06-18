@@ -22,10 +22,11 @@ import kotlinx.coroutines.launch
 sealed interface BirdIdentifierUiState {
     object Idle : BirdIdentifierUiState
     data class Loading(val message: String) : BirdIdentifierUiState
-    data class Success(
+    data class IdentificationSuccess(val possibilities: List<String>, val pendingPrompt: String) : BirdIdentifierUiState
+    data class ConversationReady(
         val identifiedBird: String,
         val chatResponse: String,
-        val imageUrl: String? // Added for the bird image
+        val imageUrl: String?
     ) : BirdIdentifierUiState
     data class Error(val errorMessage: String) : BirdIdentifierUiState
 }
@@ -48,7 +49,7 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
 
     private val generativeVisionModel: GenerativeModel by lazy {
         GenerativeModel(
-            modelName = "gemini-2.0-flash",
+            modelName = "gemini-1.5-flash", // Updated model
             apiKey = BuildConfig.GEMINI_API_KEY
         )
     }
@@ -69,48 +70,25 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
             resetConversation()
 
             try {
-                // Step 1: Identify the bird to get its name
                 val identificationPrompt = context.getString(R.string.gemini_prompt_identify_from_image)
                 val identificationContent = content("user") {
                     image(bitmap)
                     text(identificationPrompt)
                 }
                 val identificationResponse = generativeVisionModel.generateContent(identificationContent)
-                val birdName = identificationResponse.text?.trim()
+                val responseText = identificationResponse.text?.trim()
 
-                if (birdName.isNullOrBlank()) {
-                    _uiState.value = BirdIdentifierUiState.Error(context.getString(R.string.bird_identifier_error_no_identify))
-                    return@launch
-                }
-                if (birdName.contains("no bird", ignoreCase = true)) {
+                if (responseText.isNullOrBlank() || responseText.contains("no bird", ignoreCase = true)) {
                     _uiState.value = BirdIdentifierUiState.Error(context.getString(R.string.bird_identifier_error_no_bird_found))
                     return@launch
                 }
 
-                identifiedBirdName = birdName
-                _uiState.value = BirdIdentifierUiState.Loading(context.getString(R.string.bird_identifier_loading_fetching_details, birdName))
+                val possibilities = responseText.split(',').map { it.trim() }.filter { it.isNotEmpty() }
 
-                // Step 2 & 3: Fetch image and answer question concurrently
-                val effectivePrompt = if (prompt.isNotBlank()) prompt else context.getString(R.string.gemini_prompt_initial_question_no_image)
-                val imageDeferred = async { fetchBestWikipediaImage(birdName) }
-                val initialAnswerDeferred = async { getInitialAnswer(birdName, effectivePrompt) }
-
-                val imageUrl = imageDeferred.await()
-                val initialAnswer = initialAnswerDeferred.await()
-
-                if (initialAnswer != null) {
-                    // Update conversation history
-                    val userContent = content("user") { text(prompt) }
-                    val modelContent = content("model") { text(initialAnswer) }
-                    _conversationHistory.addAll(listOf(userContent, modelContent))
-
-                    _uiState.value = BirdIdentifierUiState.Success(
-                        identifiedBird = birdName,
-                        chatResponse = initialAnswer,
-                        imageUrl = imageUrl
-                    )
+                if (possibilities.size == 1) {
+                    selectBirdAndStartConversation(possibilities.first(), prompt)
                 } else {
-                    _uiState.value = BirdIdentifierUiState.Error(context.getString(R.string.bird_identifier_error_failed_details, birdName))
+                    _uiState.value = BirdIdentifierUiState.IdentificationSuccess(possibilities, prompt)
                 }
 
             } catch (e: Exception) {
@@ -126,39 +104,21 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
             resetConversation()
 
             try {
-                // Step 1: Extract bird name from the prompt
                 val extractionPrompt = context.getString(R.string.gemini_prompt_extract_name_from_text, prompt)
                 val nameExtractionResponse = generativeChatModel.generateContent(extractionPrompt)
-                val birdName = nameExtractionResponse.text?.trim()
+                val responseText = nameExtractionResponse.text?.trim()
 
-                if (birdName.isNullOrBlank() || birdName.contains("Error:", ignoreCase = true)) {
-                    _uiState.value = BirdIdentifierUiState.Error(birdName ?: context.getString(R.string.bird_identifier_error_no_name_from_question))
+                if (responseText.isNullOrBlank() || responseText.contains("Error:", ignoreCase = true)) {
+                    _uiState.value = BirdIdentifierUiState.Error(responseText ?: context.getString(R.string.bird_identifier_error_no_name_from_question))
                     return@launch
                 }
 
-                identifiedBirdName = birdName
-                _uiState.value = BirdIdentifierUiState.Loading(context.getString(R.string.bird_identifier_loading_fetching_details, birdName))
+                val possibilities = responseText.split(',').map { it.trim() }.filter { it.isNotEmpty() }
 
-                // Step 2 & 3: Fetch image and answer question concurrently
-                val imageDeferred = async { fetchBestWikipediaImage(birdName) }
-                val initialAnswerDeferred = async { getInitialAnswer(birdName, prompt) }
-
-                val imageUrl = imageDeferred.await()
-                val initialAnswer = initialAnswerDeferred.await()
-
-                if (initialAnswer != null) {
-                    // Update conversation history
-                    val userContent = content("user") { text(prompt) }
-                    val modelContent = content("model") { text(initialAnswer) }
-                    _conversationHistory.addAll(listOf(userContent, modelContent))
-
-                    _uiState.value = BirdIdentifierUiState.Success(
-                        identifiedBird = birdName,
-                        chatResponse = initialAnswer,
-                        imageUrl = imageUrl
-                    )
+                if (possibilities.size == 1) {
+                    selectBirdAndStartConversation(possibilities.first(), prompt)
                 } else {
-                    _uiState.value = BirdIdentifierUiState.Error(context.getString(R.string.bird_identifier_error_failed_details, birdName))
+                    _uiState.value = BirdIdentifierUiState.IdentificationSuccess(possibilities, prompt)
                 }
 
             } catch (e: Exception) {
@@ -168,6 +128,33 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    fun selectBirdAndStartConversation(birdName: String, userPrompt: String) {
+        viewModelScope.launch {
+            _uiState.value = BirdIdentifierUiState.Loading(context.getString(R.string.bird_identifier_loading_fetching_details, birdName))
+            identifiedBirdName = birdName
+
+            val effectivePrompt = if (userPrompt.isNotBlank()) userPrompt else context.getString(R.string.gemini_prompt_initial_question_no_image)
+            val imageDeferred = async { fetchBestWikipediaImage(birdName) }
+            val initialAnswerDeferred = async { getInitialAnswer(birdName, effectivePrompt) }
+
+            val imageUrl = imageDeferred.await()
+            val initialAnswer = initialAnswerDeferred.await()
+
+            if (initialAnswer != null) {
+                val userContent = content("user") { text(effectivePrompt) }
+                val modelContent = content("model") { text(initialAnswer) }
+                _conversationHistory.addAll(listOf(userContent, modelContent))
+
+                _uiState.value = BirdIdentifierUiState.ConversationReady(
+                    identifiedBird = birdName,
+                    chatResponse = initialAnswer,
+                    imageUrl = imageUrl
+                )
+            } else {
+                _uiState.value = BirdIdentifierUiState.Error(context.getString(R.string.bird_identifier_error_failed_details, birdName))
+            }
+        }
+    }
 
     private suspend fun getInitialAnswer(birdName: String, prompt: String): String? {
         try {
@@ -183,19 +170,14 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
     }
 
     private suspend fun fetchBestWikipediaImage(birdName: String): String? {
-        // 1. Primary attempt using the common name
         val primaryImageUrl = getImageUrlForTitle(birdName)
         if (primaryImageUrl != null) {
             Log.d(TAG, "Primary Wikipedia image found for $birdName.")
             return primaryImageUrl
         }
 
-        // 2. Fallback: Get eBird taxonomy to find the family name
         Log.w(TAG, "No direct image for '$birdName'. Trying fallback via eBird taxonomy.")
         try {
-            // eBird API needs a species code, but we can try with the common name.
-            // A better approach might be needed if common names are ambiguous.
-            // For now, let's assume the common name is specific enough for a taxonomy lookup.
             val ebirdResponse = ebirdApiService.getSpeciesTaxonomy(speciesCodes = birdName)
             if (!ebirdResponse.isSuccessful || ebirdResponse.body().isNullOrEmpty()) {
                 Log.e(TAG, "Fallback failed: Could not get eBird taxonomy for '$birdName'.")
@@ -209,7 +191,6 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
                 return null
             }
 
-            // 3. Fallback: Get representative species from Wikipedia category
             val representativeSpeciesTitle = getRepresentativeSpeciesFromFamily(familySciName)
             if (representativeSpeciesTitle != null) {
                 Log.d(TAG, "Found representative species '$representativeSpeciesTitle' for family '$familySciName'. Fetching its image.")
@@ -248,7 +229,6 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
 
             if (response.isSuccessful) {
                 val members = response.body()?.query?.categoryMembers
-                // Find the first member that isn't a sub-category or template page
                 members?.firstOrNull { member ->
                     !member.title.contains("list of", ignoreCase = true) &&
                             !member.title.startsWith("Category:", ignoreCase = true) &&
@@ -271,7 +251,6 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
         }
 
         viewModelScope.launch {
-            // Keep previous success state while loading new answer
             val previousState = _uiState.value
             _uiState.value = BirdIdentifierUiState.Loading(context.getString(R.string.bird_identifier_loading_thinking))
 
@@ -288,10 +267,10 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
                     ?: context.getString(R.string.bird_identifier_error_no_response)
                 _conversationHistory.add(content("model") { text(responseText) })
 
-                _uiState.value = BirdIdentifierUiState.Success(
+                _uiState.value = BirdIdentifierUiState.ConversationReady(
                     identifiedBird = birdName,
                     chatResponse = responseText,
-                    imageUrl = if (previousState is BirdIdentifierUiState.Success) previousState.imageUrl else null
+                    imageUrl = if (previousState is BirdIdentifierUiState.ConversationReady) previousState.imageUrl else null
                 )
 
             } catch (e: Exception) {

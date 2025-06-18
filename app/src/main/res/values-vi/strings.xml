@@ -248,16 +248,18 @@
     <string name="bird_identifier_loading_fetching_details">Đang lấy chi tiết cho %1$s...</string>
     <string name="bird_identifier_loading_thinking">Đang suy nghĩ...</string>
     <string name="bird_identifier_loading_extracting_name">Đang tìm hiểu bạn muốn nói về con chim nào...</string>
+    <string name="bird_identifier_possibilities_title">Đây có thể là một trong những loài này…</string>
+    <string name="bird_identifier_possibilities_subtitle">Chọn một loài chim để tìm hiểu thêm.</string>
+
     <!-- Gemini Prompt -->
-    <string name="gemini_prompt_identify_from_image">Identify the bird in this image. Respond with ONLY the bird\'s most common English name. Your entire response must be just the name, for example: \'House Sparrow\'. If there is no bird, respond with \'no bird\'.</string>
-    <string name="gemini_prompt_extract_name_from_text">You are an expert ornithologist and polyglot. Your task is to extract the name of a bird from the user\'s text and respond with ONLY the bird\'s common **English** name.\n\n- If the text is in English, like "tell me about the american robin", respond with "American Robin".\n- If the text is in Vietnamese, like "con chim hoạ mi", respond with "Chinese Hwamei".\n- If the text is just a name, like "Sáo", respond with the most likely English name, like "Starling".\n- If you cannot identify a specific bird (e.g., the text is "con mèo" or "what is the weather?"), you MUST respond with the exact text: "Error: No bird name found".\n\nUser text: "%1$s"</string>
+    <string name="gemini_prompt_identify_from_image">Nhận dạng con chim trong ảnh này. Nếu bạn rất chắc chắn về một loài, hãy chỉ trả lời bằng tên tiếng Anh thông dụng nhất của loài chim đó. Nếu có thể là một vài loài chim tương tự, hãy trả lời bằng một danh sách các loài có khả năng nhất, tối đa 3 loài, được phân tách bằng dấu phẩy. Ví dụ: \'House Sparrow, Eurasian Tree Sparrow, Chipping Sparrow\'. Nếu không có con chim nào trong ảnh, hãy trả lời là \'no bird\'.</string>
+    <string name="gemini_prompt_extract_name_from_text">Bạn là một nhà điểu học chuyên gia và đa ngôn ngữ. Nhiệm vụ của bạn là trích xuất tên một loài chim từ văn bản của người dùng.\n- Nếu tên là cụ thể (ví dụ: \'Blue Jay\', \'Họa mi\'), hãy chỉ trả lời bằng tên tiếng Anh thông dụng duy nhất đó (ví dụ: \'Blue Jay\', \'Chinese Hwamei\').\n- Nếu tên không rõ ràng (ví dụ: \'sparrow\', \'chim sẻ\'), hãy trả lời bằng một danh sách lên đến 5 loài có khả năng nhất bằng tiếng Anh, được phân tách bằng dấu phẩy (ví dụ: \'House Sparrow, Eurasian Tree Sparrow, American Tree Sparrow, Song Sparrow, Chipping Sparrow\').\n- Nếu bạn không thể xác định được một con chim (ví dụ: văn bản là \'con mèo\' hoặc \'thời tiết thế nào?\'), bạn PHẢI trả lời bằng văn bản chính xác: \'Error: No bird name found\'.\n\nVăn bản của người dùng: \"%1$s\"</string>
     <string name="gemini_prompt_initial_question_no_image">Hãy cho tôi biết về loài chim này.</string>
     <string name="gemini_language_suffix"> Vui lòng trả lời bằng tiếng Việt.</string>
 
+
     <!-- admin management -->
     <string name="admin_manage_subscriptions">Quản lý Gói đăng ký</string>
-
-
     <string name="map_action_start_compare">Bắt đầu Chế độ So sánh</string>
     <string name="map_action_exit_compare">Thoát Chế độ So sánh</string>
     <string name="map_compare_selected_info">Đã chọn để So sánh: %1$d/%2$d</string>

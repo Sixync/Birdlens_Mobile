@@ -14,6 +14,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,7 +61,6 @@ fun BirdIdentifierScreen(
     var userPrompt by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    // Image Picker Launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -75,7 +76,6 @@ fun BirdIdentifierScreen(
         }
     }
 
-    // Permission Handler
     val readImagesPermissionState = rememberPermissionState(permission = Manifest.permission.READ_MEDIA_IMAGES)
 
     AppScaffold(
@@ -90,117 +90,75 @@ fun BirdIdentifierScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Image Section
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CardBackground)
-                    .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
-                    .clickable {
-                        if (readImagesPermissionState.status.isGranted) {
-                            imagePickerLauncher.launch("image/*")
-                        } else {
-                            readImagesPermissionState.launchPermissionRequest()
+            // Image Section is always visible unless in conversation
+            if (uiState !is BirdIdentifierUiState.ConversationReady) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CardBackground)
+                        .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+                        .clickable {
+                            if (readImagesPermissionState.status.isGranted) {
+                                imagePickerLauncher.launch("image/*")
+                            } else {
+                                readImagesPermissionState.launchPermissionRequest()
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (selectedImageBitmap != null) {
+                        Image(
+                            bitmap = selectedImageBitmap!!.asImageBitmap(),
+                            contentDescription = "Selected bird image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.AddAPhoto,
+                                contentDescription = "Add a photo",
+                                tint = TextWhite.copy(alpha = 0.8f),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(id = R.string.bird_identifier_select_prompt),
+                                color = TextWhite.copy(alpha = 0.8f)
+                            )
                         }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                if (selectedImageBitmap != null) {
-                    Image(
-                        bitmap = selectedImageBitmap!!.asImageBitmap(),
-                        contentDescription = "Selected bird image",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.AddAPhoto,
-                            contentDescription = "Add a photo",
-                            tint = TextWhite.copy(alpha = 0.8f),
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(id = R.string.bird_identifier_select_prompt),
-                            color = TextWhite.copy(alpha = 0.8f)
-                        )
                     }
                 }
-            }
 
-            if (!readImagesPermissionState.status.isGranted && readImagesPermissionState.status.shouldShowRationale) {
-                Text(
-                    stringResource(id = R.string.bird_identifier_permission_rationale),
-                    color = TextWhite.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Initial Prompt Input - shown only before the conversation starts
-            if (uiState is BirdIdentifierUiState.Idle) {
-                val placeholderText = if (selectedImageBitmap == null) {
-                    stringResource(id = R.string.bird_identifier_text_input_placeholder_no_image)
-                } else {
-                    stringResource(id = R.string.bird_identifier_text_input_placeholder_with_image)
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = userPrompt,
-                        onValueChange = { userPrompt = it },
-                        placeholder = { Text(placeholderText) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = TextWhite,
-                            unfocusedTextColor = TextWhite,
-                            focusedContainerColor = CardBackground,
-                            unfocusedContainerColor = CardBackground,
-                            cursorColor = TextWhite,
-                            focusedIndicatorColor = GreenWave2,
-                        )
+                if (!readImagesPermissionState.status.isGranted && readImagesPermissionState.status.shouldShowRationale) {
+                    Text(
+                        stringResource(id = R.string.bird_identifier_permission_rationale),
+                        color = TextWhite.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(
-                        onClick = {
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // State Handling Section
+            when (val state = uiState) {
+                is BirdIdentifierUiState.Idle -> {
+                    UserInputSection(
+                        userPrompt = userPrompt,
+                        onPromptChange = { userPrompt = it },
+                        selectedImageBitmap = selectedImageBitmap,
+                        onIdentifyClick = {
                             if (selectedImageBitmap != null) {
                                 viewModel.startChatWithImage(selectedImageBitmap!!, userPrompt)
                             } else {
                                 viewModel.startChatWithText(userPrompt)
                             }
                         },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(GreenWave2),
-                        enabled = userPrompt.isNotBlank() && uiState !is BirdIdentifierUiState.Loading
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = stringResource(id = R.string.bird_identifier_start_conversation),
-                            tint = VeryDarkGreenBase
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // State Handling Section
-            when (val state = uiState) {
-                is BirdIdentifierUiState.Idle -> {
-                    Text(
-                        stringResource(id = R.string.bird_identifier_idle_prompt),
-                        color = TextWhite.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
+                        isLoading = false
                     )
                 }
                 is BirdIdentifierUiState.Loading -> {
@@ -214,7 +172,15 @@ fun BirdIdentifierScreen(
                         Text(stringResource(id = R.string.bird_identifier_try_again))
                     }
                 }
-                is BirdIdentifierUiState.Success -> {
+                is BirdIdentifierUiState.IdentificationSuccess -> {
+                    PossibilitiesList(
+                        possibilities = state.possibilities,
+                        onBirdSelected = { birdName ->
+                            viewModel.selectBirdAndStartConversation(birdName, state.pendingPrompt)
+                        }
+                    )
+                }
+                is BirdIdentifierUiState.ConversationReady -> {
                     ConversationArea(
                         state = state,
                         onQuestionAsked = { question -> viewModel.askQuestion(question) }
@@ -226,13 +192,111 @@ fun BirdIdentifierScreen(
 }
 
 @Composable
+fun UserInputSection(
+    userPrompt: String,
+    onPromptChange: (String) -> Unit,
+    selectedImageBitmap: Bitmap?,
+    onIdentifyClick: () -> Unit,
+    isLoading: Boolean
+) {
+    val placeholderText = if (selectedImageBitmap == null) {
+        stringResource(id = R.string.bird_identifier_text_input_placeholder_no_image)
+    } else {
+        stringResource(id = R.string.bird_identifier_text_input_placeholder_with_image)
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = userPrompt,
+            onValueChange = onPromptChange,
+            placeholder = { Text(placeholderText) },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(24.dp),
+            colors = TextFieldDefaults.colors(
+                focusedTextColor = TextWhite,
+                unfocusedTextColor = TextWhite,
+                focusedContainerColor = CardBackground,
+                unfocusedContainerColor = CardBackground,
+                cursorColor = TextWhite,
+                focusedIndicatorColor = GreenWave2,
+            )
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(
+            onClick = onIdentifyClick,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(GreenWave2),
+            enabled = (userPrompt.isNotBlank() || selectedImageBitmap != null) && !isLoading
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Send,
+                contentDescription = stringResource(id = R.string.bird_identifier_start_conversation),
+                tint = VeryDarkGreenBase
+            )
+        }
+    }
+}
+
+@Composable
+fun PossibilitiesList(
+    possibilities: List<String>,
+    onBirdSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(R.string.bird_identifier_possibilities_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = TextWhite,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = stringResource(R.string.bird_identifier_possibilities_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextWhite.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            items(possibilities) { birdName ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onBirdSelected(birdName) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.8f))
+                ) {
+                    Text(
+                        text = birdName,
+                        modifier = Modifier.padding(16.dp),
+                        color = GreenWave2,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
 fun ColumnScope.ConversationArea(
-    state: BirdIdentifierUiState.Success,
+    state: BirdIdentifierUiState.ConversationReady,
     onQuestionAsked: (String) -> Unit
 ) {
     var followUpQuestion by remember { mutableStateOf("") }
 
-    // Identified Bird Title
     Text(
         text = state.identifiedBird,
         style = MaterialTheme.typography.headlineSmall,
@@ -240,14 +304,12 @@ fun ColumnScope.ConversationArea(
         fontWeight = FontWeight.Bold
     )
 
-    // Scrollable area for conversation history (including image)
     Column(
         modifier = Modifier
             .weight(1f)
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
-        // Display the fetched image of the bird
         state.imageUrl?.let {
             Spacer(modifier = Modifier.height(16.dp))
             Image(
@@ -262,7 +324,6 @@ fun ColumnScope.ConversationArea(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Chat Response Text
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -278,7 +339,6 @@ fun ColumnScope.ConversationArea(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Input Area for follow-up questions
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically

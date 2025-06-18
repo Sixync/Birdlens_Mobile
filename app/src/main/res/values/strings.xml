@@ -224,6 +224,7 @@
     <string name="bird_seen_on">Seen: %1$s</string>
     <string name="bird_count">Count: %1$d</string>
 
+
     <!-- Bird Identifier Screen -->
     <string name="bird_identifier_title">AI Bird Identifier</string>
     <string name="bird_identifier_select_prompt">Tap to select a bird photo (optional)</string>
@@ -235,7 +236,7 @@
     <string name="bird_identifier_try_again">Try Again</string>
     <string name="bird_identifier_follow_up_placeholder">Ask a follow-up question...</string>
     <string name="bird_identifier_send_question">Send question</string>
-    <string name="bird_identifier_error_no_identify">Could not identify the bird. Please try another image.</string>
+    <string name="bird_identifier_error_no_identify">Could not identify any likely birds. Please try another image.</string>
     <string name="bird_identifier_error_no_bird_found">No bird was found in the image.</string>
     <string name="bird_identifier_error_no_name_from_question">Could not determine the bird from your question. Please be more specific, e.g., \'Tell me about the Blue Jay\'.</string>
     <string name="bird_identifier_error_failed_details">Failed to get details for %1$s.</string>
@@ -246,8 +247,17 @@
     <string name="bird_identifier_loading_fetching_details">Fetching details for %1$s...</string>
     <string name="bird_identifier_loading_thinking">Thinking...</string>
     <string name="bird_identifier_loading_extracting_name">Figuring out which bird you mean...</string>
-    <string name="gemini_prompt_identify_from_image">Identify the bird in this image. Respond with ONLY the bird\'s most common English name. Your entire response must be just the name, for example: \'House Sparrow\'. If there is no bird, respond with \'no bird\'.</string>
-    <string name="gemini_prompt_extract_name_from_text">You are an expert ornithologist and polyglot. Your task is to extract the name of a bird from the user\'s text and respond with ONLY the bird\'s common **English** name.\n\n- If the text is in English, like "tell me about the american robin", respond with "American Robin".\n- If the text is in Vietnamese, like "con chim hoạ mi", respond with "Chinese Hwamei".\n- If the text is just a name, like "Sáo", respond with the most likely English name, like "Starling".\n- If you cannot identify a specific bird (e.g., the text is "con mèo" or "what is the weather?"), you MUST respond with the exact text: "Error: No bird name found".\n\nUser text: "%1$s"</string>
+    <string name="bird_identifier_possibilities_title">It might be one of these…</string>
+    <string name="bird_identifier_possibilities_subtitle">Select a bird to learn more.</string>
+
+    <!-- Gemini Prompts -->
+    <string name="gemini_prompt_identify_from_image">Identify the bird in this image. If you are very confident about one species, respond with ONLY that bird\'s most common English name. If it could be several similar-looking birds, respond with a comma-separated list of up to 3 most likely species. For example: \'House Sparrow, Eurasian Tree Sparrow, Chipping Sparrow\'. If there is no bird in the image, respond with \'no bird\'.</string>
+    <string name="gemini_prompt_extract_name_from_text">You are an expert ornithologist and polyglot. Your task is to extract the bird name from the user\'s text.
+- If the name is specific (e.g., \'Blue Jay\', \'Họa mi\'), respond with ONLY that single common English name (e.g., \'Blue Jay\', \'Chinese Hwamei\').
+- If the name is ambiguous (e.g., \'sparrow\', \'chim sẻ\'), respond with a comma-separated list of up to 5 likely species in English (e.g., \'House Sparrow, Eurasian Tree Sparrow, American Tree Sparrow, Song Sparrow, Chipping Sparrow\').
+- If you cannot identify a bird (e.g., the text is \'con mèo\' or \'what is the weather?\'), you MUST respond with the exact text: \'Error: No bird name found\'.
+
+User text: \"%1$s\"</string>
     <string name="gemini_prompt_initial_question_no_image">Tell me about this bird.</string>
     <string name="gemini_language_suffix"> Please answer in English.</string>
 
