@@ -14,8 +14,10 @@ import com.android.birdlens.data.model.post.PaginatedCommentsResponse
 import com.android.birdlens.data.model.post.PaginatedPostsResponse
 import com.android.birdlens.data.model.post.PostResponse
 import com.android.birdlens.data.model.post.ReactionResponseData
+import com.android.birdlens.data.model.request.ForgotPasswordRequest
 import com.android.birdlens.data.model.request.LoginRequest
 import com.android.birdlens.data.model.request.RegisterRequest
+import com.android.birdlens.data.model.request.ResetPasswordRequest
 import com.android.birdlens.data.model.response.GenericApiResponse
 import com.android.birdlens.data.model.response.UserResponse
 import okhttp3.MultipartBody
@@ -41,11 +43,20 @@ interface ApiService {
     @GET("users/me")
     suspend fun getCurrentUser(): Response<GenericApiResponse<UserResponse>>
 
-    @PATCH("auth/email-verification") // New Endpoint
+    // This is for email verification, not password reset. The path in the backend is /verify-email, not /email-verification.
+    // The backend uses a GET request for verification.
+    @GET("auth/verify-email")
     suspend fun verifyEmail(
         @Query("token") token: String,
         @Query("user_id") userId: String
-    ): Response<GenericApiResponse<Unit?>> // Backend returns null data on success
+    ): Response<GenericApiResponse<Unit?>> // Backend returns HTML, so we might need a different handler or just check status code. For now, assume a generic response can be handled.
+
+    @POST("auth/forgot-password")
+    suspend fun forgotPassword(@Body forgotPasswordRequest: ForgotPasswordRequest): Response<GenericApiResponse<Unit?>>
+
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body resetPasswordRequest: ResetPasswordRequest): Response<GenericApiResponse<Unit?>>
+
 
     // Tour Endpoints
     @GET("tours")

@@ -28,6 +28,7 @@ import com.android.birdlens.presentation.ui.screens.community.CreatePostScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
 import com.android.birdlens.presentation.ui.screens.emailverification.EmailVerificationScreen
 import com.android.birdlens.presentation.ui.screens.eventdetail.EventDetailScreen
+import com.android.birdlens.presentation.ui.screens.forgotpassword.ForgotPasswordScreen
 import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
@@ -35,6 +36,7 @@ import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScree
 import com.android.birdlens.presentation.ui.screens.pickdays.PickDaysScreen
 import com.android.birdlens.presentation.ui.screens.pleaseverify.PleaseVerifyEmailScreen
 import com.android.birdlens.presentation.ui.screens.register.RegisterScreen
+import com.android.birdlens.presentation.ui.screens.resetpassword.ResetPasswordScreen
 import com.android.birdlens.presentation.ui.screens.settings.SettingsScreen
 import com.android.birdlens.presentation.ui.screens.tour.TourScreen
 import com.android.birdlens.presentation.ui.screens.tourdetail.TourDetailScreen
@@ -49,6 +51,7 @@ import com.android.birdlens.presentation.viewmodel.BirdIdentifierViewModel
 import com.android.birdlens.presentation.viewmodel.CommunityViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModel
 import com.android.birdlens.presentation.viewmodel.EventDetailViewModelFactory
+import com.android.birdlens.presentation.viewmodel.ForgotPasswordViewModel
 import com.android.birdlens.presentation.viewmodel.HotspotComparisonViewModel
 import com.android.birdlens.presentation.viewmodel.HotspotComparisonViewModelFactory // Import the factory
 import com.android.birdlens.presentation.viewmodel.MapViewModel
@@ -81,16 +84,30 @@ fun AppNavigation(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onForgotPassword = { /* TODO */ }
+                onForgotPassword = { navController.navigate(Screen.ForgotPassword.route) }
             )
         }
         composable(Screen.Register.route) {
-            // val accountInfoViewModel: AccountInfoViewModel = viewModel() // Not typically needed directly in RegisterScreen itself
             RegisterScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+        composable(Screen.ForgotPassword.route) {
+            val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
+            ForgotPasswordScreen(navController = navController, viewModel = forgotPasswordViewModel)
+        }
+        composable(
+            route = Screen.ResetPassword.route, // "reset_password_screen/{token}"
+            arguments = listOf(navArgument("token") { type = NavType.StringType }),
+            // This deep link will capture the URL from the email and map the path segment to the 'token' argument.
+            deepLinks = listOf(navDeepLink { uriPattern = "app://birdlens/reset-password/{token}" })
+        ) { backStackEntry ->
+            // The token is now automatically extracted from the deep link's path.
+            val token = backStackEntry.arguments?.getString("token") ?: ""
+            val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
+            ResetPasswordScreen(navController = navController, token = token, viewModel = forgotPasswordViewModel)
         }
         composable(Screen.LoginSuccess.route) {
             val accountInfoViewModel: AccountInfoViewModel = viewModel()

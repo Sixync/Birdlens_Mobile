@@ -1,3 +1,4 @@
+// EXE201/app/src/main/java/com/android/birdlens/MainActivity.kt
 package com.android.birdlens
 
 import android.annotation.SuppressLint
@@ -5,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +20,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.android.birdlens.admob.AdManager
+import com.android.birdlens.data.AuthEvent
+import com.android.birdlens.data.AuthEventBus
 import com.android.birdlens.data.LanguageManager
 import com.android.birdlens.data.repository.BirdSpeciesRepository
 import com.android.birdlens.presentation.navigation.AppNavigation
@@ -45,6 +49,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val TAG_ADS = "MainActivityAds"
         private const val TAG_DEEPLINK = "MainActivityDeepLink"
+        private const val TAG_AUTH = "MainActivityAuth" // Tag for auth events
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -64,29 +69,52 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                Log.d(TAG_ADS, "Started collecting AccountInfoUiState for ad logic.")
-                accountInfoViewModel.uiState.collect { state ->
-                    val previousShouldShowAds = _shouldShowAds.value
-                    when (state) {
-                        is AccountInfoUiState.Success -> {
-                            val subscriptionName = state.user.subscription
-                            _shouldShowAds.value = subscriptionName != "ExBird"
-                            Log.d(TAG_ADS, "User subscription: '$subscriptionName'. Ads enabled: ${_shouldShowAds.value}")
-                        }
-                        is AccountInfoUiState.Error -> {
-                            _shouldShowAds.value = true
-                            Log.w(TAG_ADS, "Error fetching user profile: ${state.message}. Ads enabled by default.")
-                        }
-                        is AccountInfoUiState.Idle, is AccountInfoUiState.Loading -> {
-                            Log.d(TAG_ADS, "User profile state: ${state::class.java.simpleName}. Current ads policy: ${_shouldShowAds.value}")
-                            if (state is AccountInfoUiState.Idle && !previousShouldShowAds) {
+                // Ad logic collector
+                launch {
+                    Log.d(TAG_ADS, "Started collecting AccountInfoUiState for ad logic.")
+                    accountInfoViewModel.uiState.collect { state ->
+                        val previousShouldShowAds = _shouldShowAds.value
+                        when (state) {
+                            is AccountInfoUiState.Success -> {
+                                val subscriptionName = state.user.subscription
+                                _shouldShowAds.value = subscriptionName != "ExBird"
+                                Log.d(TAG_ADS, "User subscription: '$subscriptionName'. Ads enabled: ${_shouldShowAds.value}")
+                            }
+                            is AccountInfoUiState.Error -> {
                                 _shouldShowAds.value = true
-                                Log.d(TAG_ADS, "User logged out or session expired. Ads policy reset to true.")
+                                Log.w(TAG_ADS, "Error fetching user profile: ${state.message}. Ads enabled by default.")
+                            }
+                            is AccountInfoUiState.Idle, is AccountInfoUiState.Loading -> {
+                                Log.d(TAG_ADS, "User profile state: ${state::class.java.simpleName}. Current ads policy: ${_shouldShowAds.value}")
+                                if (state is AccountInfoUiState.Idle && !previousShouldShowAds) {
+                                    _shouldShowAds.value = true
+                                    Log.d(TAG_ADS, "User logged out or session expired. Ads policy reset to true.")
+                                }
                             }
                         }
+                        if (previousShouldShowAds != _shouldShowAds.value) {
+                            Log.d(TAG_ADS, "Ad policy changed. Ads enabled: ${_shouldShowAds.value}")
+                        }
                     }
-                    if (previousShouldShowAds != _shouldShowAds.value) {
-                        Log.d(TAG_ADS, "Ad policy changed. Ads enabled: ${_shouldShowAds.value}")
+                }
+
+                // Auth event collector for handling expired tokens
+                launch {
+                    AuthEventBus.events.collect { event ->
+                        when (event) {
+                            is AuthEvent.TokenExpiredOrInvalid -> {
+                                Log.w(TAG_AUTH, "Token expired/invalid event received. Logging out user.")
+                                Toast.makeText(this@MainActivity, "Your session has expired. Please log in again.", Toast.LENGTH_LONG).show()
+                                googleAuthViewModel.signOut(applicationContext)
+                                navController.navigate(Screen.Welcome.route) {
+                                    // Clear the entire back stack
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
+                                }
+                            }
+                        }
                     }
                 }
             }
