@@ -1,5 +1,5 @@
 <!-- // app/src/main/res/values/strings.xml -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Birdlens</string>
 
     <!-- General -->
@@ -54,9 +54,11 @@
     <string name="welcome_to_app">Welcome to BirdLens</string>
 
     <!-- Bottom Navigation -->
-    <string name="bottom_nav_settings">Settings</string>
+    <string name="bottom_nav_home" translatable="false">Home</string>
     <string name="bottom_nav_community">Community</string>
     <string name="bottom_nav_map">Map</string>
+    <string name="bottom_nav_premium" translatable="false">Premium</string>
+    <string name="bottom_nav_me" translatable="false">Me</string>
     <string name="bottom_nav_marketplace">Marketplace</string>
     <string name="bottom_nav_tours">Tours</string>
 
@@ -74,6 +76,7 @@
     <string name="settings_select_language">Select Language</string>
     <string name="language_english">English</string>
     <string name="language_vietnamese">Vietnamese</string>
+    <string name="settings_my_subscription">My Subscription</string>
 
     <!-- Account Info Screen -->
     <string name="account_info_title">Account Information</string>
@@ -269,7 +272,6 @@ User text: \"%1$s\"</string>
     <string name="subscription_tier_standard">Standard User</string>
     <string name="subscription_tier_unknown">Unknown</string>
     <string name="loading_ellipsis">Loading…</string>
-    <string name="settings_my_subscription">My Subscription</string>
 
 
     <string name="map_action_start_compare">Start Compare Mode</string>

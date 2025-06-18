@@ -23,41 +23,27 @@ import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
 import com.android.birdlens.presentation.ui.screens.birdidentifier.BirdIdentifierScreen
 import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
-import com.android.birdlens.presentation.ui.screens.comparison.HotspotComparisonScreen // Import the screen
+import com.android.birdlens.presentation.ui.screens.comparison.HotspotComparisonScreen
 import com.android.birdlens.presentation.ui.screens.community.CreatePostScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
 import com.android.birdlens.presentation.ui.screens.emailverification.EmailVerificationScreen
 import com.android.birdlens.presentation.ui.screens.eventdetail.EventDetailScreen
 import com.android.birdlens.presentation.ui.screens.forgotpassword.ForgotPasswordScreen
+import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
 import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
 import com.android.birdlens.presentation.ui.screens.pickdays.PickDaysScreen
 import com.android.birdlens.presentation.ui.screens.pleaseverify.PleaseVerifyEmailScreen
+import com.android.birdlens.presentation.ui.screens.premium.PremiumScreen
 import com.android.birdlens.presentation.ui.screens.register.RegisterScreen
 import com.android.birdlens.presentation.ui.screens.resetpassword.ResetPasswordScreen
 import com.android.birdlens.presentation.ui.screens.settings.SettingsScreen
 import com.android.birdlens.presentation.ui.screens.tour.TourScreen
 import com.android.birdlens.presentation.ui.screens.tourdetail.TourDetailScreen
 import com.android.birdlens.presentation.ui.screens.welcome.WelcomeScreen
-import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
-import com.android.birdlens.presentation.viewmodel.BirdInfoViewModel
-import com.android.birdlens.presentation.viewmodel.EventViewModel
-import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
-import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
-import com.android.birdlens.presentation.viewmodel.AdminSubscriptionViewModel
-import com.android.birdlens.presentation.viewmodel.BirdIdentifierViewModel
-import com.android.birdlens.presentation.viewmodel.CommunityViewModel
-import com.android.birdlens.presentation.viewmodel.EventDetailViewModel
-import com.android.birdlens.presentation.viewmodel.EventDetailViewModelFactory
-import com.android.birdlens.presentation.viewmodel.ForgotPasswordViewModel
-import com.android.birdlens.presentation.viewmodel.HotspotComparisonViewModel
-import com.android.birdlens.presentation.viewmodel.HotspotComparisonViewModelFactory // Import the factory
-import com.android.birdlens.presentation.viewmodel.MapViewModel
-import com.android.birdlens.presentation.viewmodel.HotspotBirdListViewModel
-import com.android.birdlens.presentation.viewmodel.TourViewModel
-
+import com.android.birdlens.presentation.viewmodel.*
 
 @Composable
 fun AppNavigation(
@@ -68,6 +54,11 @@ fun AppNavigation(
     val application = LocalContext.current.applicationContext as Application
     val communityViewModel: CommunityViewModel = viewModel()
 
+    // Logic: The NavHost startDestination is now Screen.Welcome.route, which is correct.
+    // The routes have been updated to use the new Screen object definitions.
+    // A new composable for Screen.Premium.route has been added.
+    // The old TourScreen is now hosted under the Screen.Home.route.
+    // The old AccountInfoScreen is now hosted under the Screen.Me.route.
     NavHost(
         navController = navController,
         startDestination = Screen.Welcome.route,
@@ -99,12 +90,10 @@ fun AppNavigation(
             ForgotPasswordScreen(navController = navController, viewModel = forgotPasswordViewModel)
         }
         composable(
-            route = Screen.ResetPassword.route, // "reset_password_screen/{token}"
+            route = Screen.ResetPassword.route,
             arguments = listOf(navArgument("token") { type = NavType.StringType }),
-            // This deep link will capture the URL from the email and map the path segment to the 'token' argument.
             deepLinks = listOf(navDeepLink { uriPattern = "app://birdlens/reset-password/{token}" })
         ) { backStackEntry ->
-            // The token is now automatically extracted from the deep link's path.
             val token = backStackEntry.arguments?.getString("token") ?: ""
             val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
             ResetPasswordScreen(navController = navController, token = token, viewModel = forgotPasswordViewModel)
@@ -151,23 +140,23 @@ fun AppNavigation(
             )
         }
 
-
-        composable(Screen.Tour.route) {
+        // Changed: The 'Tour' screen is now the 'Home' screen in the navigation graph.
+        composable(Screen.Home.route) {
             val eventViewModel: EventViewModel = viewModel()
-            val tourViewModel: TourViewModel = viewModel() // Added TourViewModel for this screen
+            val tourViewModel: TourViewModel = viewModel()
             TourScreen(
                 navController = navController,
                 onNavigateToAllEvents = { navController.navigate(Screen.AllEventsList.route) },
                 onNavigateToAllTours = { navController.navigate(Screen.AllToursList.route) },
-                onNavigateToPopularTours = { navController.navigate(Screen.AllToursList.route) }, // Can be same as AllTours or a filtered view
-                onTourItemClick = { tourIdAsLong -> // Changed from tourIdAsInt
+                onNavigateToPopularTours = { navController.navigate(Screen.AllToursList.route) },
+                onTourItemClick = { tourIdAsLong ->
                     navController.navigate(Screen.TourDetail.createRoute(tourIdAsLong))
                 },
                 onEventItemClick = { eventId ->
                     navController.navigate(Screen.EventDetail.createRoute(eventId))
                 },
                 eventViewModel = eventViewModel,
-                tourViewModel = tourViewModel // Pass it here
+                tourViewModel = tourViewModel
             )
         }
         composable(Screen.AllEventsList.route) {
@@ -181,13 +170,13 @@ fun AppNavigation(
             )
         }
         composable(Screen.AllToursList.route) {
-            val tourViewModel: TourViewModel = viewModel() // Added TourViewModel
+            val tourViewModel: TourViewModel = viewModel()
             AllToursListScreen(
                 navController = navController,
                 onTourItemClick = { tourIdAsLong ->
                     navController.navigate(Screen.TourDetail.createRoute(tourIdAsLong))
                 },
-                tourViewModel = tourViewModel // Pass it
+                tourViewModel = tourViewModel
             )
         }
         composable(
@@ -195,7 +184,7 @@ fun AppNavigation(
             arguments = listOf(navArgument("tourId") { type = NavType.LongType })
         ) { backStackEntry ->
             val tourId = backStackEntry.arguments?.getLong("tourId") ?: -1L
-            val tourViewModel: TourViewModel = viewModel() // Instantiate TourViewModel
+            val tourViewModel: TourViewModel = viewModel()
             TourDetailScreen(navController = navController, tourId = tourId, tourViewModel = tourViewModel)
         }
         composable(
@@ -222,14 +211,15 @@ fun AppNavigation(
             CreatePostScreen(navController = navController, communityViewModel = communityViewModel)
         }
         composable(Screen.Settings.route) {
-            val accountInfoViewModel: AccountInfoViewModel = viewModel() // For subscription status in settings
+            val accountInfoViewModel: AccountInfoViewModel = viewModel()
             SettingsScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
-                accountInfoViewModel = accountInfoViewModel // Pass it
+                accountInfoViewModel = accountInfoViewModel
             )
         }
-        composable(Screen.AccountInfo.route) {
+        // Changed: The 'AccountInfo' screen is now the 'Me' screen.
+        composable(Screen.Me.route) {
             val accountInfoViewModel: AccountInfoViewModel = viewModel()
             AccountInfoScreen(
                 navController = navController,
@@ -241,7 +231,6 @@ fun AppNavigation(
             route = Screen.EventDetail.route,
             arguments = listOf(navArgument("eventId") { type = NavType.LongType })
         ) { backStackEntry ->
-            // val eventId = backStackEntry.arguments?.getLong("eventId") ?: -1L // Already handled by factory
             val eventDetailViewModel: EventDetailViewModel = viewModel(
                 factory = EventDetailViewModelFactory(
                     application,
@@ -251,7 +240,7 @@ fun AppNavigation(
             )
             EventDetailScreen(
                 navController = navController,
-                eventId = backStackEntry.arguments?.getLong("eventId") ?: -1L, // Still need to pass it for direct use if any
+                eventId = backStackEntry.arguments?.getLong("eventId") ?: -1L,
                 eventDetailViewModel = eventDetailViewModel
             )
         }
@@ -275,7 +264,6 @@ fun AppNavigation(
             route = Screen.HotspotBirdList.route,
             arguments = listOf(navArgument("hotspotId") { type = NavType.StringType })
         ) { backStackEntry ->
-            // val hotspotId = backStackEntry.arguments?.getString("hotspotId") // Already handled by factory
             val hotspotBirdListViewModel: HotspotBirdListViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { HotspotBirdListViewModel(createSavedStateHandle()) }
@@ -305,19 +293,28 @@ fun AppNavigation(
                 adminSubscriptionViewModel = adminSubscriptionViewModel
             )
         }
-        // Corrected Composable for HotspotComparisonScreen
         composable(
-            route = Screen.HotspotComparison.route, // Use the object directly
+            route = Screen.HotspotComparison.route,
             arguments = listOf(navArgument("locIds") { type = NavType.StringType })
         ) { backStackEntry ->
             val locIdsString = backStackEntry.arguments?.getString("locIds")
-            val locIdsList = locIdsString?.split(",")?.filter { it.isNotBlank() } ?: emptyList() // Ensure no blank IDs
+            val locIdsList = locIdsString?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
             val comparisonViewModel: HotspotComparisonViewModel = viewModel(
                 factory = HotspotComparisonViewModelFactory(application, locIdsList)
             )
-            HotspotComparisonScreen( // Make sure this screen is imported
+            HotspotComparisonScreen(
                 navController = navController,
                 viewModel = comparisonViewModel
+            )
+        }
+        // Add: Add the new Premium screen to the navigation graph.
+        composable(Screen.Premium.route) {
+            val subscriptionViewModel: SubscriptionViewModel = viewModel()
+            val accountInfoViewModel: AccountInfoViewModel = viewModel()
+            PremiumScreen(
+                navController = navController,
+                subscriptionViewModel = subscriptionViewModel,
+                accountInfoViewModel = accountInfoViewModel
             )
         }
     }

@@ -16,7 +16,8 @@ sealed class Screen(val route: String) {
     data object EmailVerification : Screen("email_verification_screen?token={token}&user_id={user_id}") {
         fun createRoute(token: String, userId: String) = "email_verification_screen?token=$token&user_id=$userId"
     }
-    data object Tour : Screen("tour_screen")
+    // Change: Renamed Tour to Home as it's the main entry point now. The screen it points to remains the same.
+    data object Home : Screen("home_screen")
     data object AllEventsList : Screen("all_events_list_screen")
     data object AllToursList : Screen("all_tours_list_screen")
     data object TourDetail : Screen("tour_detail_screen/{tourId}") {
@@ -32,8 +33,10 @@ sealed class Screen(val route: String) {
     data object Marketplace : Screen("marketplace_screen")
     data object Map : Screen("map_screen")
     data object Community : Screen("community_screen")
+    // Change: Settings is no longer a main bottom nav item. It will be accessed from the 'Me' screen.
     data object Settings : Screen("settings_screen")
-    data object AccountInfo : Screen("account_info_screen")
+    // Change: AccountInfo is now the 'Me' tab. The route is updated for clarity.
+    data object Me : Screen("me_screen")
     data object BirdInfo : Screen("bird_info_screen/{speciesCode}") {
         fun createRoute(speciesCode: String) = "bird_info_screen/$speciesCode"
     }
@@ -50,4 +53,7 @@ sealed class Screen(val route: String) {
     data object HotspotComparison : Screen("hotspot_comparison_screen/{locIds}") {
         fun createRoute(locIds: List<String>) = "hotspot_comparison_screen/${locIds.joinToString(",")}"
     }
+
+    // Add: A new screen for premium features.
+    data object Premium : Screen("premium_screen")
 }

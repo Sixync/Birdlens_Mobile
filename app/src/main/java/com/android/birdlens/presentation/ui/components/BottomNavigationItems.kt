@@ -6,25 +6,28 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource // Added
-import com.android.birdlens.R // Added
+import androidx.compose.ui.res.stringResource
+import com.android.birdlens.R
 import com.android.birdlens.presentation.navigation.Screen
 
 data class BottomNavItemData(
-    val labelResId: Int, // Changed to resource ID
+    val labelResId: Int,
     val icon: @Composable () -> Unit,
     val selectedIcon: @Composable () -> Unit,
     val route: String
 )
 
+// Logic: The bottom navigation items are now reordered and updated to match the new requirements.
+// 'Home' is the new main screen, 'Premium' is added to showcase the subscription,
+// and 'Me' replaces 'Settings' as the user profile entry point.
 val globalBottomNavItems
-    @Composable // Needs to be composable to access stringResource
+    @Composable
     get() = listOf(
         BottomNavItemData(
-            labelResId = R.string.bottom_nav_settings,
-            icon = { Icon(Icons.Outlined.Tune, stringResource(id = R.string.bottom_nav_settings)) },
-            selectedIcon = { Icon(Icons.Filled.Tune, stringResource(id = R.string.bottom_nav_settings)) },
-            route = Screen.Settings.route
+            labelResId = R.string.bottom_nav_home,
+            icon = { Icon(Icons.Outlined.Home, stringResource(id = R.string.bottom_nav_home)) },
+            selectedIcon = { Icon(Icons.Filled.Home, stringResource(id = R.string.bottom_nav_home)) },
+            route = Screen.Home.route // Main/home tab
         ),
         BottomNavItemData(
             labelResId = R.string.bottom_nav_community,
@@ -39,15 +42,15 @@ val globalBottomNavItems
             route = Screen.Map.route
         ),
         BottomNavItemData(
-            labelResId = R.string.bottom_nav_marketplace,
-            icon = { Icon(Icons.Outlined.ShoppingCart, stringResource(id = R.string.bottom_nav_marketplace)) },
-            selectedIcon = { Icon(Icons.Filled.ShoppingCart, stringResource(id = R.string.bottom_nav_marketplace)) },
-            route = Screen.Marketplace.route // Could also link to Cart as a primary action
+            labelResId = R.string.bottom_nav_premium,
+            icon = { Icon(Icons.Outlined.WorkspacePremium, stringResource(id = R.string.bottom_nav_premium)) },
+            selectedIcon = { Icon(Icons.Filled.WorkspacePremium, stringResource(id = R.string.bottom_nav_premium)) },
+            route = Screen.Premium.route
         ),
         BottomNavItemData(
-            labelResId = R.string.bottom_nav_tours,
-            icon = { Icon(Icons.Outlined.CalendarToday, stringResource(id = R.string.bottom_nav_tours)) },
-            selectedIcon = { Icon(Icons.Filled.CalendarToday, stringResource(id = R.string.bottom_nav_tours)) },
-            route = Screen.Tour.route // Main/home tab
+            labelResId = R.string.bottom_nav_me,
+            icon = { Icon(Icons.Outlined.AccountCircle, stringResource(id = R.string.bottom_nav_me)) },
+            selectedIcon = { Icon(Icons.Filled.AccountCircle, stringResource(id = R.string.bottom_nav_me)) },
+            route = Screen.Me.route
         )
     )

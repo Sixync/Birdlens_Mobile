@@ -1,8 +1,7 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/accountinfo/AccountInfoScreen.kt
 package com.android.birdlens.presentation.ui.screens.accountinfo
 
-import android.annotation.SuppressLint
-import android.content.Intent // Import Intent
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
@@ -35,14 +36,14 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.android.birdlens.R
 import com.android.birdlens.data.model.response.UserResponse
+import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
-import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
-// Import CheckoutActivity to launch it
 import com.android.birdlens.presentation.ui.screens.payment.CheckoutActivity
 import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountInfoScreen(
     navController: NavController,
@@ -53,12 +54,29 @@ fun AccountInfoScreen(
     AppScaffold(
         navController = navController,
         topBar = {
-            SimpleTopAppBar(
-                title = stringResource(id = R.string.account_info_title),
-                onNavigateBack = { navController.popBackStack() }
+            // Logic: The TopAppBar now includes an action icon to navigate to the settings screen.
+            CenterAlignedTopAppBar(
+                title = { Text(stringResource(id = R.string.account_info_title), color = TextWhite, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    // Show back arrow only if there's a back stack entry, otherwise it's the root of the 'Me' tab.
+                    if (navController.previousBackStackEntry != null) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextWhite)
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextWhite)
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         },
-        showBottomBar = false
+        // Logic: showBottomBar is set to true as this is now a main tab screen.
+        showBottomBar = true
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -70,7 +88,7 @@ fun AccountInfoScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
                 }
                 is AccountInfoUiState.Success -> {
-                    AccountDetails(user = state.user) // Pass navController if needed for other nav
+                    AccountDetails(user = state.user)
                 }
                 is AccountInfoUiState.Error -> {
                     Column(
@@ -100,7 +118,7 @@ fun AccountInfoScreen(
 
 @Composable
 fun AccountDetails(user: UserResponse) {
-    val context = LocalContext.current // Get context to launch activity
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -155,14 +173,10 @@ fun AccountDetails(user: UserResponse) {
         }
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Button to Purchase/Manage Subscription
-        if (user.subscription != "ExBird") { // Assuming "ExBird" is your premium subscription name
+        if (user.subscription != "ExBird") {
             Button(
                 onClick = {
                     val intent = Intent(context, CheckoutActivity::class.java)
-                    // You can pass data to CheckoutActivity if needed, e.g., which subscription to buy.
-                    // For now, CheckoutActivity uses a hardcoded item.
-                    // intent.putExtra("SUBSCRIPTION_ID", "exbird_premium_monthly")
                     context.startActivity(intent)
                 },
                 modifier = Modifier
@@ -175,11 +189,8 @@ fun AccountDetails(user: UserResponse) {
                 Text(stringResource(id = R.string.purchase_exbird_subscription), color = TextWhite)
             }
         } else {
-            // Optionally, show a "Manage Subscription" button or info if already subscribed
             Button(
                 onClick = {
-                    // TODO: Navigate to a subscription management portal or show info
-                    // For now, could also launch CheckoutActivity if it can handle "managing"
                     android.widget.Toast.makeText(context, "Subscription management not yet implemented.", android.widget.Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier
@@ -187,7 +198,7 @@ fun AccountDetails(user: UserResponse) {
                     .padding(horizontal = 16.dp)
                     .height(50.dp),
                 shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = GreenWave3) // Different color for manage
+                colors = ButtonDefaults.buttonColors(containerColor = GreenWave3)
             ) {
                 Text(stringResource(id = R.string.manage_subscription), color = VeryDarkGreenBase)
             }
@@ -247,47 +258,5 @@ fun UserInfoRow(
         )
         Spacer(modifier = Modifier.height(4.dp))
         HorizontalDivider(color = DividerColor.copy(alpha = 0.5f), thickness = 0.5.dp)
-    }
-}
-
-@SuppressLint("ViewModelConstructorInComposable", "StateFlowValueCalledInComposition")
-@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
-@Composable
-fun AccountInfoScreenPreview_Success_WithSubscription() {
-    BirdlensTheme {
-        val dummyUser = UserResponse(
-            id = 1, username = "birdwatcher_pro", firstName = "Alex", lastName = "Smith",
-            email = "alex.smith@example.com", age = 32, avatarUrl = null,
-            subscription = "ExBird",
-            emailVerified = true
-        )
-        val context = LocalContext.current
-        val mockViewModel = AccountInfoViewModel(context.applicationContext as android.app.Application)
-        mockViewModel._uiState.value = AccountInfoUiState.Success(dummyUser)
-
-        AppScaffold(navController = rememberNavController(), topBar = { SimpleTopAppBar(stringResource(id = R.string.account_info_title))}) {
-            Box(Modifier.padding(it)) { AccountDetails(user = dummyUser) }
-        }
-    }
-}
-
-@SuppressLint("ViewModelConstructorInComposable", "StateFlowValueCalledInComposition")
-@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
-@Composable
-fun AccountInfoScreenPreview_Success_NoSubscription_NotVerified() {
-    BirdlensTheme {
-        val dummyUser = UserResponse(
-            id = 1, username = "free_user", firstName = "Jane", lastName = "Doe",
-            email = "jane.doe@example.com", age = 28, avatarUrl = null,
-            subscription = null,
-            emailVerified = false
-        )
-        val context = LocalContext.current
-        val mockViewModel = AccountInfoViewModel(context.applicationContext as android.app.Application)
-        mockViewModel._uiState.value = AccountInfoUiState.Success(dummyUser)
-
-        AppScaffold(navController = rememberNavController(), topBar = { SimpleTopAppBar(stringResource(id = R.string.account_info_title))}) {
-            Box(Modifier.padding(it)) { AccountDetails(user = dummyUser) }
-        }
     }
 }

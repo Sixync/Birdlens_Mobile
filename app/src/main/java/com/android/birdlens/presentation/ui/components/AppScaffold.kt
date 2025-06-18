@@ -43,7 +43,9 @@ fun AppScaffold(
                         onItemSelected = { item ->
                             if (currentRoute != item.route) {
                                 navController.navigate(item.route) {
-                                    popUpTo(Screen.Tour.route) { // Assuming Tour is the "home" of bottom nav graph
+                                    // Logic: The popUpTo destination is now the new 'Home' screen.
+                                    // This ensures that when switching tabs, the back stack is reset to the home screen.
+                                    popUpTo(Screen.Home.route) { // Assuming Tour is the "home" of bottom nav graph
                                         saveState = true
                                     }
                                     launchSingleTop = true

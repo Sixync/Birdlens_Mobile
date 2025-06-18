@@ -46,7 +46,7 @@ fun LoginSuccessScreen(
         when (val state = accountState) {
             is AccountInfoUiState.Success -> {
                 if (state.user.emailVerified) {
-                    navController.navigate(Screen.Tour.route) {
+                    navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 } else {

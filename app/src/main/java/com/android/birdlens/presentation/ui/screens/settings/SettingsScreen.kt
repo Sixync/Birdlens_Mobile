@@ -86,12 +86,12 @@ fun SettingsScreen(
 
     val settingsItemsSection1 = listOf(
         SettingsItem(R.string.settings_account, Icons.Outlined.AccountCircle, {
-            navController.navigate(Screen.AccountInfo.route)
+            navController.navigate(Screen.Me.route)
         }),
         SettingsItem(
             titleResId = R.string.settings_my_subscription, // New String Resource
             icon = Icons.Outlined.WorkspacePremium,
-            onClick = { navController.navigate(Screen.AccountInfo.route) }, // Or a dedicated subscription page
+            onClick = { navController.navigate(Screen.Me.route) }, // Or a dedicated subscription page
             subText = currentSubscriptionTier
         ),
         SettingsItem(
