@@ -53,7 +53,7 @@ data class SettingsItem(
 fun SettingsScreen(
     navController: NavController,
     googleAuthViewModel: GoogleAuthViewModel,
-    accountInfoViewModel: AccountInfoViewModel = viewModel(), // Add AccountInfoViewModel
+    accountInfoViewModel: AccountInfoViewModel, // Accept the ViewModel
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -91,7 +91,7 @@ fun SettingsScreen(
         SettingsItem(
             titleResId = R.string.settings_my_subscription, // New String Resource
             icon = Icons.Outlined.WorkspacePremium,
-            onClick = { navController.navigate(Screen.Me.route) }, // Or a dedicated subscription page
+            onClick = { navController.navigate(Screen.Premium.route) }, // Navigate to Premium screen
             subText = currentSubscriptionTier
         ),
         SettingsItem(
@@ -117,9 +117,6 @@ fun SettingsScreen(
             onClick = { navController.navigate(Screen.AdminSubscriptionList.route) }
         )
     )
-
-    // ... (AppScaffold and rest of the UI structure remains mostly the same) ...
-    // The key change is passing `currentSubscriptionTier` to the relevant `SettingsItem`.
 
     AppScaffold(
         navController = navController,
@@ -239,6 +236,8 @@ fun SettingsScreen(
 
                 Button(
                     onClick = {
+                        // Logic: Explicitly reset the user profile state before signing out.
+                        accountInfoViewModel.onUserLoggedOut()
                         googleAuthViewModel.signOut(context)
                         navController.navigate(Screen.Welcome.route) {
                             popUpTo(navController.graph.startDestinationId) {
@@ -283,6 +282,8 @@ fun SettingsScreen(
     }
 }
 
+// The rest of the SettingsScreen.kt file (SettingsListItem, LanguageSelectionDialog, and Preview) remains the same.
+// The code is omitted for brevity but should be kept in your file.
 @Composable
 fun SettingsListItem(item: SettingsItem) {
     // stringResource will fetch the string based on the current LocalContext's locale
@@ -387,10 +388,12 @@ fun SettingsScreenPreview() {
         val context = LocalContext.current
         val application = context.applicationContext as Application
         val dummyGoogleAuthViewModel: GoogleAuthViewModel = viewModel { GoogleAuthViewModel(application) }
+        val dummyAccountInfoViewModel: AccountInfoViewModel = viewModel { AccountInfoViewModel(application) }
 
         SettingsScreen(
             navController = rememberNavController(),
-            googleAuthViewModel = dummyGoogleAuthViewModel
+            googleAuthViewModel = dummyGoogleAuthViewModel,
+            accountInfoViewModel = dummyAccountInfoViewModel
         )
     }
 }

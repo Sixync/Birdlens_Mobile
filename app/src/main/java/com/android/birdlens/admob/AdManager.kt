@@ -22,7 +22,7 @@ class AdManager(private val applicationContext: Context) {
     companion object {
         // This is a Test Ad Unit ID for Interstitial ads.
         // IMPORTANT: Replace with your actual Ad Unit ID from AdMob for production.
-        private const val AD_UNIT_ID = "ca-app-pub-7643061698514707/2597978212"
+        private const val AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712" // Google's Test Ad Unit ID
         // Example of a real Ad Unit ID structure (replace with yours):
         // private const val AD_UNIT_ID = "ca-app-pub-YOUR_ADMOB_APP_ID/YOUR_INTERSTITIAL_AD_UNIT_ID"
         private const val TAG = "AdManager"
@@ -75,6 +75,7 @@ class AdManager(private val applicationContext: Context) {
     fun showInterstitialAd(activity: Activity, onAdFlowComplete: () -> Unit) { // Renamed callback
         if (isAdShowing) {
             Log.d(TAG, "An ad is already showing. Skipping new ad request.")
+            // Logic: It's important to still call onAdFlowComplete so the timer logic isn't stuck.
             onAdFlowComplete() // Signal completion so timer logic can be re-evaluated by caller
             return
         }
@@ -120,6 +121,7 @@ class AdManager(private val applicationContext: Context) {
         } else {
             Log.d(TAG, "Interstitial ad wasn't ready. Attempting to load.")
             loadAd() // Try to load an ad if it's not available for the next cycle.
+            // Logic: Call the completion handler even if the ad wasn't ready. This is crucial for the timer to restart correctly.
             onAdFlowComplete() // Still call this to allow the timer to be re-evaluated by caller.
         }
     }

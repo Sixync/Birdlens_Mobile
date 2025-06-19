@@ -3,6 +3,7 @@ package com.android.birdlens.presentation.navigation
 
 import android.app.Application
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.createSavedStateHandle
@@ -26,7 +27,6 @@ import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.comparison.HotspotComparisonScreen
 import com.android.birdlens.presentation.ui.screens.community.CreatePostScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
-// Logic: The import for the EmailVerificationScreen is no longer needed.
 import com.android.birdlens.presentation.ui.screens.eventdetail.EventDetailScreen
 import com.android.birdlens.presentation.ui.screens.forgotpassword.ForgotPasswordScreen
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
@@ -49,7 +49,10 @@ import com.android.birdlens.presentation.viewmodel.*
 fun AppNavigation(
     navController: NavHostController,
     googleAuthViewModel: GoogleAuthViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Logic: Pass the AccountInfoViewModel instance through.
+    accountInfoViewModel: AccountInfoViewModel,
+    triggerAd: () -> Unit
 ) {
     val application = LocalContext.current.applicationContext as Application
     val communityViewModel: CommunityViewModel = viewModel()
@@ -59,6 +62,8 @@ fun AppNavigation(
         startDestination = Screen.Welcome.route,
         modifier = modifier
     ) {
+        // ... other composable routes ...
+
         composable(Screen.Welcome.route) {
             WelcomeScreen(
                 onLoginClicked = { navController.navigate(Screen.Login.route) },
@@ -94,7 +99,6 @@ fun AppNavigation(
             ResetPasswordScreen(navController = navController, token = token, viewModel = forgotPasswordViewModel)
         }
         composable(Screen.LoginSuccess.route) {
-            val accountInfoViewModel: AccountInfoViewModel = viewModel()
             LoginSuccessScreen(
                 navController = navController,
                 accountInfoViewModel = accountInfoViewModel
@@ -110,8 +114,6 @@ fun AppNavigation(
                 googleAuthViewModel = googleAuthViewModel
             )
         }
-
-        // Logic: The composable block for Screen.EmailVerification has been removed entirely.
 
         composable(Screen.Home.route) {
             val eventViewModel: EventViewModel = viewModel()
@@ -183,7 +185,7 @@ fun AppNavigation(
             CreatePostScreen(navController = navController, communityViewModel = communityViewModel)
         }
         composable(Screen.Settings.route) {
-            val accountInfoViewModel: AccountInfoViewModel = viewModel()
+            // Logic: Pass the AccountInfoViewModel to the SettingsScreen.
             SettingsScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
@@ -191,7 +193,6 @@ fun AppNavigation(
             )
         }
         composable(Screen.Me.route) {
-            val accountInfoViewModel: AccountInfoViewModel = viewModel()
             AccountInfoScreen(
                 navController = navController,
                 accountInfoViewModel = accountInfoViewModel
@@ -220,6 +221,9 @@ fun AppNavigation(
             route = Screen.BirdInfo.route,
             arguments = listOf(navArgument("speciesCode") { type = NavType.StringType })
         ) { backStackEntry ->
+            LaunchedEffect(Unit) {
+                triggerAd()
+            }
             val birdInfoViewModel: BirdInfoViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { BirdInfoViewModel(createSavedStateHandle()) }
@@ -248,7 +252,11 @@ fun AppNavigation(
         }
         composable(Screen.BirdIdentifier.route) {
             val birdIdentifierViewModel: BirdIdentifierViewModel = viewModel()
-            BirdIdentifierScreen(navController = navController, viewModel = birdIdentifierViewModel)
+            BirdIdentifierScreen(
+                navController = navController,
+                viewModel = birdIdentifierViewModel,
+                triggerAd = triggerAd
+            )
         }
         composable(Screen.AdminSubscriptionList.route) {
             val adminSubscriptionViewModel: AdminSubscriptionViewModel = viewModel()
@@ -280,7 +288,6 @@ fun AppNavigation(
         }
         composable(Screen.Premium.route) {
             val subscriptionViewModel: SubscriptionViewModel = viewModel()
-            val accountInfoViewModel: AccountInfoViewModel = viewModel()
             PremiumScreen(
                 navController = navController,
                 subscriptionViewModel = subscriptionViewModel,

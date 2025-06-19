@@ -1,4 +1,4 @@
-// app/src/main/java/com/android/birdlens/presentation/ui/screens/birdidentifier/BirdIdentifierScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/birdidentifier/BirdIdentifierScreen.kt
 package com.android.birdlens.presentation.ui.screens.birdidentifier
 
 import android.Manifest
@@ -54,7 +54,9 @@ import com.google.accompanist.permissions.shouldShowRationale
 @Composable
 fun BirdIdentifierScreen(
     navController: NavController,
-    viewModel: BirdIdentifierViewModel = viewModel()
+    viewModel: BirdIdentifierViewModel = viewModel(),
+    // Logic: Accept the ad trigger lambda.
+    triggerAd: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -77,6 +79,13 @@ fun BirdIdentifierScreen(
     }
 
     val readImagesPermissionState = rememberPermissionState(permission = Manifest.permission.READ_MEDIA_IMAGES)
+
+    // Logic: Trigger an ad when the identification is successful.
+    LaunchedEffect(uiState) {
+        if (uiState is BirdIdentifierUiState.ConversationReady) {
+            triggerAd()
+        }
+    }
 
     AppScaffold(
         navController = navController,
@@ -190,7 +199,8 @@ fun BirdIdentifierScreen(
         }
     }
 }
-
+// Logic: The rest of the file (UserInputSection, PossibilitiesList, ConversationArea) remains unchanged.
+// The code is omitted for brevity but should be kept in your file.
 @Composable
 fun UserInputSection(
     userPrompt: String,

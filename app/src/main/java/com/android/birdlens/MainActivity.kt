@@ -31,24 +31,38 @@ import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.BirdlensTheme
 import com.android.birdlens.ui.theme.GreenDeep
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+sealed class AdPolicyState {
+    data object UNDETERMINED : AdPolicyState()
+    data object ADS_ENABLED : AdPolicyState()
+    data object ADS_DISABLED : AdPolicyState()
+}
+
+
 class MainActivity : ComponentActivity() {
     private val googleAuthViewModel: GoogleAuthViewModel by viewModels()
     private val accountInfoViewModel: AccountInfoViewModel by viewModels()
     private lateinit var adManager: AdManager
-    private val _shouldShowAds = MutableStateFlow(true)
-    val shouldShowAds: StateFlow<Boolean> get() = _shouldShowAds.asStateFlow()
+
+    private val _adPolicyState = MutableStateFlow<AdPolicyState>(AdPolicyState.UNDETERMINED)
+    val adPolicyState: StateFlow<AdPolicyState> = _adPolicyState.asStateFlow()
 
     private lateinit var navController: NavHostController
 
+    private var adTimerJob: Job? = null
+    private var lastAdShownTimestamp: Long = 0
+
     companion object {
         private const val TAG_ADS = "MainActivityAds"
-        // Logic: Removed the TAG_DEEPLINK as it's no longer used.
-        private const val TAG_AUTH = "MainActivityAuth" // Tag for auth events
+        private const val TAG_AUTH = "MainActivityAuth"
+        private const val AD_TIMER_INTERVAL_MS = 3 * 60 * 1000L // 3 minutes
+        private const val MIN_TIME_BETWEEN_ADS_MS = 60 * 1000L // 1 minute
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -59,7 +73,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Trigger bird species database population on a background thread
         lifecycleScope.launch(Dispatchers.IO) {
             BirdSpeciesRepository(applicationContext).populateDatabaseIfEmpty()
         }
@@ -68,45 +81,44 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                // Ad logic collector
                 launch {
                     Log.d(TAG_ADS, "Started collecting AccountInfoUiState for ad logic.")
                     accountInfoViewModel.uiState.collect { state ->
-                        val previousShouldShowAds = _shouldShowAds.value
-                        when (state) {
+                        // Logic: The ad policy logic is now simpler and more robust.
+                        // It directly maps the account state to the ad policy state.
+                        val newAdPolicy = when (state) {
                             is AccountInfoUiState.Success -> {
-                                val subscriptionName = state.user.subscription
-                                _shouldShowAds.value = subscriptionName != "ExBird"
-                                Log.d(TAG_ADS, "User subscription: '$subscriptionName'. Ads enabled: ${_shouldShowAds.value}")
+                                if (state.user.subscription == "ExBird") AdPolicyState.ADS_DISABLED else AdPolicyState.ADS_ENABLED
                             }
-                            is AccountInfoUiState.Error -> {
-                                _shouldShowAds.value = true
-                                Log.w(TAG_ADS, "Error fetching user profile: ${state.message}. Ads enabled by default.")
-                            }
-                            is AccountInfoUiState.Idle, is AccountInfoUiState.Loading -> {
-                                Log.d(TAG_ADS, "User profile state: ${state::class.java.simpleName}. Current ads policy: ${_shouldShowAds.value}")
-                                if (state is AccountInfoUiState.Idle && !previousShouldShowAds) {
-                                    _shouldShowAds.value = true
-                                    Log.d(TAG_ADS, "User logged out or session expired. Ads policy reset to true.")
-                                }
-                            }
+                            is AccountInfoUiState.Error -> AdPolicyState.ADS_ENABLED // Default to showing ads on error or for logged-out users.
+                            // Logic: When the state is Idle or Loading, the policy is UNDETERMINED. This is the crucial fix.
+                            // This state occurs on app start, after logout, and during profile fetch.
+                            is AccountInfoUiState.Idle, is AccountInfoUiState.Loading -> AdPolicyState.UNDETERMINED
                         }
-                        if (previousShouldShowAds != _shouldShowAds.value) {
-                            Log.d(TAG_ADS, "Ad policy changed. Ads enabled: ${_shouldShowAds.value}")
+
+                        if (_adPolicyState.value != newAdPolicy) {
+                            Log.i(TAG_ADS, "Ad policy changing from ${_adPolicyState.value::class.simpleName} to ${newAdPolicy::class.simpleName}")
+                            _adPolicyState.value = newAdPolicy
+                        }
+
+                        if (newAdPolicy == AdPolicyState.ADS_ENABLED) {
+                            startAdTimer()
+                        } else {
+                            stopAdTimer()
                         }
                     }
                 }
 
-                // Auth event collector for handling expired tokens
                 launch {
                     AuthEventBus.events.collect { event ->
                         when (event) {
                             is AuthEvent.TokenExpiredOrInvalid -> {
                                 Log.w(TAG_AUTH, "Token expired/invalid event received. Logging out user.")
                                 Toast.makeText(this@MainActivity, "Your session has expired. Please log in again.", Toast.LENGTH_LONG).show()
+                                // Logic: When a token expires, explicitly reset the account info state.
+                                accountInfoViewModel.onUserLoggedOut()
                                 googleAuthViewModel.signOut(applicationContext)
                                 navController.navigate(Screen.Welcome.route) {
-                                    // Clear the entire back stack
                                     popUpTo(navController.graph.startDestinationId) {
                                         inclusive = true
                                     }
@@ -120,7 +132,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            navController = rememberNavController() // NavController initialized here
+            navController = rememberNavController()
             BirdlensTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -128,34 +140,63 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AppNavigation(
                         navController = navController,
-                        googleAuthViewModel = googleAuthViewModel
+                        googleAuthViewModel = googleAuthViewModel,
+                        // Logic: We now pass the AccountInfoViewModel to AppNavigation so it can be used
+                        // in the SettingsScreen to properly orchestrate the logout.
+                        accountInfoViewModel = accountInfoViewModel,
+                        triggerAd = { triggerInterstitialAd() }
                     )
                 }
             }
-            // Logic: Removed the call to handleIntent as it's no longer needed.
-            // The NavController handles other deep links like password reset automatically.
         }
     }
 
-    override fun onNewIntent(intent: Intent) { // Correct non-nullable Intent
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // Logic: The body of this method is now empty but the override is kept.
-        // The Jetpack Navigation component handles deep links automatically when the activity is launched with a new intent.
-        // No manual parsing is needed here anymore.
         Log.d(TAG_AUTH, "onNewIntent called with: $intent. Navigation Component will handle deep links.")
     }
 
-    // Logic: The entire handleIntent method has been removed as it was only for email verification deep linking.
+    private fun startAdTimer() {
+        if (adTimerJob?.isActive == true) {
+            return
+        }
+        Log.i(TAG_ADS, "Starting ad timer with ${AD_TIMER_INTERVAL_MS / 1000}s interval.")
+        adTimerJob = lifecycleScope.launch {
+            while (true) {
+                delay(AD_TIMER_INTERVAL_MS)
+                Log.d(TAG_ADS, "Ad timer fired. Triggering ad.")
+                triggerInterstitialAd()
+            }
+        }
+    }
+
+    private fun stopAdTimer() {
+        if (adTimerJob?.isActive == true) {
+            Log.i(TAG_ADS, "Stopping ad timer.")
+            adTimerJob?.cancel()
+            adTimerJob = null
+        }
+    }
 
     fun triggerInterstitialAd() {
+        if (System.currentTimeMillis() - lastAdShownTimestamp < MIN_TIME_BETWEEN_ADS_MS) {
+            Log.d(TAG_ADS, "Ad trigger skipped: Not enough time has passed since the last ad.")
+            return
+        }
+
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            if (_shouldShowAds.value) {
+            if (_adPolicyState.value == AdPolicyState.ADS_ENABLED) {
                 Log.d(TAG_ADS, "Interstitial ad triggered. Ads are currently enabled. Attempting to show.")
+                stopAdTimer()
                 adManager.showInterstitialAd(this@MainActivity) {
-                    Log.d(TAG_ADS, "Ad flow finished for triggered ad.")
+                    Log.d(TAG_ADS, "Ad flow finished. Restarting timer.")
+                    lastAdShownTimestamp = System.currentTimeMillis()
+                    if (_adPolicyState.value == AdPolicyState.ADS_ENABLED) {
+                        startAdTimer()
+                    }
                 }
             } else {
-                Log.d(TAG_ADS, "Interstitial ad trigger ignored: Ads are disabled (e.g., ExBird subscription).")
+                Log.d(TAG_ADS, "Interstitial ad trigger ignored: Ad policy is ${_adPolicyState.value::class.simpleName}.")
             }
         } else {
             Log.d(TAG_ADS, "Interstitial ad trigger ignored: Activity not in resumed state.")
@@ -164,12 +205,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG_ADS, "onResume: Current shouldShowAds state: ${_shouldShowAds.value}. Ad display is event-driven.")
+        if (_adPolicyState.value == AdPolicyState.ADS_ENABLED) {
+            startAdTimer()
+        }
+        Log.d(TAG_ADS, "onResume: Current ad policy state: ${_adPolicyState.value::class.simpleName}.")
     }
 
     override fun onPause() {
         super.onPause()
-        Log.d(TAG_ADS, "onPause: Ad display is event-driven.")
+        stopAdTimer()
+        Log.d(TAG_ADS, "onPause: Ad timer stopped.")
     }
 
     fun recreateActivity() {

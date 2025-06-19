@@ -69,6 +69,15 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
         fetchPosts(initialLoad = true)
     }
 
+    // Logic: This new function will be called by the UI when the screen becomes active.
+    // It checks if the UI is stuck in an error state and, if so, triggers a full refresh.
+    fun onEnterScreen() {
+        if (_postFeedState.value is PostFeedUiState.Error) {
+            Log.d(TAG, "Community screen entered in an error state. Forcing a refresh.")
+            fetchPosts(initialLoad = true)
+        }
+    }
+
     fun fetchPosts(initialLoad: Boolean = false) {
         if (isPostLoadingPosts || (!initialLoad && allPostsLoaded)) return
 
