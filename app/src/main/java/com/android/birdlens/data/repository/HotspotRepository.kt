@@ -6,8 +6,11 @@ import android.util.Log
 import com.android.birdlens.data.local.AppDatabase
 import com.android.birdlens.data.local.toEbirdNearbyHotspot
 import com.android.birdlens.data.local.toLocalHotspot
+import com.android.birdlens.data.model.VisitingTimesAnalysis
 import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
 import com.android.birdlens.data.model.ebird.EbirdRetrofitInstance
+import com.android.birdlens.data.model.response.GenericApiResponse
+import com.android.birdlens.data.network.RetrofitInstance
 import com.android.birdlens.utils.ErrorUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -15,33 +18,60 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive // Import for isActive check
 import kotlinx.coroutines.withContext
+import retrofit2.Response
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.math.cos // Ensure this specific import if not already present
 
-class HotspotRepository(applicationContext: Context) {
+class HotspotRepository(private val applicationContext: Context) {
 
     val hotspotDao = AppDatabase.getDatabase(applicationContext).hotspotDao()
-    val ebirdApiService = EbirdRetrofitInstance.api // Made public for ViewModel direct access if needed, or keep private
+    private val ebirdApiService = EbirdRetrofitInstance.api
 
     private val CACHE_EXPIRY_MS = TimeUnit.DAYS.toMillis(1)
     companion object {
         private const val TAG = "HotspotRepository"
     }
 
+    fun getEbirdApiService() = ebirdApiService
+
+    // Logic: Add a new function to get details for a single hotspot, checking cache first.
+    suspend fun getHotspotDetails(locId: String): EbirdNearbyHotspot? {
+        return withContext(Dispatchers.IO) {
+            val cached = hotspotDao.getHotspotsByIds(listOf(locId)).firstOrNull()
+            if (cached != null) {
+                Log.d(TAG, "Found hotspot details for $locId in cache.")
+                return@withContext cached.toEbirdNearbyHotspot()
+            }
+
+            Log.d(TAG, "Hotspot details for $locId not in cache. Fetching from network.")
+            try {
+                val response = ebirdApiService.getHotspotInfo(locId)
+                if (response.isSuccessful) {
+                    response.body()
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to fetch hotspot info for $locId from network", e)
+                null
+            }
+        }
+    }
+
+
     suspend fun getNearbyHotspots(
         center: LatLng,
         radiusKm: Int,
         currentBounds: LatLngBounds?,
         countryCodeFilter: String? = null,
-        forceRefresh: Boolean = false // Added parameter
+        forceRefresh: Boolean = false
     ): List<EbirdNearbyHotspot> {
         return withContext(Dispatchers.IO) {
             val currentTime = System.currentTimeMillis()
             val cacheExpiryTimestamp = currentTime - CACHE_EXPIRY_MS
 
             if (!forceRefresh) {
-                // Approximate bounding box from center and radius if currentBounds is null
                 val minLat = currentBounds?.southwest?.latitude ?: (center.latitude - (radiusKm / 111.0))
                 val maxLat = currentBounds?.northeast?.latitude ?: (center.latitude + (radiusKm / 111.0))
                 val lngRadiusDegrees = radiusKm / (111.0 * cos(Math.toRadians(center.latitude)))
@@ -67,7 +97,7 @@ class HotspotRepository(applicationContext: Context) {
 
             Log.d(TAG, "Fetching from network: lat=${center.latitude}, lng=${center.longitude}, dist=$radiusKm, forceRefresh=$forceRefresh")
             try {
-                if (!kotlin.coroutines.coroutineContext.isActive) { // Check before network call
+                if (!kotlin.coroutines.coroutineContext.isActive) {
                     Log.i(TAG, "Coroutine cancelled before network call in getNearbyHotspots.")
                     throw CancellationException("Coroutine cancelled before network call in repository's getNearbyHotspots")
                 }
@@ -78,7 +108,7 @@ class HotspotRepository(applicationContext: Context) {
                     dist = radiusKm
                 )
 
-                if (!kotlin.coroutines.coroutineContext.isActive) { // Check after network call
+                if (!kotlin.coroutines.coroutineContext.isActive) {
                     Log.i(TAG, "Coroutine cancelled during/after network call in getNearbyHotspots.")
                     throw CancellationException("Coroutine cancelled during/after network call in repository's getNearbyHotspots")
                 }
@@ -114,7 +144,6 @@ class HotspotRepository(applicationContext: Context) {
         }
     }
 
-    // findSpeciesCode and getHotspotsForSpeciesInCountry remain the same
     suspend fun findSpeciesCode(birdName: String): String? {
         return withContext(Dispatchers.IO) {
             try {
@@ -154,13 +183,13 @@ class HotspotRepository(applicationContext: Context) {
                             EbirdNearbyHotspot(
                                 locId = obs.locId,
                                 locName = obs.locName,
-                                countryCode = countryCode, // Assuming observations are from the queried country
-                                subnational1Code = null, // Not available from this endpoint directly
-                                subnational2Code = null, // Not available
+                                countryCode = countryCode,
+                                subnational1Code = null,
+                                subnational2Code = null,
                                 lat = obs.lat,
                                 lng = obs.lng,
                                 latestObsDt = obs.obsDt,
-                                numSpeciesAllTime = null // Not available from this endpoint
+                                numSpeciesAllTime = null
                             )
                         }
                     Log.d(TAG, "Created ${hotspots.size} unique hotspots for species '$speciesCode'.")
@@ -199,5 +228,10 @@ class HotspotRepository(applicationContext: Context) {
             hotspotDao.clearAll()
             Log.i(TAG, "Cleared all hotspot cache.")
         }
+    }
+
+    suspend fun getVisitingTimesAnalysis(locId: String, speciesCode: String?): Response<GenericApiResponse<VisitingTimesAnalysis>> {
+        val apiService = RetrofitInstance.getApiService(applicationContext)
+        return apiService.getHotspotVisitingTimes(locId, speciesCode)
     }
 }

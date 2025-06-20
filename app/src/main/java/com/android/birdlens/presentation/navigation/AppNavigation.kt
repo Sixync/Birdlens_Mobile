@@ -30,6 +30,7 @@ import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
 import com.android.birdlens.presentation.ui.screens.eventdetail.EventDetailScreen
 import com.android.birdlens.presentation.ui.screens.forgotpassword.ForgotPasswordScreen
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
+import com.android.birdlens.presentation.ui.screens.hotspotdetail.HotspotDetailScreen
 import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
@@ -50,7 +51,6 @@ fun AppNavigation(
     navController: NavHostController,
     googleAuthViewModel: GoogleAuthViewModel,
     modifier: Modifier = Modifier,
-    // Logic: Pass the AccountInfoViewModel instance through.
     accountInfoViewModel: AccountInfoViewModel,
     triggerAd: () -> Unit
 ) {
@@ -62,8 +62,6 @@ fun AppNavigation(
         startDestination = Screen.Welcome.route,
         modifier = modifier
     ) {
-        // ... other composable routes ...
-
         composable(Screen.Welcome.route) {
             WelcomeScreen(
                 onLoginClicked = { navController.navigate(Screen.Login.route) },
@@ -185,7 +183,6 @@ fun AppNavigation(
             CreatePostScreen(navController = navController, communityViewModel = communityViewModel)
         }
         composable(Screen.Settings.route) {
-            // Logic: Pass the AccountInfoViewModel to the SettingsScreen.
             SettingsScreen(
                 navController = navController,
                 googleAuthViewModel = googleAuthViewModel,
@@ -246,10 +243,27 @@ fun AppNavigation(
             )
             HotspotBirdListScreen(
                 navController = navController,
-                hotspotId = backStackEntry.arguments?.getString("hotspotId"),
                 viewModel = hotspotBirdListViewModel
             )
         }
+        composable(
+            route = Screen.HotspotDetail.route,
+            arguments = listOf(navArgument("locId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            // Logic: Replaced the manual factory with the modern viewModelFactory DSL.
+            // This is a more robust way to ensure the SavedStateHandle with the "locId" argument
+            // is correctly passed to the HotspotDetailViewModel. This is the core fix.
+            val hotspotDetailViewModel: HotspotDetailViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer { HotspotDetailViewModel(application, createSavedStateHandle()) }
+                }
+            )
+            HotspotDetailScreen(
+                navController = navController,
+                viewModel = hotspotDetailViewModel
+            )
+        }
+
         composable(Screen.BirdIdentifier.route) {
             val birdIdentifierViewModel: BirdIdentifierViewModel = viewModel()
             BirdIdentifierScreen(

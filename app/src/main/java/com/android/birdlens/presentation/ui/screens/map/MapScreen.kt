@@ -1,4 +1,4 @@
-// app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
 package com.android.birdlens.presentation.ui.screens.map
 
 import android.Manifest
@@ -34,7 +34,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-// painterResource import is fine
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,12 +56,8 @@ import com.android.birdlens.data.local.BirdSpecies
 import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
-// SimpleTopAppBar is still used by HotspotComparisonScreen, so it's okay
-// import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
 import com.android.birdlens.presentation.viewmodel.MapUiState
 import com.android.birdlens.presentation.viewmodel.MapViewModel
-// SpeciesSearchScope is removed
-// import com.android.birdlens.presentation.viewmodel.SpeciesSearchScope
 import com.android.birdlens.ui.theme.*
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -76,7 +71,6 @@ import com.google.maps.android.compose.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-// bitmapDescriptorFromVector function remains the same
 fun bitmapDescriptorFromVector(
     context: Context,
     @DrawableRes vectorResId: Int,
@@ -137,8 +131,6 @@ fun MapScreen(
     var mapsSdkInitialized by remember { mutableStateOf(false) }
 
     val currentHomeCountrySetting by mapViewModel.currentHomeCountrySetting.collectAsState()
-    // currentSpeciesSearchScope is removed from here
-    // var showSearchScopeDialog by remember { mutableStateOf(false) } // Removed
     var showHomeCountryDialog by remember { mutableStateOf(false) }
 
 
@@ -190,8 +182,7 @@ fun MapScreen(
                 CameraUpdateFactory.newLatLngZoom(currentHomeCountrySetting.center, currentHomeCountrySetting.zoom),
                 1000
             )
-            // After map animation, request hotspots for the new home country view if not in search mode
-            if (!mapViewModel.isSearchActive) { // Assuming isSearchActive is a StateFlow now
+            if (!mapViewModel.isSearchActive) {
                 mapViewModel.requestHotspotsForCurrentView(currentHomeCountrySetting.center, currentHomeCountrySetting.zoom, forceRefresh = true)
             }
         }
@@ -265,13 +256,12 @@ fun MapScreen(
     AppScaffold(
         navController = navController,
         topBar = {
-            MapScreenHeader( // Removed parameters related to search scope
+            MapScreenHeader(
                 searchQuery = searchQuery,
                 onSearchQueryChange = { mapViewModel.onSearchQueryChanged(it) },
                 onSearchSubmit = {
                     keyboardController?.hide()
                     mapViewModel.onBirdSearchSubmitted()
-                    // No need to adjust camera based on search scope here, as search is always for current map region
                 },
                 onClearSearch = {
                     keyboardController?.hide()
@@ -282,14 +272,16 @@ fun MapScreen(
                 searchResults = searchResults,
                 onSearchResultClick = { birdName ->
                     keyboardController?.hide()
-                    mapViewModel.onSearchQueryChanged(birdName) // Update query to selected bird
-                    mapViewModel.onBirdSearchSubmitted()      // Submit the selected bird name
+                    mapViewModel.onSearchQueryChanged(birdName)
+                    mapViewModel.onBirdSearchSubmitted()
                 }
             )
         },
         showBottomBar = true
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+        Box(modifier = Modifier
+            .padding(innerPadding)
+            .fillMaxSize()) {
             if (!mapsSdkInitialized && !showMapError) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
             } else if (locationPermissionsState.allPermissionsGranted && mapsSdkInitialized) {
@@ -321,20 +313,20 @@ fun MapScreen(
                                 snippet = stringResource(R.string.map_marker_snippet_species, ebirdHotspot.numSpeciesAllTime ?: "N/A"),
                                 icon = currentIcon,
                                 zIndex = if (isCompareModeActive && isSelectedForCompare) 1.0f else 0.0f,
+                                // Logic: The first tap on the marker does nothing but show the info window.
+                                // We return false to allow the default behavior (showing the window) to proceed.
                                 onClick = { marker ->
                                     mapViewModel.notifyMarkerInteraction()
                                     if (isCompareModeActive) {
                                         mapViewModel.onHotspotSelectedForComparison(ebirdHotspot)
-                                        true
+                                        true // Consume the click in compare mode
                                     } else {
-                                        // Regular click action (navigate to hotspot detail)
-                                        // navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
                                         false // Allow info window to show
                                     }
                                 },
+                                // Logic: Tapping the info window (the popup) now triggers navigation.
                                 onInfoWindowClick = {
                                     if (!isCompareModeActive) {
-                                        mapViewModel.notifyMarkerInteraction() // Ensure this is called if needed
                                         navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
                                     }
                                 }
@@ -359,7 +351,7 @@ fun MapScreen(
                         val locIds = selectedHotspotsForComparison.map { it.locId }
                         if (locIds.size >= 2) {
                             navController.navigate(Screen.HotspotComparison.createRoute(locIds))
-                            mapViewModel.toggleCompareMode() // Optionally exit compare mode after navigating
+                            mapViewModel.toggleCompareMode()
                         } else {
                             Toast.makeText(context, context.getString(R.string.map_compare_toast_min_selection), Toast.LENGTH_SHORT).show()
                         }
@@ -371,7 +363,7 @@ fun MapScreen(
                 Column(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .padding(start = 16.dp, top = 16.dp, bottom = if (isCompareModeActive && selectedHotspotsForComparison.isNotEmpty()) 100.dp else 16.dp), // Adjust bottom padding for compare bar
+                        .padding(start = 16.dp, top = 16.dp, bottom = if (isCompareModeActive && selectedHotspotsForComparison.isNotEmpty()) 100.dp else 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     floatingActionItems.forEach { item ->
@@ -388,9 +380,6 @@ fun MapScreen(
                 }
             }
         }
-
-        // SearchScopeSelectionDialog is no longer needed and removed.
-        // if (showSearchScopeDialog) { ... }
 
         if (showHomeCountryDialog) {
             HomeCountrySelectionDialog(
@@ -440,12 +429,12 @@ fun PermissionRationaleUI(onGrantPermissions: () -> Unit, showRationale: Boolean
 
 @Composable
 fun LoadingErrorUI(mapUiState: MapUiState) {
-    val context = LocalContext.current // Get context for Toast
+    val context = LocalContext.current
     if (mapUiState is MapUiState.Loading) {
         val loadingMessage = mapUiState.message
-        if (!loadingMessage.isNullOrBlank()){ // Only show specific message if provided
+        if (!loadingMessage.isNullOrBlank()){
             Column(
-                modifier = Modifier.fillMaxSize(), // Ensure it covers the screen if needed
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -460,17 +449,15 @@ fun LoadingErrorUI(mapUiState: MapUiState) {
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
-        } else { // Generic loading indicator if no specific message
+        } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = TextWhite)
             }
         }
     }
 
-    // Show a Toast for errors, which is less intrusive than a full-screen message
-    // unless the error is critical (like map not loading at all, handled by `showMapError`).
     (mapUiState as? MapUiState.Error)?.let { errorState ->
-        LaunchedEffect(errorState.message) { // Show Toast only when the message changes
+        LaunchedEffect(errorState.message) {
             Toast.makeText(context, errorState.message, Toast.LENGTH_LONG).show()
         }
     }
@@ -479,7 +466,7 @@ fun LoadingErrorUI(mapUiState: MapUiState) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreenHeader( // Removed parameters related to search scope
+fun MapScreenHeader(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
@@ -504,19 +491,14 @@ fun MapScreenHeader( // Removed parameters related to search scope
                 }
             },
             actions = {
-                // Removed Search Scope Icon Button
                 IconButton(onClick = onNavigateToCart) {
                     Icon(Icons.Filled.ShoppingCart, contentDescription = stringResource(R.string.icon_cart_description), tint = TextWhite, modifier = Modifier.size(28.dp))
                 }
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-            modifier = Modifier.padding(top = 8.dp) // Applied status bar padding in AppScaffold
+            modifier = Modifier.padding(top = 8.dp)
         )
-        // Spacer(modifier = Modifier.height(8.dp)) // Adjusted spacing
-
-        // Removed Search Scope Text Display
-
-        Spacer(modifier = Modifier.height(4.dp)) // Adjusted spacing
+        Spacer(modifier = Modifier.height(4.dp))
 
         OutlinedTextField(
             value = searchQuery,
@@ -536,16 +518,16 @@ fun MapScreenHeader( // Removed parameters related to search scope
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
             singleLine = true,
-            shape = RoundedCornerShape(50), // Consistent rounded shape
+            shape = RoundedCornerShape(50),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = TextWhite,
                 unfocusedTextColor = TextWhite,
-                focusedContainerColor = SearchBarBackground, // Use themed color
+                focusedContainerColor = SearchBarBackground,
                 unfocusedContainerColor = SearchBarBackground,
                 disabledContainerColor = SearchBarBackground,
                 cursorColor = TextWhite,
-                focusedBorderColor = GreenWave2, // Highlight when focused
-                unfocusedBorderColor = Color.Transparent, // No border when not focused for cleaner look
+                focusedBorderColor = GreenWave2,
+                unfocusedBorderColor = Color.Transparent,
                 focusedLeadingIconColor = TextWhite,
                 unfocusedLeadingIconColor = TextWhite.copy(alpha = 0.7f),
                 focusedTrailingIconColor = TextWhite,
@@ -555,28 +537,27 @@ fun MapScreenHeader( // Removed parameters related to search scope
             )
         )
 
-        // Search results dropdown
         if (searchResults.isNotEmpty()) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp), // Consistent padding
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.95f)), // Slightly more opaque
+                colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.95f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) { // Limit height
+                LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
                     items(searchResults, key = { it.speciesCode }) { bird ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onSearchResultClick(bird.commonName) } // Pass common name
+                                .clickable { onSearchResultClick(bird.commonName) }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Outlined.Search, // Or a bird icon
-                                contentDescription = null, // Decorative
+                                Icons.Outlined.Search,
+                                contentDescription = null,
                                 tint = TextWhite.copy(alpha = 0.7f),
                                 modifier = Modifier.size(20.dp)
                             )
@@ -605,18 +586,18 @@ fun FloatingMapButton(item: FloatingMapActionItem) {
         badge = {
             if (item.badgeCount != null) {
                 Badge(
-                    containerColor = ActionButtonLightGray, // Or your theme's badge color
-                    contentColor = ActionButtonTextDark,   // Or your theme's badge text color
-                    modifier = Modifier.offset(x = (-6).dp, y = 6.dp) // Adjust badge position
+                    containerColor = ActionButtonLightGray,
+                    contentColor = ActionButtonTextDark,
+                    modifier = Modifier.offset(x = (-6).dp, y = 6.dp)
                 ) {
                     Text(item.badgeCount.toString())
                 }
             }
         },
         modifier = Modifier
-            .size(52.dp) // Slightly larger for better touch target
+            .size(52.dp)
             .clip(CircleShape)
-            .background(if (item.isSelected) GreenWave2.copy(alpha = 0.9f) else ButtonGreen.copy(alpha = 0.9f)) // Visual feedback for selection
+            .background(if (item.isSelected) GreenWave2.copy(alpha = 0.9f) else ButtonGreen.copy(alpha = 0.9f))
             .clickable(onClick = item.onClick)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -636,10 +617,10 @@ fun CompareModeBottomBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp), // Add padding around the bar
-        shape = RoundedCornerShape(16.dp), // Rounded corners
-        color = CardBackground.copy(alpha = 0.95f), // Semi-transparent background
-        tonalElevation = 4.dp // Add some elevation
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = CardBackground.copy(alpha = 0.95f),
+        tonalElevation = 4.dp
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -666,14 +647,14 @@ fun CompareModeBottomBar(
                             containerColor = ButtonGreen.copy(alpha = 0.7f),
                             labelColor = TextWhite
                         ),
-                        border = null // No border for a cleaner look
+                        border = null
                     )
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
             Button(
                 onClick = onCompareClick,
-                enabled = selectedHotspots.size >= 2, // Enable only if enough items are selected
+                enabled = selectedHotspots.size >= 2,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
             ) {
@@ -682,8 +663,6 @@ fun CompareModeBottomBar(
         }
     }
 }
-
-// SearchScopeSelectionDialog is no longer needed and can be removed.
 
 @Composable
 fun HomeCountrySelectionDialog(
@@ -739,7 +718,6 @@ fun HomeCountrySelectionDialog(
 @Composable
 fun MapScreenPreviewWithCompareModeActive() {
     val mockViewModel: MapViewModel = viewModel()
-    // Simulate compare mode activation for preview
     LaunchedEffect(Unit) {
         (mockViewModel.isCompareModeActive as MutableStateFlow).value = true
         (mockViewModel.selectedHotspotsForComparison as MutableStateFlow).value = listOf(

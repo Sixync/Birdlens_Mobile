@@ -42,10 +42,14 @@ sealed class HotspotBirdListUiState {
     data class Error(val message: String) : HotspotBirdListUiState()
 }
 
-open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
-    internal val initialLocId: String?
+open class HotspotBirdListViewModel(
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
 
-    val _uiState = MutableStateFlow<HotspotBirdListUiState>(HotspotBirdListUiState.Idle) // Start as Idle
+    // Logic: Change initialLocId to be public so the screen can access it directly and reliably.
+    val initialLocId: String?
+
+    val _uiState = MutableStateFlow<HotspotBirdListUiState>(HotspotBirdListUiState.Idle)
     val uiState: StateFlow<HotspotBirdListUiState> = _uiState.asStateFlow()
 
     private val ebirdApiService = EbirdRetrofitInstance.api
@@ -76,11 +80,11 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
     }
 
     private fun fetchAllSpeciesCodesAndInitialDetails(locId: String) {
-        _uiState.value = HotspotBirdListUiState.Loading // Set to loading at the start of the process
+        _uiState.value = HotspotBirdListUiState.Loading
         Log.i(TAG, "Fetching all species codes and recent observations for locId: '$locId'")
         viewModelScope.launch {
             try {
-                coroutineScope { // Ensures all async calls within complete or fail together
+                coroutineScope {
                     val allSpeciesCodesDeferred = async { ebirdApiService.getSpeciesListForHotspot(locId) }
                     val recentObservationsDeferred = async {
                         ebirdApiService.getRecentObservationsForHotspot(
@@ -115,12 +119,11 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
                         allDetailsLoaded = true
                         return@coroutineScope
                     }
-                } // End of coroutineScope for initial data fetching
+                }
 
-                // Reset pagination and load the first page of details
                 currentDetailsPage = 0
                 allDetailsLoaded = false
-                isLoadingDetails = false // Ensure this is reset
+                isLoadingDetails = false
                 loadPageOfBirdDetailsAndUpdateState(mutableListOf(), isInitialLoad = true)
 
             } catch (e: Exception) {
@@ -149,16 +152,12 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
                 if (currentState is HotspotBirdListUiState.Success) {
                     currentState.copy(isLoadingMore = true)
                 } else {
-                    // If current state isn't Success (e.g. initial Loading, or Error),
-                    // this loadMore might be a stale call. Ideally, UI wouldn't allow it.
-                    // For robustness, we could just return or log.
                     Log.w(TAG, "loadMoreBirdDetails called when state is not Success. Current state: $currentState")
                     isLoadingDetails = false
                     return@launch
                 }
             }
             loadPageOfBirdDetailsAndUpdateState(currentBirds.toMutableList(), isInitialLoad = false)
-            // isLoadingDetails will be reset inside loadPageOfBirdDetailsAndUpdateState or its catch block
         }
     }
 
@@ -171,12 +170,12 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
             _uiState.update {
                 if (it is HotspotBirdListUiState.Success) {
                     it.copy(canLoadMore = false, isLoadingMore = false)
-                } else { // Should not happen if logic is correct, but handle defensively
+                } else {
                     HotspotBirdListUiState.Success(existingBirds, canLoadMore = false, isLoadingMore = false)
                 }
             }
             Log.d(TAG, "All details loaded. Total: ${existingBirds.size}")
-            isLoadingDetails = false // Reset here too
+            isLoadingDetails = false
             return
         }
 
@@ -191,7 +190,7 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
                 }
             }
             Log.d(TAG, "No more codes to fetch details for this page.")
-            isLoadingDetails = false // Reset here too
+            isLoadingDetails = false
             return
         }
 
@@ -250,19 +249,16 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
             } else {
                 val errorMsg = "Error loading page $currentDetailsPage details: ${e.localizedMessage}"
                 Log.e(TAG, errorMsg, e)
-                // If it's an error during "load more", keep existing data but stop loading more for now.
-                // If it's an initial load error, it would have been caught earlier or will make _uiState an Error state.
                 _uiState.update {
                     if (it is HotspotBirdListUiState.Success) {
-                        it.copy(isLoadingMore = false, canLoadMore = false) // Stop further loading on error
+                        it.copy(isLoadingMore = false, canLoadMore = false)
                     } else {
-                        // If not already Success (e.g., was Loading), transition to Error
                         HotspotBirdListUiState.Error(errorMsg)
                     }
                 }
             }
         } finally {
-            isLoadingDetails = false // Ensure this is always reset
+            isLoadingDetails = false
         }
     }
 
@@ -288,13 +284,12 @@ open class HotspotBirdListViewModel(savedStateHandle: SavedStateHandle) : ViewMo
     fun refreshData() {
         if (!initialLocId.isNullOrBlank()) {
             Log.i(TAG, "REFRESH_TRIGGERED: Refreshing all data for initialLocId: '$initialLocId'")
-            // Reset state variables before fetching
             allSpeciesCodesForHotspot = emptyList()
             recentObsMapForHotspot = emptyMap()
             fetchAllSpeciesCodesAndInitialDetails(initialLocId)
         } else {
             Log.e(TAG, "REFRESH_FAIL: Cannot refresh, initialLocId is missing or blank.")
-            if (_uiState.value !is HotspotBirdListUiState.Error) { // Avoid overwriting an existing error if locId was never valid
+            if (_uiState.value !is HotspotBirdListUiState.Error) {
                 _uiState.value = HotspotBirdListUiState.Error("Cannot refresh: Hotspot ID is invalid.")
             }
         }

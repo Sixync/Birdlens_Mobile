@@ -26,7 +26,9 @@ interface EbirdApiService {
         @Query("cat") category: String? = null,
         @Query("version") version: String? = null
     ): Response<List<EbirdTaxonomy>>
-
+    // Logic: Add a new function to fetch metadata for a single hotspot by its location ID.
+    @GET("v2/ref/hotspot/info/{locId}")
+    suspend fun getHotspotInfo(@Path("locId") locId: String): Response<EbirdNearbyHotspot>
     /**
      * Fetches hotspots near a given geographic point.
      * API Key is added via EbirdApiKeyInterceptor.

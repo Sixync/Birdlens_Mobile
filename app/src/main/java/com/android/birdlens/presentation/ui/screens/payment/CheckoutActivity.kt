@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.android.birdlens.BuildConfig
 import com.android.birdlens.data.network.RetrofitInstance
 import com.android.birdlens.ui.theme.BirdlensTheme
 import com.android.birdlens.ui.theme.ButtonGreen
@@ -59,9 +60,8 @@ import kotlin.coroutines.suspendCoroutine
 
 class CheckoutActivity : ComponentActivity() {
     companion object {
-        private const val BACKEND_URL = "http://20.191.153.166"
-        //http://20.191.153.166/
-        //http://10.0.2.2/ localhost
+        // Logic: Use the centralized URL from BuildConfig instead of a hardcoded constant.
+        private val BACKEND_URL = BuildConfig.BACKEND_BASE_URL
         private const val TAG = "CheckoutActivity"
     }
 
@@ -203,12 +203,13 @@ class CheckoutActivity : ComponentActivity() {
     }
 
     private suspend fun fetchPaymentIntent(): Result<String> = suspendCoroutine { continuation ->
-        val url = "$BACKEND_URL/create-payment-intent"
+        // Logic: Correctly form the full URL using the centralized base URL.
+        val url = "$BACKEND_URL/create-payment-intent".replace("//create", "/create")
 
         val shoppingCartContent = """
          {
              "items": [
-                 {"id":"sub_premium"} 
+                 {"id":"sub_premium"}
              ]
          }
      """

@@ -13,7 +13,6 @@ sealed class Screen(val route: String) {
     data object PleaseVerifyEmail : Screen("please_verify_email_screen/{email}") {
         fun createRoute(email: String) = "please_verify_email_screen/$email"
     }
-    // Logic: The EmailVerification screen route has been completely removed.
     data object Home : Screen("home_screen")
     data object AllEventsList : Screen("all_events_list_screen")
     data object AllToursList : Screen("all_tours_list_screen")
@@ -37,6 +36,10 @@ sealed class Screen(val route: String) {
     }
     data object HotspotBirdList : Screen("hotspot_bird_list_screen/{hotspotId}") {
         fun createRoute(hotspotId: String) = "hotspot_bird_list_screen/$hotspotId"
+    }
+    // Logic: Add the new screen for viewing a single hotspot's details and analysis.
+    data object HotspotDetail : Screen("hotspot_detail_screen/{locId}") {
+        fun createRoute(locId: String) = "hotspot_detail_screen/$locId"
     }
 
     data object BirdIdentifier : Screen("bird_identifier_screen")

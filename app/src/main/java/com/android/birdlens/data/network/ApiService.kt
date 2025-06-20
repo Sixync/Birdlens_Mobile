@@ -8,6 +8,7 @@ import com.android.birdlens.data.model.PaginatedToursResponse
 import com.android.birdlens.data.model.Subscription
 import com.android.birdlens.data.model.Tour
 import com.android.birdlens.data.model.TourCreateRequest
+import com.android.birdlens.data.model.VisitingTimesAnalysis
 import com.android.birdlens.data.model.post.CommentResponse
 import com.android.birdlens.data.model.post.CreateCommentRequest
 import com.android.birdlens.data.model.post.PaginatedCommentsResponse
@@ -138,4 +139,12 @@ interface ApiService {
         @Path("post_id") postId: String,
         @Query("reaction_type") reactionType: String
     ): Response<GenericApiResponse<ReactionResponseData?>>
+
+    // Logic: Add the new function to get visiting times.
+    // This will be called to get the premium analysis data.
+    @GET("hotspots/{locId}/visiting-times")
+    suspend fun getHotspotVisitingTimes(
+        @Path("locId") locId: String,
+        @Query("speciesCode") speciesCode: String? // Optional: for species-specific analysis
+    ): Response<GenericApiResponse<VisitingTimesAnalysis>>
 }

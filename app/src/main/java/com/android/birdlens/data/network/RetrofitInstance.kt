@@ -2,6 +2,7 @@
 package com.android.birdlens.data.network
 
 import android.content.Context
+import com.android.birdlens.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -9,10 +10,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit // Import TimeUnit
 
 object RetrofitInstance {
-    private const val BASE_URL = "http://20.191.153.166/"
+    // Logic: Remove the hardcoded BASE_URL. It will now come from BuildConfig.
+    // private const val BASE_URL = "http://10.0.2.2/"
 
-    //http://20.191.153.166/
-    //http://10.0.2.2/ localhost
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
@@ -34,7 +34,8 @@ object RetrofitInstance {
             synchronized(this) {
                 if (!::apiService.isInitialized) {
                     val retrofit = Retrofit.Builder()
-                        .baseUrl(BASE_URL)
+                        // Logic: Use the centralized URL from BuildConfig.
+                        .baseUrl(BuildConfig.BACKEND_BASE_URL)
                         .client(createOkHttpClient(context.applicationContext))
                         .addConverterFactory(GsonConverterFactory.create())
                         .build()
@@ -45,8 +46,6 @@ object RetrofitInstance {
         return apiService
     }
 
-    // This lazy val is problematic if context is needed before MainActivity (e.g. in Application class for init)
-    // However, your current usage of api(context) should be fine.
     val api: ApiService by lazy {
         throw IllegalStateException("ApiService not initialized with Context. Use getApiService(context) instead.")
     }

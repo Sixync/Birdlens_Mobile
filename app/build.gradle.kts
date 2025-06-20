@@ -1,3 +1,4 @@
+// EXE201/app/build.gradle.kts
 
 import java.util.Properties
 import java.io.FileInputStream
@@ -16,7 +17,8 @@ val localPropertiesFile = rootProject.file("local.properties")
 var googleMapsApiKeyFromProperties = "YOUR_API_KEY_MISSING_IN_LOCAL_PROPERTIES"
 var ebirdApiKeyFromProperties = "YOUR_EBIRD_API_KEY_MISSING"
 var geminiApiKeyFromProperties = "YOUR_GEMINI_API_KEY_MISSING"
-var stripePublishableKeyFromProperties: String? = null // Initialize as nullable String
+var stripePublishableKeyFromProperties: String? = null
+var backendBaseUrlFromProperties: String? = null
 
 if (localPropertiesFile.exists()) {
     try {
@@ -25,7 +27,9 @@ if (localPropertiesFile.exists()) {
             googleMapsApiKeyFromProperties = localProperties.getProperty("MAPS_API_KEY")
             ebirdApiKeyFromProperties = localProperties.getProperty("EBIRD_API_KEY")
             geminiApiKeyFromProperties = localProperties.getProperty("GEMINI_API_KEY")
-            stripePublishableKeyFromProperties = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY") // Reading the key
+            stripePublishableKeyFromProperties = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY")
+            backendBaseUrlFromProperties = localProperties.getProperty("BACKEND_BASE_URL_LOCAL")
+
 
             if (googleMapsApiKeyFromProperties != null) {
                 println("Successfully loaded MAPS_API_KEY from local.properties.")
@@ -43,7 +47,6 @@ if (localPropertiesFile.exists()) {
                 println("Warning: GEMINI_API_KEY not found in local.properties.")
             }
 
-            // More specific check for Stripe key
             if (stripePublishableKeyFromProperties != null) {
                 println("Successfully loaded STRIPE_PUBLISHABLE_KEY from local.properties. Value: '${stripePublishableKeyFromProperties}'")
             } else {
@@ -78,8 +81,7 @@ val googleMapsApiKey = if (googleMapsApiKeyFromProperties.isNullOrBlank()) {
     googleMapsApiKeyFromProperties!!
 }
 
-// Read Stripe Publishable Key
-val stripePublishableKey = if (stripePublishableKeyFromProperties.isNullOrBlank()) { // Simplified condition: if null or blank from properties file
+val stripePublishableKey = if (stripePublishableKeyFromProperties.isNullOrBlank()) {
     println("Stripe Key from properties was null or blank. Using default/fallback Stripe Publishable Key: 'pk_test_DEFAULT_FALLBACK_KEY'")
     "pk_test_DEFAULT_FALLBACK_KEY"
 } else {
@@ -87,9 +89,16 @@ val stripePublishableKey = if (stripePublishableKeyFromProperties.isNullOrBlank(
     stripePublishableKeyFromProperties!!
 }
 
+val backendBaseUrl = if (backendBaseUrlFromProperties.isNullOrBlank()) {
+    println("Using default/fallback Backend URL: 'http://10.0.2.2/'")
+    "http://10.0.2.2/"
+} else {
+    println("Using Backend URL from local.properties: '$backendBaseUrlFromProperties'")
+    backendBaseUrlFromProperties!!
+}
 
 println("MAPS_API_KEY to be used in build: ${googleMapsApiKey.take(5)}...")
-println("FINAL STRIPE_PUBLISHABLE_KEY to be injected into BuildConfig: '${stripePublishableKey.take(8)}...'") // Debugging line
+println("FINAL STRIPE_PUBLISHABLE_KEY to be injected into BuildConfig: '${stripePublishableKey.take(8)}...'")
 
 
 android {
@@ -109,6 +118,7 @@ android {
         buildConfigField("String", "EBIRD_API_KEY", "\"$ebirdApiKey\"")
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
         buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
+        buildConfigField("String", "BACKEND_BASE_URL", "\"$backendBaseUrl\"")
     }
 
     buildFeatures {
@@ -123,6 +133,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Logic: This is where your production URL is defined. When you build a release APK,
+            // the value of BuildConfig.BACKEND_BASE_URL will be https://birdlens.duckdns.org/
+            buildConfigField("String", "BACKEND_BASE_URL", "\"https://birdlens.duckdns.org/\"")
         }
     }
     compileOptions {

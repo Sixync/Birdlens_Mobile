@@ -1,5 +1,5 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/comparison/HotspotComparisonScreen.kt
-package com.android.birdlens.presentation.ui.screens.comparison // New package
+package com.android.birdlens.presentation.ui.screens.comparison
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,13 +24,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.android.birdlens.data.model.MonthlyStat
+import com.android.birdlens.data.model.VisitingTimesAnalysis
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
-import com.android.birdlens.presentation.ui.screens.login.CustomTextField // Re-use or adapt
-import com.android.birdlens.presentation.viewmodel.HotspotComparisonMetrics
-import com.android.birdlens.presentation.viewmodel.HotspotComparisonUiState
-import com.android.birdlens.presentation.viewmodel.HotspotComparisonViewModel
+import com.android.birdlens.presentation.ui.screens.login.CustomTextField
+import com.android.birdlens.presentation.viewmodel.*
 import com.android.birdlens.ui.theme.*
 
 @Composable
@@ -40,6 +42,11 @@ fun HotspotComparisonScreen(
     val uiState by viewModel.uiState.collectAsState()
     val targetSpeciesName by viewModel.targetSpeciesName.collectAsState()
     var showTargetSpeciesDialog by remember { mutableStateOf(false) }
+
+    // Logic: Get the AccountInfoViewModel to check the user's subscription status.
+    val accountInfoViewModel: AccountInfoViewModel = viewModel()
+    val accountState by accountInfoViewModel.uiState.collectAsState()
+    val isExBirdUser = (accountState as? AccountInfoUiState.Success)?.user?.subscription == "ExBird"
 
     AppScaffold(
         navController = navController,
@@ -57,7 +64,7 @@ fun HotspotComparisonScreen(
                 Icon(Icons.Filled.Search, "Set Target Species", tint = TextWhite)
             }
         },
-        showBottomBar = false // Or true if it fits your navigation
+        showBottomBar = false
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -90,7 +97,8 @@ fun HotspotComparisonScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(state.comparisonData, key = { it.locId }) { metrics ->
-                                HotspotComparisonCard(metrics = metrics)
+                                // Pass the subscription status to the card.
+                                HotspotComparisonCard(metrics = metrics, isExBirdUser = isExBirdUser)
                             }
                         }
                     }
@@ -115,10 +123,10 @@ fun HotspotComparisonScreen(
 }
 
 @Composable
-fun HotspotComparisonCard(metrics: HotspotComparisonMetrics) {
+fun HotspotComparisonCard(metrics: HotspotComparisonMetrics, isExBirdUser: Boolean) {
     Card(
         modifier = Modifier
-            .width(300.dp) // Fixed width for horizontal scrolling items
+            .width(300.dp)
             .fillMaxHeight()
             .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.5f))
@@ -167,11 +175,105 @@ fun HotspotComparisonCard(metrics: HotspotComparisonMetrics) {
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            ComparisonMetricItem("Accessibility", metrics.accessibilityInfo)
-            ComparisonMetricItem("Best Time to Visit", metrics.bestTimeToVisitNotes)
+            // Logic: Conditionally display the analysis or the upsell message.
+            if (isExBirdUser) {
+                metrics.visitingTimes?.let {
+                    VisitingTimesSection(analysis = it)
+                } ?: ComparisonMetricItem("Best Times to Visit", "Analysis data not available.")
+            } else {
+                PremiumUpsell()
+            }
         }
     }
 }
+
+@Composable
+fun VisitingTimesSection(analysis: VisitingTimesAnalysis) {
+    Column {
+        ComparisonMetricItem("Best Months to Visit")
+        if(analysis.monthlyActivity.isNotEmpty()){
+            BarChart(
+                data = analysis.monthlyActivity,
+                labelSelector = { it.month.substring(0, 3) },
+                valueSelector = { it.relativeFrequency }
+            )
+        } else {
+            Text("  Not enough data.", style = MaterialTheme.typography.bodyMedium.copy(color = TextWhite.copy(alpha = 0.7f)))
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        ComparisonMetricItem("Best Times of Day")
+        if(analysis.hourlyActivity.isNotEmpty()){
+            BarChart(
+                data = analysis.hourlyActivity,
+                labelSelector = { "${it.hour}:00" },
+                valueSelector = { it.relativeFrequency }
+            )
+        } else {
+            Text("  Not enough data.", style = MaterialTheme.typography.bodyMedium.copy(color = TextWhite.copy(alpha = 0.7f)))
+        }
+    }
+}
+
+@Composable
+fun <T> BarChart(
+    data: List<T>,
+    labelSelector: (T) -> String,
+    valueSelector: (T) -> Double
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        data.forEach { item ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .height((valueSelector(item) * 80).dp.coerceAtLeast(2.dp))
+                        .width(20.dp)
+                        .background(GreenWave2, shape = RoundedCornerShape(4.dp))
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = labelSelector(item),
+                    fontSize = 10.sp,
+                    color = TextWhite.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Visible
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PremiumUpsell() {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.WorkspacePremium, contentDescription = "Premium Feature", tint = GreenWave2)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Best Times to Visit",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold, color = TextWhite.copy(alpha = 0.9f))
+            )
+        }
+        Text(
+            "Unlock detailed activity analysis with an ExBird subscription.",
+            style = MaterialTheme.typography.bodyMedium.copy(color = TextWhite.copy(alpha = 0.8f)),
+            modifier = Modifier.padding(start = 32.dp, top = 4.dp)
+        )
+        HorizontalDivider(color = DividerColor.copy(alpha = 0.3f), modifier = Modifier.padding(top = 6.dp))
+    }
+}
+
 
 @Composable
 fun ComparisonMetricItem(label: String, value: String? = null) {

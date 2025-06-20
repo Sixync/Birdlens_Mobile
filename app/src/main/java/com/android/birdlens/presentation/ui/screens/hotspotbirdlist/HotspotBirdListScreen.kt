@@ -3,6 +3,7 @@ package com.android.birdlens.presentation.ui.screens.hotspotbirdlist
 
 import android.annotation.SuppressLint
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,8 +11,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,7 +32,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -37,7 +39,6 @@ import coil.compose.rememberAsyncImagePainter
 import com.android.birdlens.R
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
-import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
 import com.android.birdlens.presentation.viewmodel.BirdSpeciesInfo
 import com.android.birdlens.presentation.viewmodel.HotspotBirdListUiState
 import com.android.birdlens.presentation.viewmodel.HotspotBirdListViewModel
@@ -45,20 +46,46 @@ import com.android.birdlens.ui.theme.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SimpleTopAppBarWithAnalysisAction(
+    title: String,
+    onNavigateBack: () -> Unit,
+    onAnalysisClick: () -> Unit
+) {
+    CenterAlignedTopAppBar(
+        title = { Text(title, color = TextWhite, fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+            IconButton(onClick = onNavigateBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextWhite)
+            }
+        },
+        actions = {
+            IconButton(onClick = onAnalysisClick) {
+                Icon(Icons.Default.Analytics, contentDescription = "View Analysis", tint = TextWhite)
+            }
+        },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+            containerColor = Color.Transparent
+        )
+    )
+}
+
 @Composable
 fun HotspotBirdListScreen(
     navController: NavController,
-    hotspotId: String?,
     viewModel: HotspotBirdListViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val listState = rememberLazyListState()
 
-    if (hotspotId.isNullOrBlank() && viewModel.initialLocId.isNullOrBlank()) {
+    val effectiveHotspotId = viewModel.initialLocId ?: ""
+
+    if (effectiveHotspotId.isBlank()) {
         AppScaffold(
             navController = navController,
-            topBar = { SimpleTopAppBar(title = stringResource(R.string.error_title), onNavigateBack = { navController.popBackStack() })},
+            topBar = { com.android.birdlens.presentation.ui.components.SimpleTopAppBar(title = stringResource(R.string.error_title), onNavigateBack = { navController.popBackStack() })},
             showBottomBar = false
         ) { padding ->
             Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -67,8 +94,6 @@ fun HotspotBirdListScreen(
         }
         return
     }
-
-    val effectiveHotspotId = hotspotId ?: viewModel.initialLocId ?: ""
 
     LaunchedEffect(listState, uiState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
@@ -92,9 +117,19 @@ fun HotspotBirdListScreen(
     AppScaffold(
         navController = navController,
         topBar = {
-            SimpleTopAppBar(
+            SimpleTopAppBarWithAnalysisAction(
                 title = stringResource(R.string.hotspot_birds_title),
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onAnalysisClick = {
+                    // Logic: Add a log here to confirm the ID is present before navigating.
+                    if (effectiveHotspotId.isNotBlank()) {
+                        Log.d("HotspotBirdListScreen", "Navigating to HotspotDetail with locId: $effectiveHotspotId")
+                        navController.navigate(Screen.HotspotDetail.createRoute(effectiveHotspotId))
+                    } else {
+                        Log.e("HotspotBirdListScreen", "Attempted to navigate to HotspotDetail, but effectiveHotspotId was blank!")
+                        Toast.makeText(context, "Cannot show details, Hotspot ID is missing.", Toast.LENGTH_SHORT).show()
+                    }
+                }
             )
         },
         showBottomBar = false
@@ -258,43 +293,6 @@ fun HotspotBirdListScreenPreview_WithData() {
     BirdlensTheme {
         HotspotBirdListScreen(
             navController = rememberNavController(),
-            hotspotId = "L_PREVIEW",
-            viewModel = MockHotspotBirdListViewModel()
-        )
-    }
-}
-
-@SuppressLint("ViewModelConstructorInComposable")
-@Preview(showBackground = true, device = "spec:width=360dp,height=740dp,dpi=480")
-@Composable
-fun HotspotBirdListScreenPreview_NoBirds() {
-    class MockHotspotBirdListViewModel : HotspotBirdListViewModel(SavedStateHandle(mapOf("hotspotId" to "L_EMPTY"))) {
-        init {
-            (super._uiState as MutableStateFlow<HotspotBirdListUiState>).value = HotspotBirdListUiState.Success(emptyList(), canLoadMore = false)
-        }
-    }
-    BirdlensTheme {
-        HotspotBirdListScreen(
-            navController = rememberNavController(),
-            hotspotId = "L_EMPTY",
-            viewModel = MockHotspotBirdListViewModel()
-        )
-    }
-}
-
-@SuppressLint("ViewModelConstructorInComposable")
-@Preview(showBackground = true, device = "spec:width=360dp,height=740dp,dpi=480")
-@Composable
-fun HotspotBirdListScreenPreview_Error() {
-    class MockHotspotBirdListViewModel : HotspotBirdListViewModel(SavedStateHandle(mapOf("hotspotId" to "L_ERROR"))) {
-        init {
-            (super._uiState as MutableStateFlow<HotspotBirdListUiState>).value = HotspotBirdListUiState.Error("Failed to load bird data due to network issue.")
-        }
-    }
-    BirdlensTheme {
-        HotspotBirdListScreen(
-            navController = rememberNavController(),
-            hotspotId = "L_ERROR",
             viewModel = MockHotspotBirdListViewModel()
         )
     }
