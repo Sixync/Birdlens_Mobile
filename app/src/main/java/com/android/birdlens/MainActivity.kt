@@ -84,15 +84,11 @@ class MainActivity : ComponentActivity() {
                 launch {
                     Log.d(TAG_ADS, "Started collecting AccountInfoUiState for ad logic.")
                     accountInfoViewModel.uiState.collect { state ->
-                        // Logic: The ad policy logic is now simpler and more robust.
-                        // It directly maps the account state to the ad policy state.
                         val newAdPolicy = when (state) {
                             is AccountInfoUiState.Success -> {
                                 if (state.user.subscription == "ExBird") AdPolicyState.ADS_DISABLED else AdPolicyState.ADS_ENABLED
                             }
-                            is AccountInfoUiState.Error -> AdPolicyState.ADS_ENABLED // Default to showing ads on error or for logged-out users.
-                            // Logic: When the state is Idle or Loading, the policy is UNDETERMINED. This is the crucial fix.
-                            // This state occurs on app start, after logout, and during profile fetch.
+                            is AccountInfoUiState.Error -> AdPolicyState.ADS_ENABLED
                             is AccountInfoUiState.Idle, is AccountInfoUiState.Loading -> AdPolicyState.UNDETERMINED
                         }
 
@@ -113,16 +109,20 @@ class MainActivity : ComponentActivity() {
                     AuthEventBus.events.collect { event ->
                         when (event) {
                             is AuthEvent.TokenExpiredOrInvalid -> {
-                                Log.w(TAG_AUTH, "Token expired/invalid event received. Logging out user.")
-                                Toast.makeText(this@MainActivity, "Your session has expired. Please log in again.", Toast.LENGTH_LONG).show()
-                                // Logic: When a token expires, explicitly reset the account info state.
-                                accountInfoViewModel.onUserLoggedOut()
-                                googleAuthViewModel.signOut(applicationContext)
-                                navController.navigate(Screen.Welcome.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        inclusive = true
+                                // Logic: Add a check to prevent multiple navigations if events fire rapidly.
+                                if (navController.currentDestination?.route != Screen.Welcome.route) {
+                                    Log.w(TAG_AUTH, "Token expired/invalid event received. Logging out user.")
+                                    Toast.makeText(this@MainActivity, "Your session has expired. Please log in again.", Toast.LENGTH_LONG).show()
+                                    accountInfoViewModel.onUserLoggedOut()
+                                    googleAuthViewModel.signOut(applicationContext)
+                                    navController.navigate(Screen.Welcome.route) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            inclusive = true
+                                        }
+                                        launchSingleTop = true
                                     }
-                                    launchSingleTop = true
+                                } else {
+                                    Log.d(TAG_AUTH, "Token expired event received, but already on or navigating to Welcome screen. Ignoring.")
                                 }
                             }
                         }
@@ -141,8 +141,6 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(
                         navController = navController,
                         googleAuthViewModel = googleAuthViewModel,
-                        // Logic: We now pass the AccountInfoViewModel to AppNavigation so it can be used
-                        // in the SettingsScreen to properly orchestrate the logout.
                         accountInfoViewModel = accountInfoViewModel,
                         triggerAd = { triggerInterstitialAd() }
                     )

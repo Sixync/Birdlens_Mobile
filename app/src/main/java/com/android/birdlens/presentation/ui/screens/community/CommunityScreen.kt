@@ -63,14 +63,13 @@ fun CommunityScreen(
     var showCommentSheetForPostId by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
-    // Logic: Get the lifecycle owner to observe lifecycle events.
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Logic: This new LaunchedEffect will trigger the onEnterScreen method
-    // every time the CommunityScreen becomes active.
+    // Logic: This LaunchedEffect now correctly calls the ViewModel's onEnterScreen function.
+    // This function acts as a gatekeeper, only fetching data if necessary, preventing
+    // the race condition that caused the double toast.
     LaunchedEffect(communityViewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            // When the screen is started (or resumed), we check if we need to recover from an error.
             communityViewModel.onEnterScreen()
         }
     }

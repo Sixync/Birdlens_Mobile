@@ -36,12 +36,10 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     private val _firebaseSignInState = MutableStateFlow<FirebaseSignInState>(FirebaseSignInState.Idle)
     val firebaseSignInState: StateFlow<FirebaseSignInState> = _firebaseSignInState.asStateFlow()
 
-    // Logic: The entire state and logic for email verification are removed from the ViewModel.
-    // private val _emailVerificationState = MutableStateFlow<EmailVerificationState>(EmailVerificationState.Idle)
-    // val emailVerificationState: StateFlow<EmailVerificationState> = _emailVerificationState.asStateFlow()
-
 
     fun registerUser(registerRequest: RegisterRequest) {
+        // Logic: Reset state before starting a new operation to prevent showing stale errors.
+        resetBackendAuthState()
         _backendAuthState.value = BackendAuthState.Loading
         Log.d("AuthVM", "Registering user: ${registerRequest.username}")
         viewModelScope.launch {
@@ -73,6 +71,8 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun loginUser(loginRequest: LoginRequest) {
+        // Logic: Reset state before starting a new operation to prevent showing stale errors.
+        resetBackendAuthState()
         _backendAuthState.value = BackendAuthState.Loading
         Log.d("AuthVM", "Logging in user: ${loginRequest.email}")
         viewModelScope.launch {
@@ -133,8 +133,6 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    // Logic: The verifyEmailToken function has been removed.
-
     fun signOut(context: Context) {
         viewModelScope.launch {
             try {
@@ -153,14 +151,9 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     fun resetBackendAuthState() { _backendAuthState.value = BackendAuthState.Idle }
     fun resetFirebaseSignInState() { _firebaseSignInState.value = FirebaseSignInState.Idle }
 
-    // Logic: The function to reset email verification state has been removed.
-    // fun resetEmailVerificationState() { _emailVerificationState.value = EmailVerificationState.Idle }
-
-
     private fun resetAllAuthStates() {
         resetBackendAuthState()
         resetFirebaseSignInState()
-        // Logic: The call to reset email verification state has been removed.
     }
 
     fun getCurrentFirebaseUser(): FirebaseUser? = auth.currentUser
@@ -181,6 +174,4 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
         data class Success(val firebaseUser: FirebaseUser, val firebaseIdToken: String) : FirebaseSignInState()
         data class Error(val message: String) : FirebaseSignInState()
     }
-
-    // Logic: The EmailVerificationState sealed class has been removed.
 }

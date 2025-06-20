@@ -65,15 +65,17 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
     private var currentPostIdForComments: String? = null
 
 
+    // Logic: The automatic fetch in the init block is removed to prevent race conditions on app start.
+    // The UI will now be responsible for explicitly calling fetchPosts when it's ready.
     init {
-        fetchPosts(initialLoad = true)
+        // fetchPosts(initialLoad = true) // This line is removed.
     }
 
-    // Logic: This new function will be called by the UI when the screen becomes active.
-    // It checks if the UI is stuck in an error state and, if so, triggers a full refresh.
     fun onEnterScreen() {
-        if (_postFeedState.value is PostFeedUiState.Error) {
-            Log.d(TAG, "Community screen entered in an error state. Forcing a refresh.")
+        // Logic: This function is called by the UI. It checks if data is missing or if there was a previous error,
+        // and if so, it triggers a fresh data load. This prevents re-fetching on simple recompositions.
+        if (_postFeedState.value is PostFeedUiState.Idle || _postFeedState.value is PostFeedUiState.Error) {
+            Log.d(TAG, "Community screen entered. State is Idle or Error, initiating fetch.")
             fetchPosts(initialLoad = true)
         }
     }
