@@ -1,14 +1,7 @@
 // EXE201/app/src/main/java/com/android/birdlens/data/network/ApiService.kt
 package com.android.birdlens.data.network
 
-import com.android.birdlens.data.model.CreateSubscriptionRequest
-import com.android.birdlens.data.model.Event
-import com.android.birdlens.data.model.PaginatedEventData
-import com.android.birdlens.data.model.PaginatedToursResponse
-import com.android.birdlens.data.model.Subscription
-import com.android.birdlens.data.model.Tour
-import com.android.birdlens.data.model.TourCreateRequest
-import com.android.birdlens.data.model.VisitingTimesAnalysis
+import com.android.birdlens.data.model.*
 import com.android.birdlens.data.model.post.CommentResponse
 import com.android.birdlens.data.model.post.CreateCommentRequest
 import com.android.birdlens.data.model.post.PaginatedCommentsResponse
@@ -147,4 +140,19 @@ interface ApiService {
         @Path("locId") locId: String,
         @Query("speciesCode") speciesCode: String? // Optional: for species-specific analysis
     ): Response<GenericApiResponse<VisitingTimesAnalysis>>
+
+    // Logic: Add a new endpoint to proxy the bird identification request to the backend.
+    // The image is sent as a multipart file, and the prompt as a separate part.
+    // This removes the need for the client to have the Gemini API key.
+    @Multipart
+    @POST("ai/identify-bird")
+    suspend fun identifyBird(
+        @Part image: MultipartBody.Part?,
+        @Part("prompt") prompt: RequestBody
+    ): Response<GenericApiResponse<AIIdentifyResponse>>
+
+    // Logic: Add a new endpoint for asking follow-up questions to the AI.
+    // It sends the context (bird name, question, history) to the backend.
+    @POST("ai/ask-question")
+    suspend fun askAiQuestion(@Body request: AIQuestionRequest): Response<GenericApiResponse<AIQuestionResponse>>
 }

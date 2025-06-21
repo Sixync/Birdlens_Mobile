@@ -16,7 +16,8 @@ val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 var googleMapsApiKeyFromProperties = "YOUR_API_KEY_MISSING_IN_LOCAL_PROPERTIES"
 var ebirdApiKeyFromProperties = "YOUR_EBIRD_API_KEY_MISSING"
-var geminiApiKeyFromProperties = "YOUR_GEMINI_API_KEY_MISSING"
+// Logic: Remove the variable that holds the Gemini API key. It will no longer be read from local.properties for the client.
+// var geminiApiKeyFromProperties = "YOUR_GEMINI_API_KEY_MISSING"
 var stripePublishableKeyFromProperties: String? = null
 var backendBaseUrlFromProperties: String? = null
 
@@ -26,7 +27,8 @@ if (localPropertiesFile.exists()) {
             localProperties.load(fis)
             googleMapsApiKeyFromProperties = localProperties.getProperty("MAPS_API_KEY")
             ebirdApiKeyFromProperties = localProperties.getProperty("EBIRD_API_KEY")
-            geminiApiKeyFromProperties = localProperties.getProperty("GEMINI_API_KEY")
+            // Logic: No longer need to read the Gemini key here. The backend will handle it.
+            // geminiApiKeyFromProperties = localProperties.getProperty("GEMINI_API_KEY")
             stripePublishableKeyFromProperties = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY")
             backendBaseUrlFromProperties = localProperties.getProperty("BACKEND_BASE_URL_LOCAL")
 
@@ -41,11 +43,12 @@ if (localPropertiesFile.exists()) {
             } else {
                 println("Warning: EBIRD_API_KEY not found in local.properties.")
             }
-            if (geminiApiKeyFromProperties != null) {
-                println("Successfully loaded GEMINI_API_KEY from local.properties.")
-            } else {
-                println("Warning: GEMINI_API_KEY not found in local.properties.")
-            }
+            // Logic: Remove the print statements related to the Gemini key.
+            // if (geminiApiKeyFromProperties != null) {
+            //     println("Successfully loaded GEMINI_API_KEY from local.properties.")
+            // } else {
+            //     println("Warning: GEMINI_API_KEY not found in local.properties.")
+            // }
 
             if (stripePublishableKeyFromProperties != null) {
                 println("Successfully loaded STRIPE_PUBLISHABLE_KEY from local.properties. Value: '${stripePublishableKeyFromProperties}'")
@@ -67,12 +70,13 @@ val ebirdApiKey = if (ebirdApiKeyFromProperties.isNullOrBlank() || ebirdApiKeyFr
 } else {
     ebirdApiKeyFromProperties!!
 }
-val geminiApiKey = if (geminiApiKeyFromProperties.isNullOrBlank() || geminiApiKeyFromProperties == "YOUR_GEMINI_API_KEY_MISSING") {
-    println("Using default/fallback Gemini API Key because value from local.properties was null, blank, or placeholder.")
-    "YOUR_GEMINI_API_KEY_MISSING_IN_CONFIG"
-} else {
-    geminiApiKeyFromProperties!!
-}
+// Logic: Remove the logic for handling the Gemini key.
+// val geminiApiKey = if (geminiApiKeyFromProperties.isNullOrBlank() || geminiApiKeyFromProperties == "YOUR_GEMINI_API_KEY_MISSING") {
+//     println("Using default/fallback Gemini API Key because value from local.properties was null, blank, or placeholder.")
+//     "YOUR_GEMINI_API_KEY_MISSING_IN_CONFIG"
+// } else {
+//     geminiApiKeyFromProperties!!
+// }
 
 val googleMapsApiKey = if (googleMapsApiKeyFromProperties.isNullOrBlank()) {
     println("Using default/fallback API Key because value from local.properties was null or blank.")
@@ -116,7 +120,8 @@ android {
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
         resourceConfigurations.addAll(listOf("en", "vi"))
         buildConfigField("String", "EBIRD_API_KEY", "\"$ebirdApiKey\"")
-        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+        // Logic: REMOVE the buildConfigField for the Gemini API key. This is the critical change to prevent the leak.
+        // buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
         buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
         buildConfigField("String", "BACKEND_BASE_URL", "\"$backendBaseUrl\"")
     }
@@ -175,7 +180,8 @@ dependencies {
     implementation(libs.core.ktx)
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
-    implementation(libs.generativeai)
+    // Logic: The Gemini SDK is no longer needed on the client, so we can remove this dependency.
+    // implementation(libs.generativeai)
     implementation(libs.androidx.compose.material)
 
     testImplementation(libs.junit)

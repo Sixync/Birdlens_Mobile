@@ -2,6 +2,7 @@
 package com.android.birdlens.utils
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.OpenableColumns
 import java.io.File
@@ -54,5 +55,16 @@ class FileUtil(private val context: Context) {
             }
         }
         return result ?: "temp_media_file" // Fallback filename
+    }
+
+    // Logic: Add a helper function to convert a Bitmap into a temporary File in the cache,
+    // which is necessary for creating a RequestBody for multipart uploads with Retrofit.
+    fun createFileFromBitmap(bitmap: Bitmap, fileName: String): File {
+        val file = File(context.cacheDir, fileName)
+        val outputStream = FileOutputStream(file)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+        outputStream.flush()
+        outputStream.close()
+        return file
     }
 }
