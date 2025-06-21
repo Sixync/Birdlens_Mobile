@@ -38,6 +38,7 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.android.birdlens.R
 import com.android.birdlens.data.model.ebird.EbirdTaxonomy
+import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.viewmodel.BirdInfoUiState
 import com.android.birdlens.presentation.viewmodel.BirdInfoViewModel
@@ -142,7 +143,7 @@ fun BirdInfoContentNew(
             BirdImageHeader(
                 navController = navController,
                 commonName = birdData.commonName,
-                scientificName = birdData.scientificName, // Using scientific name as subtitle
+                scientificName = birdData.scientificName,
                 imageUrl = imageUrl,
                 onImageClick = onImageClick,
                 onBookmarkClick = onBookmarkClick
@@ -168,9 +169,23 @@ fun BirdInfoContentNew(
                     birdData.familyScientificName?.let { InfoRow(stringResource(R.string.bird_info_family_scientific), it) }
                     birdData.taxonOrder?.let { InfoRow(stringResource(R.string.bird_info_taxon_order), "%.0f".format(it)) }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+
+                // Logic: The button now navigates using the scientificName from the birdData object.
+                // This correctly matches the updated route and ViewModel.
+                Button(
+                    onClick = {
+                        navController.navigate(Screen.BirdRangeMap.createRoute(birdData.scientificName))
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
+                ) {
+                    Text("View Distribution Map", color = TextWhite)
+                }
             }
         }
-        // TODO: Add "Best place for photo" section similar to the design if data is available
     }
 }
 

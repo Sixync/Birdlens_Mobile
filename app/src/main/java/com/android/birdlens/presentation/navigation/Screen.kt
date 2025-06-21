@@ -34,10 +34,14 @@ sealed class Screen(val route: String) {
     data object BirdInfo : Screen("bird_info_screen/{speciesCode}") {
         fun createRoute(speciesCode: String) = "bird_info_screen/$speciesCode"
     }
+    // Logic: Changed the route parameter from {speciesId} to {scientificName}
+    // to accurately reflect the data being passed.
+    data object BirdRangeMap : Screen("bird_range_map_screen/{scientificName}") {
+        fun createRoute(scientificName: String) = "bird_range_map_screen/$scientificName"
+    }
     data object HotspotBirdList : Screen("hotspot_bird_list_screen/{hotspotId}") {
         fun createRoute(hotspotId: String) = "hotspot_bird_list_screen/$hotspotId"
     }
-    // Logic: Add the new screen for viewing a single hotspot's details and analysis.
     data object HotspotDetail : Screen("hotspot_detail_screen/{locId}") {
         fun createRoute(locId: String) = "hotspot_detail_screen/$locId"
     }

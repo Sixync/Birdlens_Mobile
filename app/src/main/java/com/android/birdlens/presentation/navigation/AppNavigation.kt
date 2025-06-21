@@ -23,6 +23,7 @@ import com.android.birdlens.presentation.ui.screens.allevents.AllEventsListScree
 import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
 import com.android.birdlens.presentation.ui.screens.birdidentifier.BirdIdentifierScreen
 import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen
+import com.android.birdlens.presentation.ui.screens.birdrangemap.BirdRangeMapScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.comparison.HotspotComparisonScreen
 import com.android.birdlens.presentation.ui.screens.community.CreatePostScreen
@@ -306,6 +307,22 @@ fun AppNavigation(
                 navController = navController,
                 subscriptionViewModel = subscriptionViewModel,
                 accountInfoViewModel = accountInfoViewModel
+            )
+        }
+        // Logic: Add a new composable block for the BirdRangeMapScreen.
+        // It takes speciesId as an argument to pass to the ViewModel.
+        composable(
+            route = Screen.BirdRangeMap.route,
+            arguments = listOf(navArgument("speciesId") { type = NavType.StringType })
+        ) {
+            val birdRangeMapViewModel: BirdRangeMapViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer { BirdRangeMapViewModel(application, createSavedStateHandle()) }
+                }
+            )
+            BirdRangeMapScreen(
+                navController = navController,
+                viewModel = birdRangeMapViewModel
             )
         }
     }

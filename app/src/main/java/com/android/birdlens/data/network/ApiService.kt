@@ -155,4 +155,9 @@ interface ApiService {
     // It sends the context (bird name, question, history) to the backend.
     @POST("ai/ask-question")
     suspend fun askAiQuestion(@Body request: AIQuestionRequest): Response<GenericApiResponse<AIQuestionResponse>>
+
+    // Logic: Add the new function to fetch species distribution range data.
+    // The species ID here corresponds to the `sisrecid` from the BirdLife data.
+    @GET("species/{scientific_name}/range")
+    suspend fun getSpeciesRange(@Path("scientific_name") scientificName: String): Response<SpeciesRangeApiResponse>
 }
