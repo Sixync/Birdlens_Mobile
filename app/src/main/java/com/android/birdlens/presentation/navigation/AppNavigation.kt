@@ -309,11 +309,11 @@ fun AppNavigation(
                 accountInfoViewModel = accountInfoViewModel
             )
         }
-        // Logic: Add a new composable block for the BirdRangeMapScreen.
-        // It takes speciesId as an argument to pass to the ViewModel.
+        // Logic: The argument name in navArgument is changed from "speciesId" to "scientificName"
+        // to match the route placeholder in Screen.kt. This resolves the crash.
         composable(
             route = Screen.BirdRangeMap.route,
-            arguments = listOf(navArgument("speciesId") { type = NavType.StringType })
+            arguments = listOf(navArgument("scientificName") { type = NavType.StringType })
         ) {
             val birdRangeMapViewModel: BirdRangeMapViewModel = viewModel(
                 factory = viewModelFactory {
