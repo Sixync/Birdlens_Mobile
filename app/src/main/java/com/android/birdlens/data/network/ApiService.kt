@@ -156,8 +156,8 @@ interface ApiService {
     @POST("ai/ask-question")
     suspend fun askAiQuestion(@Body request: AIQuestionRequest): Response<GenericApiResponse<AIQuestionResponse>>
 
-    // Logic: Add the new function to fetch species distribution range data.
-    // The species ID here corresponds to the `sisrecid` from the BirdLife data.
-    @GET("species/{scientific_name}/range")
-    suspend fun getSpeciesRange(@Path("scientific_name") scientificName: String): Response<SpeciesRangeApiResponse>
+    // Logic: The function signature is simplified for the test. It no longer needs parameters
+    // as the backend handler is hardcoded.
+    @GET("species/range")
+    suspend fun getSpeciesRange(): Response<SpeciesRangeApiResponse>
 }

@@ -4,7 +4,7 @@ package com.android.birdlens.data.model
 import com.google.gson.annotations.SerializedName
 
 /**
- * Represents the top-level API response from the /species/{id}/range endpoint.
+ * Represents the top-level API response from the /species/range endpoint.
  */
 data class SpeciesRangeApiResponse(
     @SerializedName("error") val error: Boolean,
@@ -16,8 +16,9 @@ data class SpeciesRangeApiResponse(
  * Represents a single range object from the backend API's data array.
  */
 data class ApiRangeData(
-    @SerializedName("presence") val presence: Int,
-    @SerializedName("origin") val origin: Int,
-    // The GeoJSON is received as a raw string from the backend.
-    @SerializedName("geo_json") val geoJsonString: String
+    // Logic: Changed the type from a custom wrapper to a nullable String.
+    // The backend sends the GeoJSON data as a double-encoded JSON string.
+    // This model now correctly expects a String, which will be parsed into
+    // a GeoJSON object in the ViewModel.
+    @SerializedName("geo_json") val geoJson: String?
 )

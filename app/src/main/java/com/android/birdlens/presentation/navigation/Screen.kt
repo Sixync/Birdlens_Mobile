@@ -34,11 +34,10 @@ sealed class Screen(val route: String) {
     data object BirdInfo : Screen("bird_info_screen/{speciesCode}") {
         fun createRoute(speciesCode: String) = "bird_info_screen/$speciesCode"
     }
-    // Logic: Changed the route parameter from {speciesId} to {scientificName}
-    // to accurately reflect the data being passed.
-    data object BirdRangeMap : Screen("bird_range_map_screen/{scientificName}") {
-        fun createRoute(scientificName: String) = "bird_range_map_screen/$scientificName"
-    }
+    // Logic: For the hardcoded test, the route is simplified to a static path.
+    // We no longer need to pass arguments in the route itself.
+    data object BirdRangeMap : Screen("bird_range_map_screen")
+
     data object HotspotBirdList : Screen("hotspot_bird_list_screen/{hotspotId}") {
         fun createRoute(hotspotId: String) = "hotspot_bird_list_screen/$hotspotId"
     }

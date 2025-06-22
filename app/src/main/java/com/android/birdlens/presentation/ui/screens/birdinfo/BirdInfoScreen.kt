@@ -173,13 +173,15 @@ fun BirdInfoContentNew(
                 Spacer(modifier = Modifier.height(24.dp))
 
 
-                // Logic: The button now navigates using the scientificName from the birdData object.
-                // This correctly matches the updated route and ViewModel.
+                // Logic: The onClick now navigates to the static route `Screen.BirdRangeMap.route`.
+                // This will trigger our hardcoded backend logic regardless of which bird's info page we are on.
                 Button(
                     onClick = {
-                        navController.navigate(Screen.BirdRangeMap.createRoute(birdData.scientificName))
+                        navController.navigate(Screen.BirdRangeMap.route)
                     },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
                 ) {
                     Text("View Distribution Map", color = TextWhite)

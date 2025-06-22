@@ -251,9 +251,6 @@ fun AppNavigation(
             route = Screen.HotspotDetail.route,
             arguments = listOf(navArgument("locId") { type = NavType.StringType })
         ) { backStackEntry ->
-            // Logic: Replaced the manual factory with the modern viewModelFactory DSL.
-            // This is a more robust way to ensure the SavedStateHandle with the "locId" argument
-            // is correctly passed to the HotspotDetailViewModel. This is the core fix.
             val hotspotDetailViewModel: HotspotDetailViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { HotspotDetailViewModel(application, createSavedStateHandle()) }
@@ -309,12 +306,10 @@ fun AppNavigation(
                 accountInfoViewModel = accountInfoViewModel
             )
         }
-        // Logic: The argument name in navArgument is changed from "speciesId" to "scientificName"
-        // to match the route placeholder in Screen.kt. This resolves the crash.
-        composable(
-            route = Screen.BirdRangeMap.route,
-            arguments = listOf(navArgument("scientificName") { type = NavType.StringType })
-        ) {
+
+        // Logic: The composable for BirdRangeMap is now simplified.
+        // It no longer defines or expects arguments in the route.
+        composable(route = Screen.BirdRangeMap.route) {
             val birdRangeMapViewModel: BirdRangeMapViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { BirdRangeMapViewModel(application, createSavedStateHandle()) }

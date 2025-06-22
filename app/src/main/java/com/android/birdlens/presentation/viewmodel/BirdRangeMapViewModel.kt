@@ -42,8 +42,6 @@ class BirdRangeMapViewModel(
 ) : AndroidViewModel(application) {
 
     private val speciesRepository = SpeciesRepository(application.applicationContext)
-    // Logic: Changed the key to 'scientificName' to match the updated navigation route.
-    val scientificName: String = savedStateHandle["scientificName"] ?: ""
 
     private val _uiState = MutableStateFlow<BirdRangeUiState>(BirdRangeUiState.Loading)
     val uiState: StateFlow<BirdRangeUiState> = _uiState.asStateFlow()
@@ -53,22 +51,24 @@ class BirdRangeMapViewModel(
     }
 
     init {
-        if (scientificName.isNotBlank()) {
-            fetchRangeData()
-        } else {
-            _uiState.value = BirdRangeUiState.Error("Scientific name not provided.")
-        }
+        Log.d(TAG, "ViewModel initialized for hardcoded test. Fetching data.")
+        fetchRangeData()
     }
 
     fun fetchRangeData() {
         viewModelScope.launch {
             _uiState.value = BirdRangeUiState.Loading
             try {
-                // Logic: Call the repository with the scientificName retrieved from navigation.
-                val response = speciesRepository.getSpeciesRange(scientificName)
-                if (response.isSuccessful && response.body()?.data != null) {
-                    val parsedData = parseApiResponse(response.body()!!.data!!)
-                    _uiState.value = BirdRangeUiState.Success(parsedData)
+                val response = speciesRepository.getSpeciesRange()
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (!apiResponse.error && apiResponse.data != null) {
+                        val parsedData = parseApiResponse(apiResponse.data)
+                        _uiState.value = BirdRangeUiState.Success(parsedData)
+                    } else {
+                        val errorMessage = apiResponse.message ?: "API returned an error with no message."
+                        _uiState.value = BirdRangeUiState.Error(errorMessage)
+                    }
                 } else {
                     val errorBody = response.errorBody()?.string()
                     _uiState.value = BirdRangeUiState.Error(ErrorUtils.extractMessage(errorBody, "Failed to load range data"))
@@ -80,10 +80,6 @@ class BirdRangeMapViewModel(
         }
     }
 
-    /**
-     * Parses the raw API response into a structured [SpeciesRangeData] object
-     * with lists of LatLng points for easy rendering on the map.
-     */
     private fun parseApiResponse(apiData: List<com.android.birdlens.data.model.ApiRangeData>): SpeciesRangeData {
         val resident = mutableListOf<List<LatLng>>()
         val breeding = mutableListOf<List<LatLng>>()
@@ -91,12 +87,14 @@ class BirdRangeMapViewModel(
         val passage = mutableListOf<List<LatLng>>()
 
         apiData.forEach { rangeData ->
-            val polygons = parseGeoJsonToLatLngLists(rangeData.geoJsonString)
-            when (rangeData.presence) {
-                1 -> resident.addAll(polygons) // Resident
-                2 -> breeding.addAll(polygons) // Breeding Season
-                3 -> nonBreeding.addAll(polygons) // Non-breeding Season
-                4 -> passage.addAll(polygons) // Passage
+            // Logic: The geoJson property is now a nullable String containing the GeoJSON data.
+            // Check if it's not null or blank before attempting to parse it.
+            if (!rangeData.geoJson.isNullOrBlank()) {
+                val polygons = parseGeoJsonToLatLngLists(rangeData.geoJson)
+                // For the test, we'll just add all polygons to the 'resident' list.
+                // In a real scenario, you would check a 'presence' or 'origin' field
+                // to decide which list (resident, breeding, etc.) to add the polygons to.
+                resident.addAll(polygons)
             }
         }
         return SpeciesRangeData(resident, breeding, nonBreeding, passage)
@@ -114,17 +112,22 @@ class BirdRangeMapViewModel(
             val type = geoJson.getString("type")
 
             if (type == "MultiPolygon") {
+                // For MultiPolygon, the structure is [[[[lng, lat],...]]]]
                 for (i in 0 until coordinates.length()) {
                     val polygonArray = coordinates.getJSONArray(i)
+                    // Each polygon has one outer ring and potentially inner rings (holes).
+                    // We are only interested in the outer ring, which is the first element.
                     val exteriorRing = polygonArray.getJSONArray(0)
                     val polygonPoints = mutableListOf<LatLng>()
                     for (j in 0 until exteriorRing.length()) {
                         val point = exteriorRing.getJSONArray(j)
-                        polygonPoints.add(LatLng(point.getDouble(1), point.getDouble(0))) // GeoJSON is (lng, lat), LatLng is (lat, lng)
+                        // GeoJSON is (longitude, latitude), but Google Maps LatLng is (latitude, longitude).
+                        polygonPoints.add(LatLng(point.getDouble(1), point.getDouble(0)))
                     }
                     allPolygons.add(polygonPoints)
                 }
             } else if (type == "Polygon") {
+                // For Polygon, the structure is [[[lng, lat],...]]
                 val exteriorRing = coordinates.getJSONArray(0)
                 val polygonPoints = mutableListOf<LatLng>()
                 for (j in 0 until exteriorRing.length()) {
