@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
+// app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
 package com.android.birdlens.presentation.ui.screens.map
 
 import android.Manifest
@@ -12,6 +12,8 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward // Corrected import
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -32,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -40,15 +44,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import coil.compose.rememberAsyncImagePainter
 import com.android.birdlens.R
 import com.android.birdlens.data.CountrySetting
 import com.android.birdlens.data.UserSettingsManager
@@ -56,25 +60,31 @@ import com.android.birdlens.data.local.BirdSpecies
 import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
+import com.android.birdlens.presentation.viewmodel.BirdSpeciesInfo
+import com.android.birdlens.presentation.viewmodel.HotspotSheetDetails
 import com.android.birdlens.presentation.viewmodel.MapUiState
 import com.android.birdlens.presentation.viewmodel.MapViewModel
 import com.android.birdlens.ui.theme.*
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.TileOverlayOptions
 import com.google.maps.android.compose.*
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.google.maps.android.compose.clustering.Clustering
+import com.google.maps.android.heatmaps.HeatmapTileProvider
 import kotlinx.coroutines.launch
 
+// bitmapDescriptorFromVector can be moved to a utils file if used elsewhere
 fun bitmapDescriptorFromVector(
     context: Context,
     @DrawableRes vectorResId: Int,
-    tintColor: Int? = null
+    tintColor: Int? = null,
+    sizeMultiplier: Float = 1.0f // New parameter for size
 ): BitmapDescriptor? {
     return try {
         ContextCompat.getDrawable(context, vectorResId)?.let { vectorDrawable ->
@@ -82,8 +92,12 @@ fun bitmapDescriptorFromVector(
             if (tintColor != null) {
                 DrawableCompat.setTint(mutatedDrawable, tintColor)
             }
-            val width = mutatedDrawable.intrinsicWidth.takeIf { it > 0 } ?: 72
-            val height = mutatedDrawable.intrinsicHeight.takeIf { it > 0 } ?: 72
+            val originalWidth = mutatedDrawable.intrinsicWidth.takeIf { it > 0 } ?: 72
+            val originalHeight = mutatedDrawable.intrinsicHeight.takeIf { it > 0 } ?: 72
+
+            val width = (originalWidth * sizeMultiplier).toInt()
+            val height = (originalHeight * sizeMultiplier).toInt()
+
             mutatedDrawable.setBounds(0, 0, width, height)
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
@@ -126,24 +140,34 @@ fun MapScreen(
     val isCompareModeActive by mapViewModel.isCompareModeActive.collectAsState()
     val selectedHotspotsForComparison by mapViewModel.selectedHotspotsForComparison.collectAsState()
 
-    var customHotspotIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
-    var selectedHotspotIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var defaultPinIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var bookmarkedPinIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var compareSelectedPinIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+
     var mapsSdkInitialized by remember { mutableStateOf(false) }
 
     val currentHomeCountrySetting by mapViewModel.currentHomeCountrySetting.collectAsState()
     var showHomeCountryDialog by remember { mutableStateOf(false) }
+
+    val selectedHotspotDetails by mapViewModel.selectedHotspotDetails.collectAsState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+
+    val mapProperties by mapViewModel.mapProperties
+    val uiSettings by mapViewModel.mapUiSettings
+    val isHeatmapVisible by mapViewModel.isHeatmapVisible.collectAsState()
+    val heatmapData by mapViewModel.heatmapData.collectAsState()
+    val isMapLocked by mapViewModel.isMapLocked.collectAsState()
+    val bookmarkedHotspotIds by mapViewModel.bookmarkedHotspotIds.collectAsState()
 
 
     LaunchedEffect(Unit) {
         try {
             MapsInitializer.initialize(context.applicationContext, MapsInitializer.Renderer.LATEST) { renderer ->
                 Log.d("MapScreen", "Maps SDK Initialized with renderer: $renderer")
-                customHotspotIcon = bitmapDescriptorFromVector(context, R.drawable.ic_map_pin)
-                selectedHotspotIcon = bitmapDescriptorFromVector(
-                    context,
-                    R.drawable.ic_map_pin,
-                    ContextCompat.getColor(context, R.color.purple_500) // Example tint for selected
-                )
+                defaultPinIcon = bitmapDescriptorFromVector(context, R.drawable.ic_custom_pin, sizeMultiplier = 1.0f)
+                bookmarkedPinIcon = bitmapDescriptorFromVector(context, R.drawable.ic_custom_pin_selected, tintColor = ContextCompat.getColor(context, R.color.purple_500), sizeMultiplier = 1.1f) // Example: Purple for bookmarked
+                compareSelectedPinIcon = bitmapDescriptorFromVector(context, R.drawable.ic_custom_pin_selected, tintColor = ContextCompat.getColor(context, R.color.teal_700), sizeMultiplier = 1.1f) // Example: Teal for comparison selection
                 mapsSdkInitialized = true
             }
         } catch (e: Exception) {
@@ -159,13 +183,6 @@ fun MapScreen(
             Manifest.permission.ACCESS_FINE_LOCATION,
         )
     )
-
-    var mapProperties by remember {
-        mutableStateOf(MapProperties(mapType = MapType.NORMAL, latLngBoundsForCameraTarget = null))
-    }
-    var uiSettings by remember {
-        mutableStateOf(MapUiSettings(zoomControlsEnabled = true, mapToolbarEnabled = true, compassEnabled = true))
-    }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(mapViewModel.initialMapCenter, mapViewModel.initialMapZoom)
@@ -194,10 +211,14 @@ fun MapScreen(
         }
     }
 
-    LaunchedEffect(locationPermissionsState.allPermissionsGranted, mapsSdkInitialized) {
+    LaunchedEffect(locationPermissionsState.allPermissionsGranted, mapsSdkInitialized, isMapLocked) {
         if (mapsSdkInitialized) {
-            mapProperties = mapProperties.copy(isMyLocationEnabled = locationPermissionsState.allPermissionsGranted)
-            uiSettings = uiSettings.copy(myLocationButtonEnabled = locationPermissionsState.allPermissionsGranted)
+            mapViewModel._mapProperties.value = mapViewModel._mapProperties.value.copy(isMyLocationEnabled = locationPermissionsState.allPermissionsGranted)
+            mapViewModel._mapUiSettings.value = mapViewModel._mapUiSettings.value.copy(
+                myLocationButtonEnabled = locationPermissionsState.allPermissionsGranted,
+                scrollGesturesEnabled = !isMapLocked,
+                zoomGesturesEnabled = !isMapLocked
+            )
         }
     }
 
@@ -214,6 +235,23 @@ fun MapScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val floatingActionItems = listOf(
+        FloatingMapActionItem(
+            icon = { Icon(Icons.Filled.Layers, contentDescription = stringResource(R.string.map_action_change_map_type), tint = TextWhite) },
+            contentDescriptionResId = R.string.map_action_change_map_type,
+            onClick = { mapViewModel.toggleMapType() }
+        ),
+        FloatingMapActionItem(
+            icon = { Icon(if (isMapLocked) Icons.Filled.Lock else Icons.Filled.LockOpen, contentDescription = stringResource(if(isMapLocked) R.string.map_action_unlock_map else R.string.map_action_lock_map), tint = TextWhite) },
+            contentDescriptionResId = if(isMapLocked) R.string.map_action_unlock_map else R.string.map_action_lock_map,
+            onClick = { mapViewModel.toggleMapLock() },
+            isSelected = isMapLocked
+        ),
+        FloatingMapActionItem(
+            icon = { Icon(if (isHeatmapVisible) Icons.Filled.LocalFireDepartment else Icons.Outlined.LocalFireDepartment, contentDescription = stringResource(if(isHeatmapVisible) R.string.map_action_hide_heatmap else R.string.map_action_show_heatmap), tint = TextWhite) },
+            contentDescriptionResId = if(isHeatmapVisible) R.string.map_action_hide_heatmap else R.string.map_action_show_heatmap,
+            onClick = { mapViewModel.toggleHeatmap() },
+            isSelected = isHeatmapVisible
+        ),
         FloatingMapActionItem(
             icon = { Icon(Icons.Filled.Home, contentDescription = stringResource(R.string.map_action_home), tint = TextWhite) },
             contentDescriptionResId = R.string.map_action_home,
@@ -249,7 +287,8 @@ fun MapScreen(
             icon = { Icon(if (isCompareModeActive) Icons.Filled.Compare else Icons.Outlined.Compare, contentDescription = stringResource(if (isCompareModeActive) R.string.map_action_exit_compare else R.string.map_action_start_compare), tint = if (isCompareModeActive) GreenWave2 else TextWhite) },
             contentDescriptionResId = if (isCompareModeActive) R.string.map_action_exit_compare else R.string.map_action_start_compare,
             onClick = { mapViewModel.toggleCompareMode() },
-            isSelected = isCompareModeActive
+            isSelected = isCompareModeActive,
+            badgeCount = if (isCompareModeActive && selectedHotspotsForComparison.isNotEmpty()) selectedHotspotsForComparison.size else null
         )
     )
 
@@ -279,6 +318,29 @@ fun MapScreen(
         },
         showBottomBar = true
     ) { innerPadding ->
+        // Use ModalBottomSheet for Material 3
+        if (selectedHotspotDetails != null) {
+            ModalBottomSheet(
+                onDismissRequest = { mapViewModel.clearSelectedHotspot() },
+                sheetState = sheetState,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                containerColor = CardBackground.copy(alpha = 0.95f),
+            ) {
+                // Content of the bottom sheet
+                selectedHotspotDetails?.let { details ->
+                    HotspotDetailsSheetContent(
+                        details = details,
+                        onNavigateToFullDetails = {
+                            navController.navigate(Screen.HotspotDetail.createRoute(details.hotspot.locId))
+                            coroutineScope.launch { sheetState.hide() }
+                                .invokeOnCompletion { if (it == null) mapViewModel.clearSelectedHotspot() }
+                        },
+                        onBookmarkToggle = { mapViewModel.toggleBookmarkCurrentHotspot() }
+                    )
+                }
+            }
+        }
+
         Box(modifier = Modifier
             .padding(innerPadding)
             .fillMaxSize()) {
@@ -299,39 +361,82 @@ fun MapScreen(
                         Toast.makeText(context, context.getString(R.string.map_toast_poi_clicked, poi.name), Toast.LENGTH_SHORT).show()
                     }
                 ) {
-                    if (customHotspotIcon != null) {
-                        (mapUiState as? MapUiState.Success)?.hotspots?.forEach { ebirdHotspot ->
-                            val isSelectedForCompare = selectedHotspotsForComparison.any { it.locId == ebirdHotspot.locId }
-                            val currentIcon = if (isCompareModeActive && isSelectedForCompare && selectedHotspotIcon != null) {
-                                selectedHotspotIcon
-                            } else {
-                                customHotspotIcon
-                            }
-                            Marker(
-                                state = MarkerState(position = LatLng(ebirdHotspot.lat, ebirdHotspot.lng)),
-                                title = ebirdHotspot.locName,
-                                snippet = stringResource(R.string.map_marker_snippet_species, ebirdHotspot.numSpeciesAllTime ?: "N/A"),
-                                icon = currentIcon,
-                                zIndex = if (isCompareModeActive && isSelectedForCompare) 1.0f else 0.0f,
-                                // Logic: The first tap on the marker does nothing but show the info window.
-                                // We return false to allow the default behavior (showing the window) to proceed.
-                                onClick = { marker ->
-                                    mapViewModel.notifyMarkerInteraction()
-                                    if (isCompareModeActive) {
-                                        mapViewModel.onHotspotSelectedForComparison(ebirdHotspot)
-                                        true // Consume the click in compare mode
-                                    } else {
-                                        false // Allow info window to show
-                                    }
-                                },
-                                // Logic: Tapping the info window (the popup) now triggers navigation.
-                                onInfoWindowClick = {
-                                    if (!isCompareModeActive) {
-                                        navController.navigate(Screen.HotspotBirdList.createRoute(ebirdHotspot.locId))
-                                    }
+                    val currentHotspots = (mapUiState as? MapUiState.Success)?.hotspots ?: emptyList()
+                    if (currentHotspots.isNotEmpty()) {
+                        Clustering( // Use the Clustering composable
+                            items = currentHotspots, // EbirdNearbyHotspot now implements ClusterItem
+                            onClusterClick = { cluster -> // Type is Cluster<EbirdNearbyHotspot>
+                                val newZoom = cameraPositionState.position.zoom + 2
+                                cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(cluster.position, newZoom))
+                                false // Return false to allow default handling (zoom to bounds)
+                            },
+                            onClusterItemClick = { hotspot -> // Type is EbirdNearbyHotspot
+                                mapViewModel.onHotspotMarkerClick(hotspot)
+                                coroutineScope.launch { sheetState.expand() }
+                                true // Consume the click, we're handling it
+                            },
+                            clusterContent = { cluster -> // Type is Cluster<EbirdNearbyHotspot>
+                                Surface(
+                                    shape = CircleShape,
+                                    color = ButtonGreen.copy(alpha = 0.8f),
+                                    contentColor = TextWhite,
+                                    border = BorderStroke(2.dp, TextWhite.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = cluster.size.toString(),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
-                            )
-                        }
+                            },
+                            // clusterItemContent is for rendering individual markers if needed,
+                            // but default markers are usually fine. Here we can customize the icon.
+                            clusterItemContent = { hotspot -> // Type is EbirdNearbyHotspot
+                                val isSelectedForCompare = selectedHotspotsForComparison.any { it.locId == hotspot.locId }
+                                val isBookmarked = bookmarkedHotspotIds.contains(hotspot.locId)
+                                val currentIcon = when {
+                                    isCompareModeActive && isSelectedForCompare -> compareSelectedPinIcon
+                                    isBookmarked -> bookmarkedPinIcon
+                                    else -> defaultPinIcon
+                                } ?: defaultPinIcon // Fallback
+
+                                Marker( // Render a normal marker for individual items
+                                    state = MarkerState(position = hotspot.position),
+                                    title = hotspot.title,
+                                    snippet = hotspot.snippet,
+                                    icon = currentIcon,
+                                    zIndex = if (isCompareModeActive && isSelectedForCompare) 1.0f else hotspot.zIndex ?: 0f
+                                )
+                            }
+                        )
+                    }
+
+                    if (isHeatmapVisible && heatmapData.isNotEmpty()) {
+                        AndroidView(
+                            factory = { context ->
+                                val mapView = MapView(context)
+                                mapView.onCreate(null)
+                                mapView.getMapAsync { googleMap ->
+                                    // Remove previous overlays if needed
+                                    googleMap.clear()
+
+                                    // Create the heatmap tile provider with weighted data
+                                    val heatmapProvider = com.google.maps.android.heatmaps.HeatmapTileProvider.Builder()
+                                        .weightedData(heatmapData) // heatmapData: List<WeightedLatLng>
+                                        .radius(30) // Customize as needed
+                                        .opacity(0.7) // Customize as needed
+                                        .build()
+
+                                    // Add the heatmap overlay to the map
+                                    googleMap.addTileOverlay(
+                                        com.google.android.gms.maps.model.TileOverlayOptions().tileProvider(heatmapProvider)
+                                    )
+                                }
+                                mapView
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
             } else if (!locationPermissionsState.allPermissionsGranted && mapsSdkInitialized) {
@@ -381,6 +486,7 @@ fun MapScreen(
             }
         }
 
+
         if (showHomeCountryDialog) {
             HomeCountrySelectionDialog(
                 currentHomeCountryCode = currentHomeCountrySetting.code,
@@ -393,6 +499,138 @@ fun MapScreen(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HotspotDetailsSheetContent(
+    details: HotspotSheetDetails,
+    onNavigateToFullDetails: () -> Unit,
+    onBookmarkToggle: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 200.dp)
+            .padding(16.dp)
+            .navigationBarsPadding()
+    ) {
+        Text(
+            text = details.hotspot.locName,
+            style = MaterialTheme.typography.headlineSmall,
+            color = TextWhite,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Visibility, contentDescription = stringResource(R.string.map_sheet_recent_sightings), tint = TextWhite.copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.map_sheet_recent_sightings) + ": ${details.recentSightingsCount}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextWhite.copy(alpha = 0.8f)
+            )
+        }
+        details.hotspot.numSpeciesAllTime?.let {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top=4.dp)) {
+                Icon(Icons.Outlined.ListAlt, contentDescription = stringResource(R.string.map_sheet_total_species), tint = TextWhite.copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.map_sheet_total_species) + ": $it",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextWhite.copy(alpha = 0.8f)
+                )
+            }
+        }
+
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            stringResource(R.string.map_sheet_notable_bird),
+            style = MaterialTheme.typography.titleMedium,
+            color = TextWhite
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = rememberAsyncImagePainter(
+                    model = details.notableBirdImageUrl,
+                    placeholder = painterResource(id = R.drawable.ic_bird_placeholder),
+                    error = painterResource(id = R.drawable.ic_bird_placeholder)
+                ),
+                contentDescription = "Notable bird",
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Gray.copy(alpha = 0.3f)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                "Example: Northern Cardinal",
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextWhite
+            )
+        }
+
+        if (details.speciesList.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.map_sheet_species_list_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = TextWhite
+            )
+            LazyRow(
+                modifier = Modifier.padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(details.speciesList.take(5)) { species ->
+                    AssistChip(
+                        onClick = { /* TODO: Navigate to bird info */ },
+                        label = { Text(species.commonName, color = TextWhite) },
+                        colors = AssistChipDefaults.assistChipColors(containerColor = ButtonGreen.copy(alpha = 0.7f)),
+                        border = null
+                    )
+                }
+            }
+        }
+
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            OutlinedButton(
+                onClick = onBookmarkToggle,
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = GreenWave2),
+                border = BorderStroke(1.dp, GreenWave2)
+            ) {
+                Icon(
+                    if (details.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                    contentDescription = if (details.isBookmarked) stringResource(R.string.map_action_unbookmark_hotspot) else stringResource(R.string.map_action_bookmark_hotspot)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (details.isBookmarked) stringResource(R.string.map_action_unbookmark_hotspot) else stringResource(R.string.map_action_bookmark_hotspot))
+            }
+            Button(
+                onClick = onNavigateToFullDetails,
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
+            ) {
+                Text(stringResource(R.string.map_sheet_view_full_details), color = TextWhite)
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = TextWhite)
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
 
 @Composable
 fun PermissionRationaleUI(onGrantPermissions: () -> Unit, showRationale: Boolean) {
@@ -710,22 +948,5 @@ fun HomeCountrySelectionDialog(
                 }
             }
         }
-    }
-}
-
-
-@Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
-@Composable
-fun MapScreenPreviewWithCompareModeActive() {
-    val mockViewModel: MapViewModel = viewModel()
-    LaunchedEffect(Unit) {
-        (mockViewModel.isCompareModeActive as MutableStateFlow).value = true
-        (mockViewModel.selectedHotspotsForComparison as MutableStateFlow).value = listOf(
-            EbirdNearbyHotspot("L1", "Test Hotspot 1", "VN", null, null, 10.0, 106.0, "2023-10-10", 50),
-            EbirdNearbyHotspot("L2", "Test Hotspot 2 with a very long name to test ellipsis", "VN", null, null, 10.1, 106.1, "2023-10-11", 70)
-        )
-    }
-    BirdlensTheme {
-        MapScreen(navController = rememberNavController(), mapViewModel = mockViewModel)
     }
 }
