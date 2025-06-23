@@ -8,10 +8,13 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit // Import TimeUnit
+import java.io.FileInputStream
+import java.util.Properties
 
 object RetrofitInstance {
     // Logic: Remove the hardcoded BASE_URL. It will now come from BuildConfig.
     // private const val BASE_URL = "http://10.0.2.2/"
+
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
