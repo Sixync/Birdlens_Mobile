@@ -46,20 +46,32 @@ class BirdRangeMapViewModel(
     private val _uiState = MutableStateFlow<BirdRangeUiState>(BirdRangeUiState.Loading)
     val uiState: StateFlow<BirdRangeUiState> = _uiState.asStateFlow()
 
+    // Logic: The scientific name is retrieved from the SavedStateHandle.
+    private val scientificName: String? = savedStateHandle["scientificName"]
+
     companion object {
         private const val TAG = "BirdRangeMapVM"
     }
 
     init {
-        Log.d(TAG, "ViewModel initialized for hardcoded test. Fetching data.")
-        fetchRangeData()
+        // Logic: The ViewModel now fetches data dynamically based on the name passed to it.
+        // It checks if the scientificName is valid before making a network call.
+        if (!scientificName.isNullOrBlank()) {
+            Log.d(TAG, "ViewModel initialized. Fetching range data for: $scientificName")
+            fetchRangeData(scientificName)
+        } else {
+            Log.e(TAG, "Scientific name is null or blank in SavedStateHandle.")
+            _uiState.value = BirdRangeUiState.Error("Scientific name not provided.")
+        }
     }
 
-    fun fetchRangeData() {
+    // Logic: The function now takes the scientific name as a parameter.
+    fun fetchRangeData(scientificName: String) {
         viewModelScope.launch {
             _uiState.value = BirdRangeUiState.Loading
             try {
-                val response = speciesRepository.getSpeciesRange()
+                // Logic: The repository is called with the specific scientific name.
+                val response = speciesRepository.getSpeciesRange(scientificName)
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (!apiResponse.error && apiResponse.data != null) {
@@ -75,7 +87,7 @@ class BirdRangeMapViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.value = BirdRangeUiState.Error(e.localizedMessage ?: "An unknown network error occurred.")
-                Log.e(TAG, "Exception fetching species range", e)
+                Log.e(TAG, "Exception fetching species range for '$scientificName'", e)
             }
         }
     }

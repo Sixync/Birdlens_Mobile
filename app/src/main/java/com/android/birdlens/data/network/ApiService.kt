@@ -156,8 +156,9 @@ interface ApiService {
     @POST("ai/ask-question")
     suspend fun askAiQuestion(@Body request: AIQuestionRequest): Response<GenericApiResponse<AIQuestionResponse>>
 
-    // Logic: The function signature is simplified for the test. It no longer needs parameters
-    // as the backend handler is hardcoded.
+    // Logic: The function signature is updated to accept the scientific name.
+    // This name will be sent as a query parameter in the GET request.
+    // e.g., GET /species/range?scientific_name=Anas%20platyrhynchos
     @GET("species/range")
-    suspend fun getSpeciesRange(): Response<SpeciesRangeApiResponse>
+    suspend fun getSpeciesRange(@Query("scientific_name") scientificName: String): Response<SpeciesRangeApiResponse>
 }

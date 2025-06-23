@@ -307,9 +307,12 @@ fun AppNavigation(
             )
         }
 
-        // Logic: The composable for BirdRangeMap is now simplified.
-        // It no longer defines or expects arguments in the route.
-        composable(route = Screen.BirdRangeMap.route) {
+        // Logic: The composable for BirdRangeMap now defines the `scientificName` argument
+        // This makes the value available to the ViewModel via its SavedStateHandle.
+        composable(
+            route = Screen.BirdRangeMap.route,
+            arguments = listOf(navArgument("scientificName") { type = NavType.StringType })
+        ) {
             val birdRangeMapViewModel: BirdRangeMapViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { BirdRangeMapViewModel(application, createSavedStateHandle()) }

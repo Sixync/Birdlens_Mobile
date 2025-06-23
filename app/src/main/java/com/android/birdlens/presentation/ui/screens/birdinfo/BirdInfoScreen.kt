@@ -173,11 +173,11 @@ fun BirdInfoContentNew(
                 Spacer(modifier = Modifier.height(24.dp))
 
 
-                // Logic: The onClick now navigates to the static route `Screen.BirdRangeMap.route`.
-                // This will trigger our hardcoded backend logic regardless of which bird's info page we are on.
+                // Logic: The onClick now navigates to the BirdRangeMap screen and passes
+                // the bird's scientific name as a route argument.
                 Button(
                     onClick = {
-                        navController.navigate(Screen.BirdRangeMap.route)
+                        navController.navigate(Screen.BirdRangeMap.createRoute(birdData.scientificName))
                     },
                     modifier = Modifier
                         .fillMaxWidth()

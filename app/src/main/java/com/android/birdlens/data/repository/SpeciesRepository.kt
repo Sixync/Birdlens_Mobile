@@ -14,10 +14,10 @@ class SpeciesRepository(context: Context) {
     private val apiService: ApiService = RetrofitInstance.api(context)
 
     /**
-     * Logic: The function signature is simplified to reflect the hardcoded test.
-     * It no longer takes parameters and just calls the parameter-less API function.
+     * Logic: The function signature is updated to take a scientific name.
+     * This name is passed directly to the updated ApiService function.
      */
-    suspend fun getSpeciesRange(): Response<SpeciesRangeApiResponse> {
-        return apiService.getSpeciesRange()
+    suspend fun getSpeciesRange(scientificName: String): Response<SpeciesRangeApiResponse> {
+        return apiService.getSpeciesRange(scientificName)
     }
 }

@@ -21,10 +21,10 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
     private val apiService = RetrofitInstance.api(application.applicationContext)
 
     init {
-        // We only fetch if there's potentially a logged-in user.
-        // If this VM is created while logged out, this will likely result in an error,
-        // which is handled, but onUserLoggedOut provides a more direct state reset.
-        fetchCurrentUser()
+        // Logic: The automatic fetch on initialization is removed.
+        // This prevents the ViewModel from making a network call with a potentially
+        // expired token when the app first starts, which was causing the race condition.
+        // fetchCurrentUser()
     }
 
     fun fetchCurrentUser() {
@@ -56,7 +56,8 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     // Logic: Add a public function to be called on logout.
-    // This explicitly resets the state to Idle, signaling that we no longer have user info.
+    // This explicitly resets the state to Idle, ensuring the UI doesn't show stale
+    // user data after the user has been signed out.
     fun onUserLoggedOut() {
         _uiState.value = AccountInfoUiState.Idle
         Log.d("AccountInfoVM", "User state has been reset to Idle due to logout.")
