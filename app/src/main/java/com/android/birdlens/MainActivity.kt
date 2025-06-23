@@ -109,10 +109,12 @@ class MainActivity : ComponentActivity() {
                     AuthEventBus.events.collect { event ->
                         when (event) {
                             is AuthEvent.TokenExpiredOrInvalid -> {
-                                // Logic: Add a check to prevent multiple navigations if events fire rapidly.
+                                // Logic: Added a check to prevent multiple navigations if events fire rapidly.
+                                // It checks if the user is not already on or being navigated to the Welcome screen.
                                 if (navController.currentDestination?.route != Screen.Welcome.route) {
                                     Log.w(TAG_AUTH, "Token expired/invalid event received. Logging out user.")
                                     Toast.makeText(this@MainActivity, "Your session has expired. Please log in again.", Toast.LENGTH_LONG).show()
+                                    // Logic: Explicitly reset the account info state and sign out completely.
                                     accountInfoViewModel.onUserLoggedOut()
                                     googleAuthViewModel.signOut(applicationContext)
                                     navController.navigate(Screen.Welcome.route) {

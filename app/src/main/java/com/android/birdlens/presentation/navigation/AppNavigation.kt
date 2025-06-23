@@ -23,6 +23,7 @@ import com.android.birdlens.presentation.ui.screens.allevents.AllEventsListScree
 import com.android.birdlens.presentation.ui.screens.alltours.AllToursListScreen
 import com.android.birdlens.presentation.ui.screens.birdidentifier.BirdIdentifierScreen
 import com.android.birdlens.presentation.ui.screens.birdinfo.BirdInfoScreen
+import com.android.birdlens.presentation.ui.screens.birdrangemap.BirdRangeMapScreen
 import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.comparison.HotspotComparisonScreen
 import com.android.birdlens.presentation.ui.screens.community.CreatePostScreen
@@ -250,9 +251,6 @@ fun AppNavigation(
             route = Screen.HotspotDetail.route,
             arguments = listOf(navArgument("locId") { type = NavType.StringType })
         ) { backStackEntry ->
-            // Logic: Replaced the manual factory with the modern viewModelFactory DSL.
-            // This is a more robust way to ensure the SavedStateHandle with the "locId" argument
-            // is correctly passed to the HotspotDetailViewModel. This is the core fix.
             val hotspotDetailViewModel: HotspotDetailViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer { HotspotDetailViewModel(application, createSavedStateHandle()) }
@@ -306,6 +304,23 @@ fun AppNavigation(
                 navController = navController,
                 subscriptionViewModel = subscriptionViewModel,
                 accountInfoViewModel = accountInfoViewModel
+            )
+        }
+
+        // Logic: The composable for BirdRangeMap now defines the `scientificName` argument
+        // This makes the value available to the ViewModel via its SavedStateHandle.
+        composable(
+            route = Screen.BirdRangeMap.route,
+            arguments = listOf(navArgument("scientificName") { type = NavType.StringType })
+        ) {
+            val birdRangeMapViewModel: BirdRangeMapViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer { BirdRangeMapViewModel(application, createSavedStateHandle()) }
+                }
+            )
+            BirdRangeMapScreen(
+                navController = navController,
+                viewModel = birdRangeMapViewModel
             )
         }
     }

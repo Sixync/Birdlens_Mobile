@@ -52,3 +52,7 @@ val DividerColor = TextWhite.copy(alpha = 0.2f)
 
 // Added for image scrim
 val ImageScrimColor = Color.Black.copy(alpha = 0.4f)
+val RangeResident = Color(0x994CAF50) // Green
+val RangeBreeding = Color(0x99FFC107) // Amber/Yellow
+val RangeNonBreeding = Color(0x992196F3) // Blue
+val RangePassage = Color(0x999C27B0) // Purple

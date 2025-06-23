@@ -155,4 +155,10 @@ interface ApiService {
     // It sends the context (bird name, question, history) to the backend.
     @POST("ai/ask-question")
     suspend fun askAiQuestion(@Body request: AIQuestionRequest): Response<GenericApiResponse<AIQuestionResponse>>
+
+    // Logic: The function signature is updated to accept the scientific name.
+    // This name will be sent as a query parameter in the GET request.
+    // e.g., GET /species/range?scientific_name=Anas%20platyrhynchos
+    @GET("species/range")
+    suspend fun getSpeciesRange(@Query("scientific_name") scientificName: String): Response<SpeciesRangeApiResponse>
 }
