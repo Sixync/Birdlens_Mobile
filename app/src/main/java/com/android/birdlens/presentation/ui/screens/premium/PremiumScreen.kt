@@ -1,7 +1,11 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/premium/PremiumScreen.kt
 package com.android.birdlens.presentation.ui.screens.premium
 
+import android.app.Activity
 import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,6 +17,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -51,6 +56,26 @@ fun PremiumScreen(
 
     val isAlreadySubscribed = (accountState as? AccountInfoUiState.Success)?.user?.subscription == "ExBird"
 
+    // Logic: This launcher starts the CheckoutActivity and waits for a result.
+    val checkoutLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // Payment was successful. Show feedback and refresh the user's profile data.
+            Toast.makeText(context, "Subscription successful! Refreshing profile...", Toast.LENGTH_SHORT).show()
+            accountInfoViewModel.fetchCurrentUser()
+        } else {
+            // Payment was cancelled or failed.
+            Toast.makeText(context, "Payment process was not completed.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Logic: This ensures the latest user data is fetched every time this screen is entered.
+    // This prevents the user from seeing the "Subscribe" button if they already have a subscription.
+    LaunchedEffect(key1 = Unit) {
+        accountInfoViewModel.fetchCurrentUser()
+    }
+
     AppScaffold(
         navController = navController,
         topBar = { SimpleTopAppBar(title = "Birdlens Premium") }
@@ -86,8 +111,9 @@ fun PremiumScreen(
                             subscription = exBirdSubscription,
                             isSubscribed = isAlreadySubscribed,
                             onSubscribeClick = {
+                                // Logic: Launch the CheckoutActivity using the new launcher.
                                 val intent = Intent(context, CheckoutActivity::class.java)
-                                context.startActivity(intent)
+                                checkoutLauncher.launch(intent)
                             }
                         )
                     } else {
