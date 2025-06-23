@@ -1,6 +1,7 @@
 // EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/payment/CheckoutActivity.kt
 package com.android.birdlens.presentation.ui.screens.payment
 
+import android.app.Activity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -60,12 +61,34 @@ import kotlin.coroutines.suspendCoroutine
 
 class CheckoutActivity : ComponentActivity() {
     companion object {
-        // Logic: Use the centralized URL from BuildConfig instead of a hardcoded constant.
         private val BACKEND_URL = BuildConfig.BACKEND_BASE_URL
         private const val TAG = "CheckoutActivity"
     }
 
     private lateinit var okHttpClient: OkHttpClient
+
+    // Logic: This function is now the callback for the PaymentSheet. It sets the activity result and finishes.
+    private fun onPaymentSheetResult(paymentResult: PaymentSheetResult) {
+        when (paymentResult) {
+            is PaymentSheetResult.Completed -> {
+                showToast("Payment complete!")
+                setResult(Activity.RESULT_OK)
+                finish()
+            }
+            is PaymentSheetResult.Canceled -> {
+                showToast("Payment canceled.")
+                setResult(Activity.RESULT_CANCELED)
+                finish()
+            }
+            is PaymentSheetResult.Failed -> {
+                val errorMessage = paymentResult.error.localizedMessage ?: "Payment failed: Unknown error"
+                Log.e(TAG, "PaymentSheetResult.Failed: ${paymentResult.error.message}", paymentResult.error)
+                showToast("Payment failed: $errorMessage")
+                setResult(Activity.RESULT_CANCELED)
+                finish()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,22 +140,16 @@ class CheckoutActivity : ComponentActivity() {
         var isLoading by remember { mutableStateOf(true) }
         var error by remember { mutableStateOf<String?>(null) }
 
-        val paymentSheet = rememberPaymentSheet { paymentResult ->
-            isLoading = false
-            when (paymentResult) {
-                is PaymentSheetResult.Completed -> showToast("Payment complete!")
-                is PaymentSheetResult.Canceled -> showToast("Payment canceled!")
-                is PaymentSheetResult.Failed -> {
-                    error = paymentResult.error.localizedMessage ?: "Payment failed: Unknown error"
-                    Log.e(TAG, "PaymentSheetResult.Failed: ${paymentResult.error.message}", paymentResult.error)
-                }
-            }
-        }
+        // Logic: Pass our new onPaymentSheetResult function as the callback.
+        val paymentSheet = rememberPaymentSheet(::onPaymentSheetResult)
 
         error?.let { errorMessage ->
             ErrorAlert(
                 errorMessage = errorMessage,
-                onDismiss = { error = null }
+                onDismiss = {
+                    error = null
+                    finish() // Close the activity if fetching the payment intent fails.
+                }
             )
         }
 
@@ -152,18 +169,16 @@ class CheckoutActivity : ComponentActivity() {
             CircularProgressIndicator(color = TextWhite)
             Spacer(modifier = Modifier.height(16.dp))
             Text("Preparing your payment...", color = TextWhite)
-        } else {
+        } else if (error == null) {
+            // Only show the pay button if there was no error fetching the payment details
             PayButton(
-                enabled = paymentIntentClientSecret != null && !isLoading,
+                enabled = paymentIntentClientSecret != null,
                 onClick = {
                     paymentIntentClientSecret?.let {
-                        isLoading = true
                         onPayClicked(
                             paymentSheet = paymentSheet,
                             paymentIntentClientSecret = it,
                         )
-                    } ?: run {
-                        error = "Payment details not available. Please try again."
                     }
                 }
             )
@@ -203,7 +218,6 @@ class CheckoutActivity : ComponentActivity() {
     }
 
     private suspend fun fetchPaymentIntent(): Result<String> = suspendCoroutine { continuation ->
-        // Logic: Correctly form the full URL using the centralized base URL.
         val url = "$BACKEND_URL/create-payment-intent".replace("//create", "/create")
 
         val shoppingCartContent = """
