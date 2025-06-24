@@ -18,13 +18,21 @@ data class CountrySetting(
 object UserSettingsManager {
     private const val PREFS_NAME = "birdlens_user_settings_prefs"
     private const val KEY_HOME_COUNTRY_CODE = "home_country_code"
+    private const val KEY_DEFAULT_RADIUS_KM = "default_radius_km"
     private const val TAG = "UserSettingsManager"
 
+    // Default Radius
+    const val DEFAULT_RADIUS_KM = 50
+
+    // Predefined Countries
     val VIETNAM_SETTINGS = CountrySetting("VN", "Vietnam", LatLng(16.047079, 108.220825), 5.5f)
     val USA_SETTINGS = CountrySetting("US", "United States", LatLng(39.8283, -98.5795), 3.5f)
     val UK_SETTINGS = CountrySetting("GB", "United Kingdom", LatLng(54.0, -2.0), 5.0f)
     val JAPAN_SETTINGS = CountrySetting("JP", "Japan", LatLng(36.2048, 138.2529), 5.0f)
     val AUSTRALIA_SETTINGS = CountrySetting("AU", "Australia", LatLng(-25.2744, 133.7751), 3.5f)
+    val GERMANY_SETTINGS = CountrySetting("DE", "Germany", LatLng(51.1657, 10.4515), 5.5f)
+    val FRANCE_SETTINGS = CountrySetting("FR", "France", LatLng(46.603354, 1.888334), 5.0f)
+    val CANADA_SETTINGS = CountrySetting("CA", "Canada", LatLng(56.1304, -106.3468), 3.0f)
 
 
     val PREDEFINED_COUNTRIES: List<CountrySetting> = listOf(
@@ -32,7 +40,10 @@ object UserSettingsManager {
         USA_SETTINGS,
         UK_SETTINGS,
         JAPAN_SETTINGS,
-        AUSTRALIA_SETTINGS
+        AUSTRALIA_SETTINGS,
+        GERMANY_SETTINGS,
+        FRANCE_SETTINGS,
+        CANADA_SETTINGS
     ).sortedBy { it.name }
 
     private fun getPreferences(context: Context): SharedPreferences {
@@ -49,6 +60,18 @@ object UserSettingsManager {
         Log.d(TAG, "Retrieved home country code: $savedCode")
         return PREDEFINED_COUNTRIES.find { it.code == savedCode } ?: VIETNAM_SETTINGS
     }
+
+    fun saveDefaultRadiusKm(context: Context, radiusKm: Int) {
+        getPreferences(context).edit().putInt(KEY_DEFAULT_RADIUS_KM, radiusKm).apply()
+        Log.d(TAG, "Saved default radius: $radiusKm km")
+    }
+
+    fun getDefaultRadiusKm(context: Context): Int {
+        val radius = getPreferences(context).getInt(KEY_DEFAULT_RADIUS_KM, DEFAULT_RADIUS_KM)
+        Log.d(TAG, "Retrieved default radius: $radius km")
+        return radius
+    }
+
 
     /**
      * Gets a country code from LatLng using Android's Geocoder.

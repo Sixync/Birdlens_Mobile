@@ -1,4 +1,3 @@
-// app/src/main/java/com/android/birdlens/presentation/viewmodel/MapViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
 import android.app.Application
@@ -76,11 +75,9 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentHomeCountrySetting = MutableStateFlow(userSettingsManager.getHomeCountrySetting(context))
     val currentHomeCountrySetting: StateFlow<CountrySetting> = _currentHomeCountrySetting.asStateFlow()
 
-    // For Bottom Sheet
     private val _selectedHotspotDetails = MutableStateFlow<HotspotSheetDetails?>(null)
     val selectedHotspotDetails: StateFlow<HotspotSheetDetails?> = _selectedHotspotDetails.asStateFlow()
 
-    // Map Controls
     val _mapProperties = mutableStateOf(MapProperties(mapType = MapType.NORMAL))
     val mapProperties: androidx.compose.runtime.State<MapProperties> = _mapProperties
 
@@ -96,13 +93,17 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _isMapLocked = MutableStateFlow(false)
     val isMapLocked: StateFlow<Boolean> = _isMapLocked.asStateFlow()
 
-    private val _bookmarkedHotspotIds = MutableStateFlow<Set<String>>(emptySet()) // In-memory for now
+    private val _bookmarkedHotspotIds = MutableStateFlow<Set<String>>(emptySet())
     val bookmarkedHotspotIds: StateFlow<Set<String>> = _bookmarkedHotspotIds.asStateFlow()
+
+    private val _currentRadiusKm = MutableStateFlow(userSettingsManager.getDefaultRadiusKm(context))
+    val currentRadiusKm: StateFlow<Int> = _currentRadiusKm.asStateFlow()
+
+    val availableRadii = listOf(10, 20, 50, 100, 200)
 
 
     companion object {
         const val SHOW_HOTSPOTS_MIN_ZOOM_LEVEL = 5.0f
-        const val HOTSPOT_FETCH_RADIUS_KM = 200
         private const val CAMERA_IDLE_DEBOUNCE_MS = 750L
         private const val SIGNIFICANT_PAN_THRESHOLD_DEGREES = 0.3
         private const val TAG = "MapViewModel"
@@ -159,7 +160,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                 val searchResults = birdSpeciesRepository.searchBirds(query)
                 if (searchResults.isNotEmpty()) {
                     val foundBird = searchResults.first()
-                    val regionCodeForSearch = determineRegionCodeForSpeciesSearch()
+                    val regionCodeForSearch = currentHomeCountrySetting.value.code // Search within selected home country
                     _uiState.value = MapUiState.Loading(context.getString(R.string.map_search_ai_finding_region, foundBird.commonName, regionCodeForSearch))
                     fetchHotspotsForSpeciesCode(foundBird.speciesCode, foundBird.commonName, regionCodeForSearch)
                 } else {
@@ -175,11 +176,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                 Log.e(TAG, errorMsg, e)
             }
         }
-    }
-
-    private fun determineRegionCodeForSpeciesSearch(): String {
-        val currentMapCenter = cameraPositionStateHolder?.position?.target ?: initialMapCenter
-        return userSettingsManager.getCountryCodeFromLatLng(context, currentMapCenter)
     }
 
     fun onSearchQueryCleared(currentMapCenter: LatLng) {
@@ -222,7 +218,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         fetchJob?.cancel()
-        Log.d(TAG, "Preparing to fetch general hotspots. Center: $center, Zoom: $zoom, ForceRefresh: $forceRefresh")
+        Log.d(TAG, "Preparing to fetch general hotspots. Center: $center, Zoom: $zoom, Radius: ${currentRadiusKm.value}km, ForceRefresh: $forceRefresh")
 
         fetchJob = viewModelScope.launch {
             if (!forceRefresh) {
@@ -232,13 +228,14 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                 Log.d(TAG, "Job cancelled before network processing for general hotspots."); return@launch
             }
 
-            val countryCodeToFilterHotspots: String? = null
+            val countryCodeToFilterHotspots: String? = currentHomeCountrySetting.value.code
 
             if (zoom < SHOW_HOTSPOTS_MIN_ZOOM_LEVEL && !forceRefresh && !isSearchActive) {
                 if (areHotspotsVisible || (_uiState.value as? MapUiState.Success)?.hotspots?.isNotEmpty() == true) {
                     _uiState.value = MapUiState.Success(emptyList(), zoom, center, 0)
                 }
                 areHotspotsVisible = false
+                _heatmapData.value = emptyList() // Clear heatmap data as well
                 Log.d(TAG, "Zoom ($zoom) < threshold. Hiding/Clearing general hotspots.")
                 return@launch
             }
@@ -252,19 +249,19 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     Log.d(TAG, "Proceeding with fetch due to forceRefresh or significant pan, clearing marker lock.")
                 }
                 _uiState.value = MapUiState.Loading(if (forceRefresh) context.getString(R.string.map_toast_refreshing_hotspots) else null)
-                Log.d(TAG, "Fetching general hotspots (filter: $countryCodeToFilterHotspots) around $center, radius $HOTSPOT_FETCH_RADIUS_KM km")
+                Log.d(TAG, "Fetching general hotspots (filter: $countryCodeToFilterHotspots) around $center, radius ${currentRadiusKm.value} km")
                 try {
                     val fetchedHotspots = hotspotRepository.getNearbyHotspots(
-                        center = center, radiusKm = HOTSPOT_FETCH_RADIUS_KM,
+                        center = center, radiusKm = currentRadiusKm.value, // Use selected radius
                         currentBounds = null,
-                        countryCodeFilter = countryCodeToFilterHotspots,
+                        countryCodeFilter = countryCodeToFilterHotspots, // Use home country code
                         forceRefresh = forceRefresh
                     ).sortedByDescending { it.numSpeciesAllTime ?: 0 }
 
                     if (!isActive) { Log.d(TAG, "Job cancelled DURING/AFTER network call for general hotspots."); return@launch }
 
-                    _uiState.value = MapUiState.Success(fetchedHotspots, zoom, center, HOTSPOT_FETCH_RADIUS_KM)
-                    if (fetchedHotspots.isNotEmpty()) { // Generate heatmap data
+                    _uiState.value = MapUiState.Success(fetchedHotspots, zoom, center, currentRadiusKm.value)
+                    if (fetchedHotspots.isNotEmpty()) {
                         _heatmapData.value = fetchedHotspots.map { WeightedLatLng(LatLng(it.lat, it.lng), (it.numSpeciesAllTime ?: 1).toDouble()) }
                     } else {
                         _heatmapData.value = emptyList()
@@ -283,8 +280,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 Log.d(TAG, "View has not changed enough for general hotspot refetch. Current Center: $center, Last Fetched: $lastFetchedCenter")
                 (_uiState.value as? MapUiState.Success)?.let {
-                    if (abs(it.zoomLevelContext - zoom) > 0.1f || it.fetchedCenter != center) {
-                        _uiState.value = it.copy(zoomLevelContext = zoom, fetchedCenter = center)
+                    if (abs(it.zoomLevelContext - zoom) > 0.1f || it.fetchedCenter != center || it.fetchedRadiusKm != currentRadiusKm.value) {
+                        _uiState.value = it.copy(zoomLevelContext = zoom, fetchedCenter = center, fetchedRadiusKm = currentRadiusKm.value)
                     }
                 }
             }
@@ -295,6 +292,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             Log.d(TAG, "Fetching hotspots for speciesCode: '$speciesCode' in region: '$regionCode'")
             try {
+                // Species search should probably ignore the radius filter and show all sightings in the region.
                 val hotspotsWithBird = hotspotRepository.getHotspotsForSpeciesInCountry(speciesCode, regionCode)
                 if (!isActive) {
                     Log.i(TAG, "Species hotspot fetch cancelled for $speciesCode in $regionCode"); return@launch
@@ -305,7 +303,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     val mapCenter = targetCountrySetting?.center ?: calculateCenterOfHotspots(hotspotsWithBird) ?: initialMapCenter
                     val mapZoom = targetCountrySetting?.zoom ?: 6.0f
 
-                    _uiState.value = MapUiState.Success(hotspotsWithBird, mapZoom, mapCenter, 0)
+                    _uiState.value = MapUiState.Success(hotspotsWithBird, mapZoom, mapCenter, 0) // Radius 0 or region-wide
                     _heatmapData.value = hotspotsWithBird.map { WeightedLatLng(LatLng(it.lat, it.lng)) }
                     areHotspotsVisible = true
                     lastFetchedCenter = mapCenter
@@ -330,22 +328,19 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _selectedHotspotDetails.value = HotspotSheetDetails(
                 hotspot = hotspot,
-                recentSightingsCount = 0, // Placeholder, fetch actual count
-                notableBirdImageUrl = null, // Placeholder, fetch actual image
+                recentSightingsCount = 0,
+                notableBirdImageUrl = null,
                 isBookmarked = _bookmarkedHotspotIds.value.contains(hotspot.locId)
             )
-            // Fetch detailed data for the bottom sheet
             try {
                 val recentObsResponse = hotspotRepository.getEbirdApiService().getRecentObservationsForHotspot(hotspot.locId, back = 7)
                 val recentSightings = if (recentObsResponse.isSuccessful) recentObsResponse.body() ?: emptyList() else emptyList()
 
-                // Fetch species list for the hotspot
                 val speciesListResponse = hotspotRepository.getEbirdApiService().getSpeciesListForHotspot(hotspot.locId)
                 val speciesCodes = if (speciesListResponse.isSuccessful) speciesListResponse.body() ?: emptyList() else emptyList()
 
                 val speciesDetails = mutableListOf<BirdSpeciesInfo>()
                 if (speciesCodes.isNotEmpty()) {
-                    // Fetch details for first few species as an example
                     val speciesToFetchDetailsFor = speciesCodes.take(5)
                     val taxonomyResponse = hotspotRepository.getEbirdApiService().getSpeciesTaxonomy(speciesCodes = speciesToFetchDetailsFor.joinToString(","))
                     if (taxonomyResponse.isSuccessful) {
@@ -355,27 +350,24 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                                     commonName = taxon.commonName,
                                     speciesCode = taxon.speciesCode,
                                     scientificName = taxon.scientificName,
-                                    observationDate = null, count = null, isRecent = false, imageUrl = null // Image can be fetched here if needed
+                                    observationDate = null, count = null, isRecent = false, imageUrl = null
                                 )
                             )
                         }
                     }
                 }
 
-
                 _selectedHotspotDetails.update { currentDetails ->
                     currentDetails?.copy(
                         recentSightingsCount = recentSightings.size,
                         notableBirdImageUrl = recentSightings.firstOrNull()?.let {
-                            // Placeholder logic to get an image, replace with actual logic
-                            "https://images.unsplash.com/photo-1518992028580-6d57bd80f2dd?w=100&q=80" // Example
+                            "https://images.unsplash.com/photo-1518992028580-6d57bd80f2dd?w=100&q=80"
                         },
                         speciesList = speciesDetails
                     )
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error fetching details for bottom sheet for ${hotspot.locId}", e)
-                // Optionally update _selectedHotspotDetails to show an error state in the sheet
             }
         }
     }
@@ -419,14 +411,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     currentBookmarks + hotspotId
                 }
             }
-            // Update the bottom sheet state to reflect bookmark change
             _selectedHotspotDetails.update {
                 it?.copy(isBookmarked = _bookmarkedHotspotIds.value.contains(hotspotId))
             }
-            // Persist bookmarks if using Room/SharedPreferences
         }
     }
-
 
     private fun calculateCenterOfHotspots(hotspots: List<EbirdNearbyHotspot>): LatLng? {
         if (hotspots.isEmpty()) return null
@@ -445,17 +434,33 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         return latDiff > SIGNIFICANT_PAN_THRESHOLD_DEGREES || lngDiff > SIGNIFICANT_PAN_THRESHOLD_DEGREES
     }
 
-
     fun setHomeCountry(countrySetting: CountrySetting) {
         userSettingsManager.saveHomeCountryCode(context, countrySetting.code)
         _currentHomeCountrySetting.value = countrySetting
         Log.i(TAG, "Home country set to: ${countrySetting.name}. Map should re-center.")
 
+        // Camera will be animated by LaunchedEffect in MapScreen.
+        // Data fetching will be triggered after camera animation or by requestHotspotsForCurrentView
+        // based on the updated home country context.
+        // Forcing a refresh here to ensure data reflects the new country immediately.
         if (!isSearchActive) {
             requestHotspotsForCurrentView(countrySetting.center, countrySetting.zoom, forceRefresh = true)
         } else {
+            // If search is active, we might want to re-run search for the new country
             if (_searchQuery.value.isNotBlank()){
-                onBirdSearchSubmitted()
+                onBirdSearchSubmitted() // This will now use the new home country for region code
+            }
+        }
+    }
+
+    fun setRadius(radiusKm: Int) {
+        if (_currentRadiusKm.value != radiusKm) {
+            _currentRadiusKm.value = radiusKm
+            userSettingsManager.saveDefaultRadiusKm(context, radiusKm)
+            Log.i(TAG, "Search radius set to $radiusKm km.")
+            // Re-fetch data with the new radius from the current map center
+            cameraPositionStateHolder?.let {
+                requestHotspotsForCurrentView(it.position.target, it.position.zoom, forceRefresh = true)
             }
         }
     }
@@ -492,6 +497,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     currentSelection + hotspot
                 } else {
                     Log.w(TAG, context.getString(R.string.map_compare_max_items_toast, MAX_COMPARISON_ITEMS))
+                    // Optionally show a toast to the user
                     currentSelection
                 }
             }
