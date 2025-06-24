@@ -177,6 +177,22 @@
     <string name="map_permission_denied_rationale">Nếu bạn đã từ chối quyền vĩnh viễn, bạn cần bật quyền đó trong cài đặt ứng dụng.</string>
     <string name="map_error_loading_detailed">Không thể tải bản đồ. Đảm bảo Dịch vụ Google Play đã được cập nhật, khóa API hợp lệ và SDK Bản đồ được khởi tạo chính xác.</string>
     <string name="map_marker_snippet_species">Loài: %1$s</string>
+    <string name="map_action_change_map_type">Thay đổi Loại Bản đồ</string>
+    <string name="map_action_lock_map">Khóa Bản đồ</string>
+    <string name="map_action_unlock_map">Mở khóa Bản đồ</string>
+    <string name="map_action_show_heatmap">Hiện Bản đồ Nhiệt</string>
+    <string name="map_action_hide_heatmap">Ẩn Bản đồ Nhiệt</string>
+    <string name="map_action_bookmark_hotspot">Đánh dấu Điểm nóng</string>
+    <string name="map_action_unbookmark_hotspot">Bỏ đánh dấu Điểm nóng</string>
+    <string name="map_sheet_recent_sightings">Quan sát gần đây (7 ngày)</string>
+    <string name="map_sheet_total_species">Tổng số loài đã ghi nhận</string>
+    <string name="map_sheet_notable_bird">Chim nổi bật (Ví dụ)</string>
+    <string name="map_sheet_view_full_details">Xem Chi tiết Đầy đủ</string>
+    <string name="map_type_normal">Thường</string>
+    <string name="map_type_satellite">Vệ tinh</string>
+    <string name="map_type_hybrid">Kết hợp</string>
+    <string name="map_type_terrain">Địa hình</string>
+    <string name="map_sheet_species_list_title">Một số loài đã thấy ở đây</string>
 
     <!-- Map Screen Search (Local Search) -->
     <string name="map_search_placeholder">Tìm kiếm loài chim…</string>
