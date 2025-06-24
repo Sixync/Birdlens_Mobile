@@ -102,7 +102,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         const val SHOW_HOTSPOTS_MIN_ZOOM_LEVEL = 5.0f
-        const val HOTSPOT_FETCH_RADIUS_KM = 50
+        const val HOTSPOT_FETCH_RADIUS_KM = 200
         private const val CAMERA_IDLE_DEBOUNCE_MS = 750L
         private const val SIGNIFICANT_PAN_THRESHOLD_DEGREES = 0.3
         private const val TAG = "MapViewModel"

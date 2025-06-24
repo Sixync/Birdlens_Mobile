@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,7 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
+// Removed AndroidView import as it's no longer used for heatmap
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
@@ -68,15 +69,15 @@ import com.android.birdlens.ui.theme.*
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.MapView
+// Removed MapView import
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.TileOverlayOptions
+// Removed com.google.android.gms.maps.model.TileOverlayOptions as maps-compose has its own TileOverlay
 import com.google.maps.android.compose.*
 import com.google.maps.android.compose.clustering.Clustering
-import com.google.maps.android.heatmaps.HeatmapTileProvider
+import com.google.maps.android.heatmaps.HeatmapTileProvider // This is correct
 import kotlinx.coroutines.launch
 
 // bitmapDescriptorFromVector can be moved to a utils file if used elsewhere
@@ -166,8 +167,8 @@ fun MapScreen(
             MapsInitializer.initialize(context.applicationContext, MapsInitializer.Renderer.LATEST) { renderer ->
                 Log.d("MapScreen", "Maps SDK Initialized with renderer: $renderer")
                 defaultPinIcon = bitmapDescriptorFromVector(context, R.drawable.ic_custom_pin, sizeMultiplier = 1.0f)
-                bookmarkedPinIcon = bitmapDescriptorFromVector(context, R.drawable.ic_custom_pin_selected, tintColor = ContextCompat.getColor(context, R.color.purple_500), sizeMultiplier = 1.1f) // Example: Purple for bookmarked
-                compareSelectedPinIcon = bitmapDescriptorFromVector(context, R.drawable.ic_custom_pin_selected, tintColor = ContextCompat.getColor(context, R.color.teal_700), sizeMultiplier = 1.1f) // Example: Teal for comparison selection
+                bookmarkedPinIcon = bitmapDescriptorFromVector(context, R.drawable.ic_custom_pin_selected, tintColor = ContextCompat.getColor(context, R.color.purple_500), sizeMultiplier = 1.1f)
+                compareSelectedPinIcon = bitmapDescriptorFromVector(context, R.drawable.ic_custom_pin_selected, tintColor = ContextCompat.getColor(context, R.color.teal_700), sizeMultiplier = 1.1f)
                 mapsSdkInitialized = true
             }
         } catch (e: Exception) {
@@ -284,7 +285,7 @@ fun MapScreen(
             onClick = { navController.navigate(Screen.BirdIdentifier.route) }
         ),
         FloatingMapActionItem(
-            icon = { Icon(if (isCompareModeActive) Icons.Filled.Compare else Icons.Outlined.Compare, contentDescription = stringResource(if (isCompareModeActive) R.string.map_action_exit_compare else R.string.map_action_start_compare), tint = if (isCompareModeActive) GreenWave2 else TextWhite) },
+            icon = { Icon(Icons.Filled.Compare, contentDescription = stringResource(if (isCompareModeActive) R.string.map_action_exit_compare else R.string.map_action_start_compare), tint = if (isCompareModeActive) GreenWave2 else TextWhite) },
             contentDescriptionResId = if (isCompareModeActive) R.string.map_action_exit_compare else R.string.map_action_start_compare,
             onClick = { mapViewModel.toggleCompareMode() },
             isSelected = isCompareModeActive,
@@ -318,7 +319,6 @@ fun MapScreen(
         },
         showBottomBar = true
     ) { innerPadding ->
-        // Use ModalBottomSheet for Material 3
         if (selectedHotspotDetails != null) {
             ModalBottomSheet(
                 onDismissRequest = { mapViewModel.clearSelectedHotspot() },
@@ -326,7 +326,6 @@ fun MapScreen(
                 shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                 containerColor = CardBackground.copy(alpha = 0.95f),
             ) {
-                // Content of the bottom sheet
                 selectedHotspotDetails?.let { details ->
                     HotspotDetailsSheetContent(
                         details = details,
@@ -363,19 +362,19 @@ fun MapScreen(
                 ) {
                     val currentHotspots = (mapUiState as? MapUiState.Success)?.hotspots ?: emptyList()
                     if (currentHotspots.isNotEmpty()) {
-                        Clustering( // Use the Clustering composable
-                            items = currentHotspots, // EbirdNearbyHotspot now implements ClusterItem
-                            onClusterClick = { cluster -> // Type is Cluster<EbirdNearbyHotspot>
+                        Clustering(
+                            items = currentHotspots,
+                            onClusterClick = { cluster ->
                                 val newZoom = cameraPositionState.position.zoom + 2
                                 cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(cluster.position, newZoom))
-                                false // Return false to allow default handling (zoom to bounds)
+                                false
                             },
-                            onClusterItemClick = { hotspot -> // Type is EbirdNearbyHotspot
+                            onClusterItemClick = { hotspot ->
                                 mapViewModel.onHotspotMarkerClick(hotspot)
                                 coroutineScope.launch { sheetState.expand() }
-                                true // Consume the click, we're handling it
+                                true
                             },
-                            clusterContent = { cluster -> // Type is Cluster<EbirdNearbyHotspot>
+                            clusterContent = { cluster ->
                                 Surface(
                                     shape = CircleShape,
                                     color = ButtonGreen.copy(alpha = 0.8f),
@@ -390,52 +389,48 @@ fun MapScreen(
                                     )
                                 }
                             },
-                            // clusterItemContent is for rendering individual markers if needed,
-                            // but default markers are usually fine. Here we can customize the icon.
-                            clusterItemContent = { hotspot -> // Type is EbirdNearbyHotspot
+                            clusterItemContent = { hotspot ->
                                 val isSelectedForCompare = selectedHotspotsForComparison.any { it.locId == hotspot.locId }
                                 val isBookmarked = bookmarkedHotspotIds.contains(hotspot.locId)
-                                val currentIcon = when {
-                                    isCompareModeActive && isSelectedForCompare -> compareSelectedPinIcon
-                                    isBookmarked -> bookmarkedPinIcon
-                                    else -> defaultPinIcon
-                                } ?: defaultPinIcon // Fallback
 
-                                Marker( // Render a normal marker for individual items
-                                    state = MarkerState(position = hotspot.position),
-                                    title = hotspot.title,
-                                    snippet = hotspot.snippet,
-                                    icon = currentIcon,
-                                    zIndex = if (isCompareModeActive && isSelectedForCompare) 1.0f else hotspot.zIndex ?: 0f
+                                val iconRes = when {
+                                    isCompareModeActive && isSelectedForCompare -> R.drawable.ic_custom_pin_selected
+                                    isBookmarked -> R.drawable.ic_custom_pin_selected
+                                    else -> R.drawable.ic_custom_pin
+                                }
+                                val iconTint = when {
+                                    isCompareModeActive && isSelectedForCompare -> colorResource(id = R.color.teal_700)
+                                    isBookmarked -> colorResource(id = R.color.purple_500)
+                                    else -> Color.Unspecified
+                                }
+                                val iconSize = when {
+                                    (isCompareModeActive && isSelectedForCompare) || isBookmarked -> 42.dp
+                                    else -> 36.dp
+                                }
+
+                                Icon(
+                                    painter = painterResource(id = iconRes),
+                                    contentDescription = hotspot.title,
+                                    tint = iconTint,
+                                    modifier = Modifier.size(iconSize)
                                 )
                             }
                         )
                     }
 
+                    // Corrected Heatmap Implementation
                     if (isHeatmapVisible && heatmapData.isNotEmpty()) {
-                        AndroidView(
-                            factory = { context ->
-                                val mapView = MapView(context)
-                                mapView.onCreate(null)
-                                mapView.getMapAsync { googleMap ->
-                                    // Remove previous overlays if needed
-                                    googleMap.clear()
-
-                                    // Create the heatmap tile provider with weighted data
-                                    val heatmapProvider = com.google.maps.android.heatmaps.HeatmapTileProvider.Builder()
-                                        .weightedData(heatmapData) // heatmapData: List<WeightedLatLng>
-                                        .radius(30) // Customize as needed
-                                        .opacity(0.7) // Customize as needed
-                                        .build()
-
-                                    // Add the heatmap overlay to the map
-                                    googleMap.addTileOverlay(
-                                        com.google.android.gms.maps.model.TileOverlayOptions().tileProvider(heatmapProvider)
-                                    )
-                                }
-                                mapView
-                            },
-                            modifier = Modifier.fillMaxSize()
+                        val heatmapTileProvider = remember(heatmapData) { // Recreate if heatmapData changes
+                            HeatmapTileProvider.Builder()
+                                .weightedData(heatmapData)
+                                .radius(50) // Example: Adjust radius as needed for desired visual effect
+                                .opacity(0.7) // Example: Adjust opacity
+                                .build()
+                        }
+                        TileOverlay(
+                            tileProvider = heatmapTileProvider,
+                            visible = true, // Visibility is controlled by the outer `if`
+                            fadeIn = true   // Optional: fade in effect
                         )
                     }
                 }
@@ -512,7 +507,7 @@ fun HotspotDetailsSheetContent(
             .fillMaxWidth()
             .defaultMinSize(minHeight = 200.dp)
             .padding(16.dp)
-            .navigationBarsPadding()
+            .navigationBarsPadding() // Handles system navigation bar insets
     ) {
         Text(
             text = details.hotspot.locName,
@@ -570,7 +565,8 @@ fun HotspotDetailsSheetContent(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                "Example: Northern Cardinal",
+                // This is an example, replace with actual data if available
+                "Example: Northern Cardinal", // This should come from details if available
                 style = MaterialTheme.typography.bodyLarge,
                 color = TextWhite
             )
@@ -589,7 +585,7 @@ fun HotspotDetailsSheetContent(
             ) {
                 items(details.speciesList.take(5)) { species ->
                     AssistChip(
-                        onClick = { /* TODO: Navigate to bird info */ },
+                        onClick = { /* TODO: Navigate to bird info for species.speciesCode */ },
                         label = { Text(species.commonName, color = TextWhite) },
                         colors = AssistChipDefaults.assistChipColors(containerColor = ButtonGreen.copy(alpha = 0.7f)),
                         border = null
@@ -627,7 +623,7 @@ fun HotspotDetailsSheetContent(
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = TextWhite)
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp)) // Add some padding at the very bottom of the sheet content
     }
 }
 
@@ -695,7 +691,7 @@ fun LoadingErrorUI(mapUiState: MapUiState) {
     }
 
     (mapUiState as? MapUiState.Error)?.let { errorState ->
-        LaunchedEffect(errorState.message) {
+        LaunchedEffect(errorState.message) { // To show toast only once
             Toast.makeText(context, errorState.message, Toast.LENGTH_LONG).show()
         }
     }
@@ -715,11 +711,11 @@ fun MapScreenHeader(
     onSearchResultClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.padding(bottom = 8.dp)) {
+    Column(modifier = modifier.padding(bottom = 8.dp)) { // Add padding to the overall header container
         CenterAlignedTopAppBar(
             title = {
                 Text(
-                    stringResource(R.string.map_screen_title_birdlens).uppercase(),
+                    stringResource(R.string.map_screen_title_birdlens).uppercase(), // Uppercase for style
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, color = GreenWave2, letterSpacing = 1.sp)
                 )
             },
@@ -734,16 +730,17 @@ fun MapScreenHeader(
                 }
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-            modifier = Modifier.padding(top = 8.dp)
+            modifier = Modifier.padding(top = 8.dp) // Padding for the app bar itself
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(4.dp)) // Space between app bar and search bar
 
+        // Search Bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp), // Horizontal padding for the search bar
             placeholder = { Text(stringResource(R.string.map_search_placeholder), color = TextWhite.copy(alpha = 0.7f)) },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.map_search_icon_description), tint = TextWhite) },
             trailingIcon = {
@@ -756,16 +753,16 @@ fun MapScreenHeader(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
             singleLine = true,
-            shape = RoundedCornerShape(50),
+            shape = RoundedCornerShape(50), // Fully rounded shape
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = TextWhite,
                 unfocusedTextColor = TextWhite,
-                focusedContainerColor = SearchBarBackground,
+                focusedContainerColor = SearchBarBackground, // Defined in Theme
                 unfocusedContainerColor = SearchBarBackground,
                 disabledContainerColor = SearchBarBackground,
                 cursorColor = TextWhite,
-                focusedBorderColor = GreenWave2,
-                unfocusedBorderColor = Color.Transparent,
+                focusedBorderColor = GreenWave2, // Highlight color when focused
+                unfocusedBorderColor = Color.Transparent, // No border when not focused
                 focusedLeadingIconColor = TextWhite,
                 unfocusedLeadingIconColor = TextWhite.copy(alpha = 0.7f),
                 focusedTrailingIconColor = TextWhite,
@@ -775,16 +772,17 @@ fun MapScreenHeader(
             )
         )
 
+        // Search Results Dropdown
         if (searchResults.isNotEmpty()) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp), // Match search bar padding
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.95f)),
+                colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.95f)), // Slightly more opaque for readability
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
+                LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) { // Limit height
                     items(searchResults, key = { it.speciesCode }) { bird ->
                         Row(
                             modifier = Modifier
@@ -794,7 +792,7 @@ fun MapScreenHeader(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Outlined.Search,
+                                Icons.Outlined.Search, // Or a bird icon
                                 contentDescription = null,
                                 tint = TextWhite.copy(alpha = 0.7f),
                                 modifier = Modifier.size(20.dp)
@@ -824,22 +822,22 @@ fun FloatingMapButton(item: FloatingMapActionItem) {
         badge = {
             if (item.badgeCount != null) {
                 Badge(
-                    containerColor = ActionButtonLightGray,
+                    containerColor = ActionButtonLightGray, // More contrast for badge
                     contentColor = ActionButtonTextDark,
-                    modifier = Modifier.offset(x = (-6).dp, y = 6.dp)
+                    modifier = Modifier.offset(x = (-6).dp, y = 6.dp) // Adjust badge position
                 ) {
                     Text(item.badgeCount.toString())
                 }
             }
         },
         modifier = Modifier
-            .size(52.dp)
+            .size(52.dp) // Standard FAB size
             .clip(CircleShape)
-            .background(if (item.isSelected) GreenWave2.copy(alpha = 0.9f) else ButtonGreen.copy(alpha = 0.9f))
+            .background(if (item.isSelected) GreenWave2.copy(alpha = 0.9f) else ButtonGreen.copy(alpha = 0.9f)) // Themed background
             .clickable(onClick = item.onClick)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            item.icon()
+            item.icon() // The icon composable passed in
         }
     }
 }
@@ -855,9 +853,9 @@ fun CompareModeBottomBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp), // Consistent padding
         shape = RoundedCornerShape(16.dp),
-        color = CardBackground.copy(alpha = 0.95f),
+        color = CardBackground.copy(alpha = 0.95f), // Semi-transparent
         tonalElevation = 4.dp
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -876,6 +874,7 @@ fun CompareModeBottomBar(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
+            // Display selected hotspots in a scrollable row
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(selectedHotspots, key = { it.locId }) { hotspot ->
                     SuggestionChip(
@@ -885,14 +884,14 @@ fun CompareModeBottomBar(
                             containerColor = ButtonGreen.copy(alpha = 0.7f),
                             labelColor = TextWhite
                         ),
-                        border = null
+                        border = null // No border for cleaner look
                     )
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
             Button(
                 onClick = onCompareClick,
-                enabled = selectedHotspots.size >= 2,
+                enabled = selectedHotspots.size >= 2, // Enable only if enough items are selected
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
             ) {
@@ -917,7 +916,7 @@ fun HomeCountrySelectionDialog(
                     color = TextWhite,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                LazyColumn(modifier = Modifier.heightIn(max=300.dp)){
+                LazyColumn(modifier = Modifier.heightIn(max=300.dp)){ // Limit height if many countries
                     items(UserSettingsManager.PREDEFINED_COUNTRIES) { country ->
                         Row(
                             modifier = Modifier
