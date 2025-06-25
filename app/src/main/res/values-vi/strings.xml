@@ -313,4 +313,5 @@
     <string name="map_search_error_no_hotspots_region">Không tìm thấy quan sát gần đây của \'%1$s\' tại %2$s.</string>
     <string name="settings_change_home_country">Thay đổi Quốc gia Mặc định</string>
     <string name="dialog_select_home_country">Chọn Quốc gia Mặc định</string>
+    <string name="explore_birds_title">Explore Birds</string>
 </resources>

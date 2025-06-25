@@ -1,4 +1,3 @@
-// app/src/main/java/com/android/birdlens/data/model/ebird/EbirdApiService.kt
 // EXE201/app/src/main/java/com/android/birdlens/data/model/ebird/EbirdApiService.kt
 package com.android.birdlens.data.model.ebird
 
@@ -7,7 +6,25 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
+data class EbirdFindResult(
+    val code: String,
+    val name: String,
+    val sciName: String
+)
+
 interface EbirdApiService {
+    /**
+     * Fetches recent notable observations for a given region. This is ideal for an "Explore" feed.
+     * API Key is added via EbirdApiKeyInterceptor.
+     * Example: https://api.ebird.org/v2/data/obs/US/recent/notable
+     */
+    @GET("v2/data/obs/{regionCode}/recent/notable")
+    suspend fun getNotableObservationsInRegion(
+        @Path("regionCode") regionCode: String,
+        @Query("maxResults") maxResults: Int = 10,
+        @Query("detail") detail: String = "simple"
+    ): Response<List<EbirdObservation>>
+
     /**
      * Fetches the eBird Taxonomy for given species codes.
      * API Key is added via EbirdApiKeyInterceptor.
@@ -26,7 +43,6 @@ interface EbirdApiService {
         @Query("cat") category: String? = null,
         @Query("version") version: String? = null
     ): Response<List<EbirdTaxonomy>>
-    // Logic: Add a new function to fetch metadata for a single hotspot by its location ID.
     @GET("v2/ref/hotspot/info/{locId}")
     suspend fun getHotspotInfo(@Path("locId") locId: String): Response<EbirdNearbyHotspot>
     /**

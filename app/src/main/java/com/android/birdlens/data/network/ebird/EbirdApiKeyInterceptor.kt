@@ -1,4 +1,4 @@
-// Birdlens_Mobile\app\src\main\java\com\android\birdlens\data\network\ebird\EbirdApiKeyInterceptor.kt
+// EXE201/app/src/main/java/com/android/birdlens/data/network/ebird/EbirdApiKeyInterceptor.kt
 package com.android.birdlens.data.network.ebird
 
 import com.android.birdlens.BuildConfig
@@ -26,8 +26,10 @@ class EbirdApiKeyInterceptor : Interceptor {
                 .build()
         }
 
+        // Changed header name from "X-eBirdApiToken" to the all-lowercase version "x-ebirdapitoken"
+        // to match the working API call from the ebird-api-ui.com tool.
         val newRequest = originalRequest.newBuilder()
-            .header("X-eBirdApiToken", apiKey)
+            .header("x-ebirdapitoken", apiKey)
             .build()
         return chain.proceed(newRequest)
     }

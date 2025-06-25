@@ -7,7 +7,9 @@ import com.android.birdlens.data.local.AppDatabase
 import com.android.birdlens.data.local.toEbirdNearbyHotspot
 import com.android.birdlens.data.local.toLocalHotspot
 import com.android.birdlens.data.model.VisitingTimesAnalysis
+import com.android.birdlens.data.model.ebird.EbirdFindResult
 import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
+import com.android.birdlens.data.model.ebird.EbirdObservation
 import com.android.birdlens.data.model.ebird.EbirdRetrofitInstance
 import com.android.birdlens.data.model.response.GenericApiResponse
 import com.android.birdlens.data.network.RetrofitInstance
@@ -33,9 +35,28 @@ class HotspotRepository(private val applicationContext: Context) {
         private const val TAG = "HotspotRepository"
     }
 
+    /**
+     * Fetches a list of notable bird sightings for a given region code.
+     *
+     * @param regionCode The code for the region (e.g., "US-NY").
+     * @return A list of EbirdObservation objects.
+     */
+    suspend fun getNotableBirds(regionCode: String): List<EbirdObservation> {
+        try {
+            val response = ebirdApiService.getNotableObservationsInRegion(regionCode)
+            if (response.isSuccessful) {
+                return response.body()?.distinctBy { it.speciesCode } ?: emptyList()
+            } else {
+                Log.e(TAG, "Error fetching notable birds. Code: ${response.code()}, Message: ${response.message()}")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception fetching notable birds: ${e.localizedMessage}", e)
+        }
+        return emptyList()
+    }
+
     fun getEbirdApiService() = ebirdApiService
 
-    // Logic: Add a new function to get details for a single hotspot, checking cache first.
     suspend fun getHotspotDetails(locId: String): EbirdNearbyHotspot? {
         return withContext(Dispatchers.IO) {
             val cached = hotspotDao.getHotspotsByIds(listOf(locId)).firstOrNull()

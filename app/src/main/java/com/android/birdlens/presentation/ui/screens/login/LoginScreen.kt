@@ -2,6 +2,7 @@
 package com.android.birdlens.presentation.ui.screens.login
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -41,6 +42,7 @@ import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AuthScreenLayout
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
+import java.util.regex.Pattern
 
 @Composable
 fun LoginScreen(
@@ -60,8 +62,8 @@ fun LoginScreen(
     LaunchedEffect(firebaseSignInState) {
         when (val state = firebaseSignInState) {
             is GoogleAuthViewModel.FirebaseSignInState.Success -> {
-                // Logic: Removed the Toast message showing the Firebase UID.
-                // Instead, just log the success for debugging purposes. The next screen will show a user-friendly message.
+                // After successful Firebase sign-in, navigate to the next screen.
+                // The UID is logged for debugging instead of shown to the user.
                 Log.d("LoginScreen", "Firebase Sign-In Success for user: ${state.firebaseUser.uid}")
                 navController.navigate(Screen.LoginSuccess.route) {
                     popUpTo(Screen.Welcome.route) { inclusive = true }
@@ -91,7 +93,7 @@ fun LoginScreen(
     val isLoading = backendAuthState is GoogleAuthViewModel.BackendAuthState.Loading ||
             firebaseSignInState is GoogleAuthViewModel.FirebaseSignInState.Loading
 
-    // SOLUTION: Get the string resource here, in the Composable scope
+    // Get string resources within the Composable scope for proper recomposition handling.
     val loginErrorCredentialsText = stringResource(id = R.string.login_error_credentials)
     val backText = stringResource(id = R.string.back)
     val loginText = stringResource(id = R.string.login)
@@ -234,11 +236,14 @@ fun CustomTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     backgroundColor: Color = AuthInputBackground,
-    leadingIcon: (@Composable () -> Unit)? = null // Added leadingIcon
+    leadingIcon: (@Composable () -> Unit)? = null,
+    // Add an optional trailingIcon parameter with a default value of null.
+    // This makes it non-breaking for existing calls.
+    trailingIcon: (@Composable () -> Unit)? = null
 ) {
     Surface(
         color = backgroundColor,
-        shape = RoundedCornerShape(16.dp), // Or 50 for more rounded like search
+        shape = RoundedCornerShape(16.dp),
         modifier = modifier.height(56.dp)
     ) {
         BasicTextField(
@@ -246,7 +251,7 @@ fun CustomTextField(
             onValueChange = onValueChange,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp), // Adjusted padding if icon is present
+                .padding(horizontal = 20.dp),
             textStyle = TextStyle(color = TextWhite, fontSize = 16.sp),
             cursorBrush = SolidColor(TextWhite),
             visualTransformation = visualTransformation,
@@ -257,7 +262,7 @@ fun CustomTextField(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    leadingIcon?.invoke() // Render leading icon if provided
+                    leadingIcon?.invoke()
                     if (leadingIcon != null) {
                         Spacer(modifier = Modifier.width(8.dp))
                     }
@@ -269,6 +274,11 @@ fun CustomTextField(
                             Text(placeholder, color = TextFieldPlaceholder, fontSize = 16.sp)
                         }
                         innerTextField()
+                    }
+                    // If the trailingIcon is provided, render it.
+                    if (trailingIcon != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        trailingIcon()
                     }
                 }
             }

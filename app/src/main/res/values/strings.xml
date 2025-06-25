@@ -329,6 +329,7 @@ User text: \"%1$s\"</string>
     <string name="map_search_error_no_hotspots_region">No recent observations of \'%1$s\' found in %2$s.</string>
     <string name="settings_change_home_country">Change Home Country</string>
     <string name="dialog_select_home_country">Select Home Country</string>
+    <string name="explore_birds_title">Explore Birds</string>
 
 
 </resources>
