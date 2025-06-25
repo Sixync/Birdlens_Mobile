@@ -1,8 +1,10 @@
+// app/src/main/java/com/android/birdlens/presentation/viewmodel/MapViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
 import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.birdlens.R
@@ -13,6 +15,7 @@ import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
 import com.android.birdlens.data.model.ebird.EbirdObservation
 import com.android.birdlens.data.repository.BirdSpeciesRepository
 import com.android.birdlens.data.repository.HotspotRepository
+import com.android.birdlens.data.repository.TutorialRepository
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MapProperties
@@ -25,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -59,6 +63,25 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val birdSpeciesRepository = BirdSpeciesRepository(application.applicationContext)
     private val userSettingsManager = UserSettingsManager
     private val context = application.applicationContext
+    private val tutorialRepository = TutorialRepository(application.applicationContext)
+
+    // Tutorial State
+    private val _showTutorial = MutableStateFlow(false)
+    val showTutorial: StateFlow<Boolean> = _showTutorial.asStateFlow()
+
+    private val _tutorialStepIndex = MutableStateFlow(0)
+    val tutorialStepIndex: StateFlow<Int> = _tutorialStepIndex.asStateFlow()
+
+    private val _elementCoordinates = MutableStateFlow<Map<String, Rect>>(emptyMap())
+    val elementCoordinates: StateFlow<Map<String, Rect>> = _elementCoordinates.asStateFlow()
+
+    val tutorialSteps = listOf(
+        "heatmap_toggle" to "Toggle here to switch between heatmap and clustered hotspots.",
+        "country_selector" to "Tap here to set or change your home country.",
+        "radius_filter" to "Adjust the radius to filter hotspots around your location.",
+        "map_hotspot" to "Tap a hotspot to see recent sightings and details."
+    )
+
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -126,6 +149,55 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         get() = _currentHomeCountrySetting.value.zoom
 
     var cameraPositionStateHolder: CameraPositionState? = null
+
+    init {
+        viewModelScope.launch {
+            val hasSeen = tutorialRepository.hasSeenMapTutorial.first()
+            if (!hasSeen) {
+                // Delay to allow UI to compose and report positions
+                delay(1500)
+                startTutorial()
+            }
+        }
+    }
+
+    fun startTutorial() {
+        _tutorialStepIndex.value = 0
+        _showTutorial.value = true
+    }
+
+    fun nextTutorialStep() {
+        if (_tutorialStepIndex.value < tutorialSteps.size - 1) {
+            _tutorialStepIndex.value++
+        } else {
+            skipTutorial()
+        }
+    }
+
+    fun previousTutorialStep() {
+        if (_tutorialStepIndex.value > 0) {
+            _tutorialStepIndex.value--
+        }
+    }
+
+    fun skipTutorial() {
+        _showTutorial.value = false
+        viewModelScope.launch {
+            tutorialRepository.markMapTutorialAsShown()
+        }
+    }
+
+    fun registerUiElement(key: String, newRect: Rect) {
+        _elementCoordinates.update { currentCoordinates ->
+            val existingRect = currentCoordinates[key]
+            // Only update if the rect is different to avoid unnecessary recompositions
+            if (existingRect != newRect) {
+                currentCoordinates + (key to newRect)
+            } else {
+                currentCoordinates
+            }
+        }
+    }
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query

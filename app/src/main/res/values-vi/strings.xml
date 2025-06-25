@@ -313,10 +313,13 @@
     <string name="map_search_error_no_hotspots_region">Không tìm thấy quan sát gần đây của \'%1$s\' tại %2$s.</string>
     <string name="settings_change_home_country">Thay đổi Quốc gia Mặc định</string>
     <string name="dialog_select_home_country">Chọn Quốc gia Mặc định</string>
+
+    //Map Control
     <string name="map_status_mode">Chế độ: %1$s</string>
     <string name="map_mode_heatmap">Bản đồ nhiệt</string>
     <string name="map_mode_clusters">Cụm điểm</string>
     <string name="map_status_country">Quốc gia: %1$s</string>
     <string name="map_status_radius">Bán kính: %1$dkm</string>
     <string name="map_radius_select_prompt">Chọn Bán kính:</string>
+    <string name="show_tutorial_content_description">Hiển thị hướng dẫn bản đồ</string>
 </resources>

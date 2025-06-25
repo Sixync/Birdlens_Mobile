@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
+// app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
 package com.android.birdlens.presentation.ui.screens.map
 
 import android.Manifest
@@ -34,9 +34,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 // import androidx.compose.ui.res.colorResource // Not needed if using Color.kt
 import androidx.compose.ui.res.painterResource
@@ -47,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
@@ -123,7 +128,8 @@ data class FloatingMapActionItem(
     val contentDescriptionResId: Int,
     val onClick: () -> Unit,
     val badgeCount: Int? = null,
-    val isSelected: Boolean = false
+    val isSelected: Boolean = false,
+    val key: String? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
@@ -159,6 +165,11 @@ fun MapScreen(
     val heatmapData by mapViewModel.heatmapData.collectAsState()
     val isMapLocked by mapViewModel.isMapLocked.collectAsState()
     val bookmarkedHotspotIds by mapViewModel.bookmarkedHotspotIds.collectAsState()
+
+    // Tutorial states
+    val showTutorial by mapViewModel.showTutorial.collectAsState()
+    val tutorialStepIndex by mapViewModel.tutorialStepIndex.collectAsState()
+    val elementCoordinates by mapViewModel.elementCoordinates.collectAsState()
 
 
     LaunchedEffect(Unit) {
@@ -229,12 +240,15 @@ fun MapScreen(
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    val radiusFilterKey = "radius_filter"
+
     val floatingActionItems = listOf(
         FloatingMapActionItem(
             icon = { Icon(if (isHeatmapVisible) Icons.Filled.Thermostat else Icons.Outlined.Thermostat, contentDescription = null, tint = TextWhite ) },
             contentDescriptionResId = if(isHeatmapVisible) R.string.map_action_hide_heatmap else R.string.map_action_show_heatmap,
             onClick = { mapViewModel.toggleHeatmap() },
-            isSelected = isHeatmapVisible
+            isSelected = isHeatmapVisible,
+            key = "heatmap_toggle"
         ),
         FloatingMapActionItem(
             icon = { Icon(Icons.Filled.Layers, contentDescription = null, tint = TextWhite) },
@@ -250,7 +264,8 @@ fun MapScreen(
         FloatingMapActionItem(
             icon = { Icon(Icons.Filled.Public, contentDescription = null, tint = TextWhite) },
             contentDescriptionResId = R.string.settings_change_home_country,
-            onClick = { showHomeCountryDialog = true }
+            onClick = { showHomeCountryDialog = true },
+            key = "country_selector"
         ),
         FloatingMapActionItem(
             icon = { Icon(Icons.Filled.Refresh, contentDescription = null, tint = TextWhite) },
@@ -294,6 +309,7 @@ fun MapScreen(
                 },
                 onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() else { /* Handle no backstack */ } },
                 onNavigateToCart = { navController.navigate(Screen.Cart.route) },
+                onShowTutorial = { mapViewModel.startTutorial() },
                 searchResults = searchResults,
                 onSearchResultClick = { birdName ->
                     keyboardController?.hide()
@@ -310,7 +326,18 @@ fun MapScreen(
                 modifier = Modifier.padding(bottom = 70.dp)
             ) {
                 for (item in floatingActionItems) {
-                    FloatingMapButton(item = item)
+                    FloatingMapButton(
+                        item = item,
+                        modifier = item.key?.let { key ->
+                            Modifier.onGloballyPositioned { coordinates ->
+                                val rect = Rect(
+                                    offset = coordinates.positionInWindow(),
+                                    size = coordinates.size.toSize()
+                                )
+                                mapViewModel.registerUiElement(key, rect)
+                            }
+                        } ?: Modifier
+                    )
                 }
             }
         }
@@ -367,8 +394,12 @@ fun MapScreen(
                         Clustering(
                             items = currentHotspots,
                             onClusterClick = { cluster ->
-                                val newZoom = cameraPositionState.position.zoom + 2
-                                cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(cluster.position, newZoom))
+                                // FIX: The cluster object can be null in some edge cases with the library.
+                                // Add a null check to prevent the NullPointerException crash.
+                                if (cluster != null) {
+                                    val newZoom = cameraPositionState.position.zoom + 2
+                                    cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(cluster.position, newZoom))
+                                }
                                 false
                             },
                             onClusterItemClick = { hotspot ->
@@ -377,23 +408,25 @@ fun MapScreen(
                                 true
                             },
                             clusterContent = { cluster ->
-                                Surface(
-                                    shape = CircleShape,
-                                    color = ButtonGreen.copy(alpha = 0.8f),
-                                    contentColor = TextWhite,
-                                    border = BorderStroke(2.dp, TextWhite.copy(alpha = 0.5f))
-                                ) {
-                                    Text(
-                                        text = cluster.size.toString(),
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                // FIX: The cluster object can be null, which causes the default red pin to be rendered.
+                                // A null check prevents the fallback to the library's default renderer.
+                                if (cluster != null) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = ButtonGreen.copy(alpha = 0.8f),
+                                        contentColor = TextWhite,
+                                        border = BorderStroke(2.dp, TextWhite.copy(alpha = 0.5f))
+                                    ) {
+                                        Text(
+                                            text = cluster.size.toString(),
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             },
                             clusterItemContent = { hotspot ->
-                                // FIX: Replace the Marker composable with an Icon composable.
-                                // The library renders this standard UI composable into a bitmap for the marker's icon.
                                 val isSelectedForCompare = selectedHotspotsForComparison.any { it.locId == hotspot.locId }
                                 val isBookmarked = bookmarkedHotspotIds.contains(hotspot.locId)
 
@@ -410,7 +443,17 @@ fun MapScreen(
                                 Icon(
                                     painter = painterResource(id = pinDrawableRes),
                                     contentDescription = hotspot.title,
-                                    tint = pinTint
+                                    tint = pinTint,
+                                    modifier = Modifier.onGloballyPositioned {
+                                        // Register the first hotspot marker for the tutorial
+                                        if (elementCoordinates["map_hotspot"] == null) {
+                                            val rect = Rect(
+                                                offset = it.positionInWindow(),
+                                                size = it.size.toSize()
+                                            )
+                                            mapViewModel.registerUiElement("map_hotspot", rect)
+                                        }
+                                    }
                                 )
                             }
                         )
@@ -452,40 +495,50 @@ fun MapScreen(
             }
 
             // Radius Filter Chips
-            Row(
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = if (isCompareModeActive && selectedHotspotsForComparison.isNotEmpty()) 100.dp else 16.dp)
-                    .padding(horizontal = 16.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                    .onGloballyPositioned { coordinates ->
+                        val rect = Rect(
+                            offset = coordinates.positionInWindow(),
+                            size = coordinates.size.toSize()
+                        )
+                        mapViewModel.registerUiElement(radiusFilterKey, rect)
+                    }
             ) {
-                mapViewModel.availableRadii.forEach { radius ->
-                    val isSelected = radius == currentRadiusKm
-                    FilterChip(
-                        selected = isSelected,
-                        enabled = true,
-                        onClick = { mapViewModel.setRadius(radius) },
-                        label = { Text("${radius}km", color = if (isSelected) VeryDarkGreenBase else TextWhite) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = CardBackground.copy(alpha = 0.7f),
-                            selectedContainerColor = GreenWave2,
-                            labelColor = TextWhite,
-                            selectedLabelColor = VeryDarkGreenBase
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    mapViewModel.availableRadii.forEach { radius ->
+                        val isSelected = radius == currentRadiusKm
+                        FilterChip(
                             selected = isSelected,
-                            borderColor = GreenWave2.copy(alpha = 0.5f),
-                            selectedBorderColor = Color.Transparent,
-                            disabledBorderColor = GreenWave2.copy(alpha = 0.2f),
-                            disabledSelectedBorderColor = Color.Transparent,
-                            borderWidth = 1.dp,
-                            selectedBorderWidth = 1.5.dp
-                        ),
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
+                            enabled = true,
+                            onClick = { mapViewModel.setRadius(radius) },
+                            label = { Text("${radius}km", color = if (isSelected) VeryDarkGreenBase else TextWhite) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = CardBackground.copy(alpha = 0.7f),
+                                selectedContainerColor = GreenWave2,
+                                labelColor = TextWhite,
+                                selectedLabelColor = VeryDarkGreenBase
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = isSelected,
+                                borderColor = GreenWave2.copy(alpha = 0.5f),
+                                selectedBorderColor = Color.Transparent,
+                                disabledBorderColor = GreenWave2.copy(alpha = 0.2f),
+                                disabledSelectedBorderColor = Color.Transparent,
+                                borderWidth = 1.dp,
+                                selectedBorderWidth = 1.5.dp
+                            ),
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                    }
                 }
             }
 
@@ -518,6 +571,49 @@ fun MapScreen(
                     Text(stringResource(R.string.map_error_loading_detailed), color = TextWhite, modifier = Modifier.padding(32.dp), textAlign = TextAlign.Center)
                 }
             }
+
+            // --- TUTORIAL OVERLAY ---
+            val currentTutorialKey = if (tutorialStepIndex < mapViewModel.tutorialSteps.size) mapViewModel.tutorialSteps[tutorialStepIndex].first else null
+            val currentTutorialText = if (tutorialStepIndex < mapViewModel.tutorialSteps.size) mapViewModel.tutorialSteps[tutorialStepIndex].second else ""
+            var currentRect = elementCoordinates[currentTutorialKey]
+
+            // For the map hotspot step, if coordinates are not available (e.g., no marker on screen), create a fake Rect in the center.
+            if (currentTutorialKey == "map_hotspot" && currentRect == null) {
+                cameraPositionState?.let {
+                    val centerPoint = it.projection?.toScreenLocation(it.position.target)
+                    if (centerPoint != null) {
+                        // Create a Rect representing a typical marker size.
+                        val markerHeightDp = 48.dp
+                        val markerWidthDp = 36.dp
+                        currentRect = Rect(
+                            left = centerPoint.x - with(LocalDensity.current) { markerWidthDp.toPx() / 2 },
+                            top = centerPoint.y - with(LocalDensity.current) { markerHeightDp.toPx() },
+                            right = centerPoint.x + with(LocalDensity.current) { markerWidthDp.toPx() / 2 },
+                            bottom = centerPoint.y.toFloat()
+                        )
+                    }
+                }
+            }
+
+            val currentStep = if (currentTutorialKey != null) {
+                TutorialStepInfo(
+                    key = currentTutorialKey,
+                    text = currentTutorialText,
+                    targetRect = currentRect,
+                    isCircleSpotlight = currentTutorialKey != radiusFilterKey
+                )
+            } else null
+
+            TutorialOverlay(
+                isVisible = showTutorial,
+                currentStep = currentStep,
+                totalSteps = mapViewModel.tutorialSteps.size,
+                currentStepIndex = tutorialStepIndex,
+                contentPadding = innerPadding, // **THE FIX**: Pass the scaffold's padding
+                onNext = { mapViewModel.nextTutorialStep() },
+                onPrevious = { mapViewModel.previousTutorialStep() },
+                onSkip = { mapViewModel.skipTutorial() }
+            )
         }
 
 
@@ -745,6 +841,7 @@ fun MapScreenHeader(
     onClearSearch: () -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToCart: () -> Unit,
+    onShowTutorial: () -> Unit,
     searchResults: List<BirdSpecies>,
     onSearchResultClick: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -763,6 +860,9 @@ fun MapScreenHeader(
                 }
             },
             actions = {
+                IconButton(onClick = onShowTutorial) {
+                    Icon(Icons.Outlined.HelpOutline, contentDescription = stringResource(id = R.string.show_tutorial_content_description), tint = TextWhite)
+                }
                 IconButton(onClick = onNavigateToCart) {
                     Icon(Icons.Filled.ShoppingCart, contentDescription = stringResource(R.string.icon_cart_description), tint = TextWhite, modifier = Modifier.size(28.dp))
                 }
@@ -852,7 +952,7 @@ fun MapScreenHeader(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FloatingMapButton(item: FloatingMapActionItem) {
+fun FloatingMapButton(item: FloatingMapActionItem, modifier: Modifier = Modifier) {
     val contentDesc = stringResource(id = item.contentDescriptionResId)
     BadgedBox(
         badge = {
@@ -866,7 +966,7 @@ fun FloatingMapButton(item: FloatingMapActionItem) {
                 }
             }
         },
-        modifier = Modifier
+        modifier = modifier
             .size(48.dp)
             .clip(CircleShape)
             .background(if (item.isSelected) GreenWave2.copy(alpha = 0.9f) else ButtonGreen.copy(alpha = 0.9f))
