@@ -22,8 +22,8 @@ class PostRepository(applicationContext: Context) {
 
     private val apiService: ApiService = RetrofitInstance.api(applicationContext)
 
-    suspend fun getPosts(limit: Int, offset: Int): Response<GenericApiResponse<PaginatedPostsResponse>> {
-        return apiService.getPosts(limit, offset)
+    suspend fun getPosts(limit: Int, offset: Int, type: String?): Response<GenericApiResponse<PaginatedPostsResponse>> {
+        return apiService.getPosts(limit, offset, type)
     }
 
     suspend fun createPost(

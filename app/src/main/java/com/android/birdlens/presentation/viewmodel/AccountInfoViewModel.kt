@@ -21,10 +21,9 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
     private val apiService = RetrofitInstance.api(application.applicationContext)
 
     init {
-        // Logic: The automatic fetch on initialization is removed.
-        // This prevents the ViewModel from making a network call with a potentially
-        // expired token when the app first starts, which was causing the race condition.
-        // fetchCurrentUser()
+        // The automatic fetch on initialization is removed to prevent race conditions.
+        // The UI layer (e.g., MainActivity or a specific screen) is now responsible
+        // for calling fetchCurrentUser() when it's appropriate.
     }
 
     fun fetchCurrentUser() {
@@ -55,12 +54,23 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    // Logic: Add a public function to be called on logout.
-    // This explicitly resets the state to Idle, ensuring the UI doesn't show stale
-    // user data after the user has been signed out.
+    /**
+     * Resets the user state to Idle. This should be called on logout to ensure
+     * stale user data is not displayed.
+     */
     fun onUserLoggedOut() {
         _uiState.value = AccountInfoUiState.Idle
         Log.d("AccountInfoVM", "User state has been reset to Idle due to logout.")
+    }
+
+    /**
+     * Resets the UI state back to Idle. This is used to "consume" a one-time event
+     * like a successful login message, preventing it from being shown again on
+     * recomposition.
+     */
+    fun resetUiStateToIdle() {
+        Log.d("AccountInfoVM", "Resetting UI state to Idle post-event.")
+        _uiState.value = AccountInfoUiState.Idle
     }
 }
 

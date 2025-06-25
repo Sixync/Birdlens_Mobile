@@ -43,6 +43,10 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
     private val _postFeedState = MutableStateFlow<PostFeedUiState>(PostFeedUiState.Idle)
     val postFeedState: StateFlow<PostFeedUiState> = _postFeedState.asStateFlow()
 
+    // Holds the currently selected feed type, defaulting to "trending".
+    private val _feedType = MutableStateFlow("trending")
+    val feedType: StateFlow<String> = _feedType.asStateFlow()
+
     private val _createPostState = MutableStateFlow<GenericUiState<PostResponse>>(GenericUiState.Idle)
     val createPostState: StateFlow<GenericUiState<PostResponse>> = _createPostState.asStateFlow()
 
@@ -65,19 +69,29 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
     private var currentPostIdForComments: String? = null
 
 
-    // Logic: The automatic fetch in the init block is removed to prevent race conditions on app start.
-    // The UI will now be responsible for explicitly calling fetchPosts when it's ready.
     init {
-        // fetchPosts(initialLoad = true) // This line is removed.
+        // The automatic fetch in the init block is removed to prevent race conditions.
+        // The UI will now be responsible for explicitly calling fetchPosts when it's ready.
     }
 
     fun onEnterScreen() {
-        // Logic: This function is called by the UI. It checks if data is missing or if there was a previous error,
+        // This function is called by the UI. It checks if data is missing or if there was a previous error,
         // and if so, it triggers a fresh data load. This prevents re-fetching on simple recompositions.
         if (_postFeedState.value is PostFeedUiState.Idle || _postFeedState.value is PostFeedUiState.Error) {
             Log.d(TAG, "Community screen entered. State is Idle or Error, initiating fetch.")
             fetchPosts(initialLoad = true)
         }
+    }
+
+    /**
+     * Sets the desired feed type and triggers a fresh data load.
+     * @param type The type of feed to load ("trending", "all", etc.).
+     */
+    fun setFeedType(type: String) {
+        if (_feedType.value == type) return // No change needed
+        _feedType.value = type
+        // Trigger a full refresh for the new feed type
+        fetchPosts(initialLoad = true)
     }
 
     fun fetchPosts(initialLoad: Boolean = false) {
@@ -102,7 +116,8 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
             }
 
             try {
-                val response = postRepository.getPosts(limit = postPageSize, offset = offsetToFetch)
+                // The current feed type is now passed to the repository.
+                val response = postRepository.getPosts(limit = postPageSize, offset = offsetToFetch, type = _feedType.value)
                 if (response.isSuccessful && response.body() != null) {
                     val genericResponse = response.body()!!
                     if (!genericResponse.error && genericResponse.data != null) {

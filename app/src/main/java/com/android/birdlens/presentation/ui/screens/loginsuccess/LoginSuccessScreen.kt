@@ -44,23 +44,22 @@ fun LoginSuccessScreen(
     LaunchedEffect(accountState) {
         when (val state = accountState) {
             is AccountInfoUiState.Success -> {
-                // Logic: Show a user-friendly welcome toast with the user's name before navigating.
                 val welcomeMessage = context.getString(R.string.welcome_user, state.user.firstName)
                 Toast.makeText(context, welcomeMessage, Toast.LENGTH_SHORT).show()
-
-                // A small delay to ensure the toast is visible before the screen changes.
-                delay(500) // 0.5 seconds
+                delay(500)
 
                 if (state.user.emailVerified) {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 } else {
-                    // Pass the email to the PleaseVerifyEmailScreen
                     navController.navigate(Screen.PleaseVerifyEmail.createRoute(state.user.email)) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 }
+                // After the navigation is triggered, reset the state to prevent this
+                // LaunchedEffect from re-triggering the toast on recomposition.
+                accountInfoViewModel.resetUiStateToIdle()
             }
             is AccountInfoUiState.Error -> {
                 Toast.makeText(context, "Error fetching profile: ${state.message}. Please log in again.", Toast.LENGTH_LONG).show()

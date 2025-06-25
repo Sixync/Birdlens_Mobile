@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,15 +60,13 @@ fun CommunityScreen(
     var searchQuery by remember { mutableStateOf("") }
     val postFeedState by communityViewModel.postFeedState.collectAsState()
     val listState = rememberLazyListState()
+    val feedType by communityViewModel.feedType.collectAsState()
 
     var showCommentSheetForPostId by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Logic: This LaunchedEffect now correctly calls the ViewModel's onEnterScreen function.
-    // This function acts as a gatekeeper, only fetching data if necessary, preventing
-    // the race condition that caused the double toast.
     LaunchedEffect(communityViewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             communityViewModel.onEnterScreen()
@@ -75,7 +74,6 @@ fun CommunityScreen(
     }
 
 
-    // Effect for pagination
     LaunchedEffect(listState, postFeedState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
             .collect { visibleItems ->
@@ -83,7 +81,7 @@ fun CommunityScreen(
                     val lastVisibleItemIndex = visibleItems.last().index
                     val currentSuccessState = postFeedState
                     if (currentSuccessState is PostFeedUiState.Success && currentSuccessState.canLoadMore && !currentSuccessState.isLoadingMore) {
-                        if (lastVisibleItemIndex >= currentSuccessState.posts.size - 5) { // Trigger load more when 5 items from end
+                        if (lastVisibleItemIndex >= currentSuccessState.posts.size - 5) {
                             communityViewModel.fetchPosts()
                         }
                     }
@@ -102,7 +100,6 @@ fun CommunityScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                // Navigate to CreatePostScreen
                 onClick = { navController.navigate(Screen.CreatePost.route) },
                 containerColor = ButtonGreen,
                 contentColor = TextWhite
@@ -112,81 +109,111 @@ fun CommunityScreen(
         },
         showBottomBar = true
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            when (val state = postFeedState) {
-                is PostFeedUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = TextWhite
+        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            // A TabRow allows the user to switch between different feed types like "trending" and "all".
+            val tabTitles = listOf("For You", "Following")
+            val selectedTabIndex = if (feedType == "trending") 0 else 1
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = Color.Transparent,
+                contentColor = TextWhite,
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                        color = GreenWave2 // A highlight color for the selected tab
                     )
                 }
-                is PostFeedUiState.Success -> {
-                    if (state.posts.isEmpty() && !state.isLoadingMore) {
-                        Text(
-                            "No posts yet. Be the first to share!",
-                            color = TextWhite.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.align(Alignment.Center).padding(16.dp)
+            ) {
+                tabTitles.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = {
+                            val newType = if (index == 0) "trending" else "all"
+                            communityViewModel.setFeedType(newType)
+                        },
+                        text = { Text(text = title) },
+                        selectedContentColor = GreenWave2,
+                        unselectedContentColor = TextWhite.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f) // The list of posts takes the remaining space
+                    .fillMaxSize()
+            ) {
+                when (val state = postFeedState) {
+                    is PostFeedUiState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center),
+                            color = TextWhite
                         )
-                    } else {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp) // Added bottom padding for FAB
-                        ) {
-                            items(state.posts, key = { it.id }) { post ->
-                                CommunityPostCard(
-                                    post = post,
-                                    onLikeClick = {
-                                        communityViewModel.addReactionToPost(post.id.toString(), "like")
-                                    },
-                                    onCommentClick = {
-                                        showCommentSheetForPostId = post.id.toString()
-                                        communityViewModel.fetchCommentsForPost(post.id.toString(), initialLoad = true) // Fetch comments for this post
-                                        coroutineScope.launch { sheetState.show() }
-                                    },
-                                    onShareClick = { /* TODO */ }
-                                )
-                            }
-                            // Loading indicator for pagination
-                            if (state.isLoadingMore) {
-                                item {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        CircularProgressIndicator(color = TextWhite)
+                    }
+                    is PostFeedUiState.Success -> {
+                        if (state.posts.isEmpty() && !state.isLoadingMore) {
+                            Text(
+                                "No posts yet. Be the first to share!",
+                                color = TextWhite.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                            )
+                        } else {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp) // Added bottom padding for FAB
+                            ) {
+                                items(state.posts, key = { it.id }) { post ->
+                                    CommunityPostCard(
+                                        post = post,
+                                        onLikeClick = {
+                                            communityViewModel.addReactionToPost(post.id.toString(), "like")
+                                        },
+                                        onCommentClick = {
+                                            showCommentSheetForPostId = post.id.toString()
+                                            communityViewModel.fetchCommentsForPost(post.id.toString(), initialLoad = true) // Fetch comments for this post
+                                            coroutineScope.launch { sheetState.show() }
+                                        },
+                                        onShareClick = { /* TODO */ }
+                                    )
+                                }
+                                // Loading indicator for pagination
+                                if (state.isLoadingMore) {
+                                    item {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            horizontalArrangement = Arrangement.Center
+                                        ) {
+                                            CircularProgressIndicator(color = TextWhite)
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                is PostFeedUiState.Error -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize().padding(16.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            "Error: ${state.message}",
-                            color = TextWhite.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { communityViewModel.fetchPosts(initialLoad = true) }) { // Pass initialLoad = true for retry
-                            Text("Retry")
+                    is PostFeedUiState.Error -> {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(16.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Error: ${state.message}",
+                                color = TextWhite.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { communityViewModel.fetchPosts(initialLoad = true) }) { // Pass initialLoad = true for retry
+                                Text("Retry")
+                            }
                         }
                     }
-                }
-                is PostFeedUiState.Idle -> {
-                    // This state should ideally transition to Loading quickly
+                    is PostFeedUiState.Idle -> {
+                        // This state should ideally transition to Loading quickly
+                    }
                 }
             }
         }

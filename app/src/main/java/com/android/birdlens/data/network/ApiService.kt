@@ -98,7 +98,9 @@ interface ApiService {
     @GET("posts")
     suspend fun getPosts(
         @Query("limit") limit: Int,
-        @Query("offset") offset: Int
+        @Query("offset") offset: Int,
+        // The `type` parameter tells the backend which post retrieval strategy to use (e.g., "trending", "all").
+        @Query("type") type: String?
     ): Response<GenericApiResponse<PaginatedPostsResponse>>
 
     @Multipart
