@@ -1,4 +1,3 @@
-<!-- // app/src/main/res/values/strings.xml -->
 <resources>
     <string name="app_name">Birdlens</string>
 
@@ -331,5 +330,13 @@ User text: \"%1$s\"</string>
     <string name="dialog_select_home_country">Select Home Country</string>
     <string name="explore_birds_title">Explore Birds</string>
 
+    <!-- New Map Control Strings -->
+    <string name="map_status_mode">Mode: %1$s</string>
+    <string name="map_mode_heatmap">Heatmap</string>
+    <string name="map_mode_clusters">Clusters</string>
+    <string name="map_status_country">Country: %1$s</string>
+    <string name="map_status_radius">Radius: %1$dkm</string>
+    <string name="map_radius_select_prompt">Select Radius:</string>
+    <string name="show_tutorial_content_description">Show map tutorial</string>
 
 </resources>

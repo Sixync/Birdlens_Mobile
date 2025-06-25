@@ -1,5 +1,3 @@
-// app/build.gradle.kts
-
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -180,14 +178,12 @@ dependencies {
     implementation(libs.core.ktx)
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
-    // Logic: The Gemini SDK is no longer needed on the client, so we can remove this dependency.
-    // implementation(libs.generativeai)
     implementation(libs.androidx.compose.material)
 
-    // Google Maps Compose Utilities (Clustering, etc.)
-    implementation("com.google.maps.android:maps-compose-utils:4.3.1") // Check for latest
-    implementation("com.google.maps.android:maps-compose-widgets:4.3.1") // For ScaleBar, etc.
-    implementation ("com.google.maps.android:android-maps-utils:3.8.2")
+    // Google Maps Compose Utilities (Clustering, Heatmaps, etc.)
+    implementation("com.google.maps.android:maps-compose-utils:4.3.3") // Updated to latest
+    implementation("com.google.maps.android:maps-compose-widgets:4.3.3") // For ScaleBar, etc. - Updated to latest
+    implementation ("com.google.maps.android:android-maps-utils:3.8.2") // For HeatmapTileProvider
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -216,6 +212,10 @@ dependencies {
     // Stripe SDK Dependencies
     implementation("com.stripe:stripe-android:21.17.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
     implementation(libs.androidx.appcompat)
 }
