@@ -3,70 +3,59 @@ package com.android.birdlens.presentation.ui.screens.map
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward // Corrected import
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Compare
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.outlined.Thermostat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-// import androidx.compose.ui.res.colorResource // Not needed if using Color.kt
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
-import androidx.compose.ui.window.Dialog
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
 import com.android.birdlens.R
-import com.android.birdlens.data.CountrySetting
-import com.android.birdlens.data.UserSettingsManager
-import com.android.birdlens.data.local.BirdSpecies
-import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
-import com.android.birdlens.presentation.viewmodel.BirdSpeciesInfo
-import com.android.birdlens.presentation.viewmodel.HotspotSheetDetails
+import com.android.birdlens.presentation.ui.screens.map.components.CompareModeBottomBar
+import com.android.birdlens.presentation.ui.screens.map.components.FloatingMapActionItem
+import com.android.birdlens.presentation.ui.screens.map.components.FloatingMapButton
+import com.android.birdlens.presentation.ui.screens.map.components.HomeCountrySelectionDialog
+import com.android.birdlens.presentation.ui.screens.map.components.HotspotDetailsSheetContent
+import com.android.birdlens.presentation.ui.screens.map.components.LoadingErrorUI
+import com.android.birdlens.presentation.ui.screens.map.components.MapScreenHeader
+import com.android.birdlens.presentation.ui.screens.map.components.PermissionRationaleUI
+import com.android.birdlens.presentation.ui.screens.map.components.TutorialOverlay
+import com.android.birdlens.presentation.ui.screens.map.components.TutorialStepInfo
 import com.android.birdlens.presentation.viewmodel.MapUiState
 import com.android.birdlens.presentation.viewmodel.MapViewModel
 import com.android.birdlens.ui.theme.*
@@ -74,63 +63,11 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
-import com.google.android.gms.maps.model.BitmapDescriptor
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.maps.android.compose.*
 import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import kotlinx.coroutines.launch
-
-fun bitmapDescriptorFromVector(
-    context: Context,
-    @DrawableRes vectorResId: Int,
-    tintColor: Color? = null, // Changed to Compose Color for easier use
-    sizeMultiplier: Float = 1.0f
-): BitmapDescriptor? {
-    return try {
-        ContextCompat.getDrawable(context, vectorResId)?.let { vectorDrawable ->
-            val mutatedDrawable = vectorDrawable.mutate()
-            if (tintColor != null) {
-                // Convert Compose Color to Android Color Int
-                val androidColor = android.graphics.Color.argb(
-                    (tintColor.alpha * 255).toInt(),
-                    (tintColor.red * 255).toInt(),
-                    (tintColor.green * 255).toInt(),
-                    (tintColor.blue * 255).toInt()
-                )
-                DrawableCompat.setTint(mutatedDrawable, androidColor)
-            }
-            val originalWidth = mutatedDrawable.intrinsicWidth.takeIf { it > 0 } ?: 72
-            val originalHeight = mutatedDrawable.intrinsicHeight.takeIf { it > 0 } ?: 72
-
-            val width = (originalWidth * sizeMultiplier).toInt()
-            val height = (originalHeight * sizeMultiplier).toInt()
-
-            mutatedDrawable.setBounds(0, 0, width, height)
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            mutatedDrawable.draw(canvas)
-            BitmapDescriptorFactory.fromBitmap(bitmap)
-        }
-    } catch (e: NullPointerException) {
-        Log.e("MapScreen", "Error creating BitmapDescriptor: IBitmapDescriptorFactory not initialized or other NPE.", e)
-        null
-    } catch (e: Exception) {
-        Log.e("MapScreen", "Generic error creating BitmapDescriptor.", e)
-        null
-    }
-}
-
-
-data class FloatingMapActionItem(
-    val icon: @Composable () -> Unit,
-    val contentDescriptionResId: Int,
-    val onClick: () -> Unit,
-    val badgeCount: Int? = null,
-    val isSelected: Boolean = false,
-    val key: String? = null
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @SuppressLint("MissingPermission")
@@ -159,7 +96,6 @@ fun MapScreen(
     // Logic: The bottom sheet state and its visibility controller are restored.
     val selectedHotspotDetails by mapViewModel.selectedHotspotDetails.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-
 
     val mapProperties by mapViewModel.mapProperties
     val uiSettings by mapViewModel.mapUiSettings
@@ -339,8 +275,6 @@ fun MapScreen(
             }
         }
     ) { innerPadding ->
-        // Logic: The ModalBottomSheet is re-introduced. Its visibility is controlled
-        // by checking if the ViewModel's selectedHotspotDetails state is null or not.
         if (selectedHotspotDetails != null) {
             ModalBottomSheet(
                 onDismissRequest = { mapViewModel.clearSelectedHotspot() },
@@ -351,7 +285,6 @@ fun MapScreen(
                 selectedHotspotDetails?.let { details ->
                     HotspotDetailsSheetContent(
                         details = details,
-                        // Logic: The main action button now navigates to the bird list screen.
                         onNavigateToFullDetails = {
                             navController.navigate(Screen.HotspotBirdList.createRoute(details.hotspot.locId))
                             coroutineScope.launch { sheetState.hide() }
@@ -400,8 +333,6 @@ fun MapScreen(
                                 }
                                 false
                             },
-                            // Logic: When a hotspot marker is clicked, the ViewModel fetches its details,
-                            // and the coroutine expands the now-visible bottom sheet.
                             onClusterItemClick = { hotspot ->
                                 mapViewModel.onHotspotMarkerClick(hotspot)
                                 coroutineScope.launch { sheetState.expand() }
@@ -629,465 +560,6 @@ fun MapScreen(
                     showHomeCountryDialog = false
                 }
             )
-        }
-    }
-}
-
-// Logic: This bottom sheet is now reinstated with one crucial change:
-// the main action button now says "View Bird List" and its `onClick`
-// lambda navigates to the HotspotBirdListScreen.
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HotspotDetailsSheetContent(
-    details: HotspotSheetDetails,
-    onNavigateToFullDetails: () -> Unit,
-    onBookmarkToggle: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 200.dp)
-            .padding(16.dp)
-            .navigationBarsPadding()
-    ) {
-        Text(
-            text = details.hotspot.locName,
-            style = MaterialTheme.typography.headlineSmall,
-            color = TextWhite,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.Visibility, contentDescription = stringResource(R.string.map_sheet_recent_sightings), tint = TextWhite.copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.map_sheet_recent_sightings) + ": ${details.recentSightingsCount}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextWhite.copy(alpha = 0.8f)
-            )
-        }
-        details.hotspot.numSpeciesAllTime?.let {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top=4.dp)) {
-                Icon(Icons.Outlined.ListAlt, contentDescription = stringResource(R.string.map_sheet_total_species), tint = TextWhite.copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.map_sheet_total_species) + ": $it",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextWhite.copy(alpha = 0.8f)
-                )
-            }
-        }
-
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            stringResource(R.string.map_sheet_notable_bird),
-            style = MaterialTheme.typography.titleMedium,
-            color = TextWhite
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = rememberAsyncImagePainter(
-                    model = details.notableBirdImageUrl,
-                    placeholder = painterResource(id = R.drawable.ic_bird_placeholder),
-                    error = painterResource(id = R.drawable.ic_bird_placeholder)
-                ),
-                contentDescription = "Notable bird",
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Gray.copy(alpha = 0.3f)),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                "Example: Northern Cardinal",
-                style = MaterialTheme.typography.bodyLarge,
-                color = TextWhite
-            )
-        }
-
-        if (details.speciesList.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                stringResource(R.string.map_sheet_species_list_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = TextWhite
-            )
-            LazyRow(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(details.speciesList.take(5)) { species ->
-                    AssistChip(
-                        onClick = { /* TODO: Navigate to bird info for species.speciesCode */ },
-                        label = { Text(species.commonName, color = TextWhite) },
-                        colors = AssistChipDefaults.assistChipColors(containerColor = ButtonGreen.copy(alpha = 0.7f)),
-                        border = null
-                    )
-                }
-            }
-        }
-
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            OutlinedButton(
-                onClick = onBookmarkToggle,
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = GreenWave2),
-                border = BorderStroke(1.dp, GreenWave2)
-            ) {
-                Icon(
-                    if (details.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                    contentDescription = if (details.isBookmarked) stringResource(R.string.map_action_unbookmark_hotspot) else stringResource(R.string.map_action_bookmark_hotspot)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (details.isBookmarked) stringResource(R.string.map_action_unbookmark_hotspot) else stringResource(R.string.map_action_bookmark_hotspot))
-            }
-            Button(
-                onClick = onNavigateToFullDetails,
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
-            ) {
-                // Logic: Changed the text of the button to reflect its new purpose.
-                Text("View Bird List", color = TextWhite)
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = TextWhite)
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-    }
-}
-
-
-@Composable
-fun PermissionRationaleUI(onGrantPermissions: () -> Unit, showRationale: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            stringResource(R.string.map_permission_required_message),
-            color = TextWhite,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        Button(
-            onClick = onGrantPermissions,
-            colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
-        ) {
-            Text(stringResource(R.string.map_grant_permissions_button), color = TextWhite)
-        }
-        if (showRationale) {
-            Text(
-                stringResource(R.string.map_permission_denied_rationale),
-                color = TextWhite.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 8.dp),
-                fontSize = 12.sp
-            )
-        }
-    }
-}
-
-@Composable
-fun LoadingErrorUI(mapUiState: MapUiState) {
-    val context = LocalContext.current
-    if (mapUiState is MapUiState.Loading) {
-        val loadingMessage = mapUiState.message
-        if (!loadingMessage.isNullOrBlank()){
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                CircularProgressIndicator(color = GreenWave2.copy(alpha = 0.7f), strokeWidth = 5.dp)
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = loadingMessage,
-                    color = TextWhite,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-        } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = TextWhite)
-            }
-        }
-    }
-
-    (mapUiState as? MapUiState.Error)?.let { errorState ->
-        LaunchedEffect(errorState.message) {
-            Toast.makeText(context, errorState.message, Toast.LENGTH_LONG).show()
-        }
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MapScreenHeader(
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onSearchSubmit: () -> Unit,
-    onClearSearch: () -> Unit,
-    onNavigateBack: () -> Unit,
-    onNavigateToCart: () -> Unit,
-    onShowTutorial: () -> Unit,
-    searchResults: List<BirdSpecies>,
-    onSearchResultClick: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier.padding(bottom = 8.dp)) {
-        CenterAlignedTopAppBar(
-            title = {
-                Text(
-                    stringResource(R.string.map_screen_title_birdlens).uppercase(),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, color = GreenWave2, letterSpacing = 1.sp)
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = TextWhite)
-                }
-            },
-            actions = {
-                IconButton(onClick = onShowTutorial) {
-                    Icon(Icons.Outlined.HelpOutline, contentDescription = stringResource(id = R.string.show_tutorial_content_description), tint = TextWhite)
-                }
-                IconButton(onClick = onNavigateToCart) {
-                    Icon(Icons.Filled.ShoppingCart, contentDescription = stringResource(R.string.icon_cart_description), tint = TextWhite, modifier = Modifier.size(28.dp))
-                }
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-            modifier = Modifier.padding(top = 8.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            placeholder = { Text(stringResource(R.string.map_search_placeholder), color = TextWhite.copy(alpha = 0.7f)) },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.map_search_icon_description), tint = TextWhite) },
-            trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = onClearSearch) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.map_search_clear_description), tint = TextWhite)
-                    }
-                }
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
-            singleLine = true,
-            shape = RoundedCornerShape(50),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = TextWhite,
-                unfocusedTextColor = TextWhite,
-                focusedContainerColor = SearchBarBackground,
-                unfocusedContainerColor = SearchBarBackground,
-                disabledContainerColor = SearchBarBackground,
-                cursorColor = TextWhite,
-                focusedBorderColor = GreenWave2,
-                unfocusedBorderColor = Color.Transparent,
-                focusedLeadingIconColor = TextWhite,
-                unfocusedLeadingIconColor = TextWhite.copy(alpha = 0.7f),
-                focusedTrailingIconColor = TextWhite,
-                unfocusedTrailingIconColor = TextWhite.copy(alpha = 0.7f),
-                focusedPlaceholderColor = TextWhite.copy(alpha = 0.5f),
-                unfocusedPlaceholderColor = TextWhite.copy(alpha = 0.7f)
-            )
-        )
-
-        if (searchResults.isNotEmpty()) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.95f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-            ) {
-                LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
-                    items(searchResults, key = { it.speciesCode }) { bird ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSearchResultClick(bird.commonName) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Outlined.Search,
-                                contentDescription = null,
-                                tint = TextWhite.copy(alpha = 0.7f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Column {
-                                Text(text = bird.commonName, color = TextWhite)
-                                Text(
-                                    text = bird.scientificName,
-                                    color = TextWhite.copy(alpha = 0.6f),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun FloatingMapButton(item: FloatingMapActionItem, modifier: Modifier = Modifier) {
-    val contentDesc = stringResource(id = item.contentDescriptionResId)
-    BadgedBox(
-        badge = {
-            if (item.badgeCount != null) {
-                Badge(
-                    containerColor = ActionButtonLightGray,
-                    contentColor = ActionButtonTextDark,
-                    modifier = Modifier.offset(x = (-6).dp, y = 6.dp)
-                ) {
-                    Text(item.badgeCount.toString())
-                }
-            }
-        },
-        modifier = modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(if (item.isSelected) GreenWave2.copy(alpha = 0.9f) else ButtonGreen.copy(alpha = 0.9f))
-            .clickable(onClick = item.onClick)
-    ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            item.icon()
-        }
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CompareModeBottomBar(
-    selectedHotspots: List<EbirdNearbyHotspot>,
-    onClearSelection: () -> Unit,
-    onCompareClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = CardBackground.copy(alpha = 0.95f),
-        tonalElevation = 4.dp
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    stringResource(R.string.map_compare_selected_info, selectedHotspots.size, MapViewModel.MAX_COMPARISON_ITEMS),
-                    color = TextWhite,
-                    fontWeight = FontWeight.SemiBold
-                )
-                TextButton(onClick = onClearSelection) {
-                    Text(stringResource(R.string.map_compare_clear_selection), color = GreenWave2)
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(selectedHotspots, key = { it.locId }) { hotspot ->
-                    SuggestionChip(
-                        onClick = { /* Optional: allow deselecting by tapping chip */ },
-                        label = { Text(hotspot.locName, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp) },
-                        colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = ButtonGreen.copy(alpha = 0.7f),
-                            labelColor = TextWhite
-                        ),
-                        border = null
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = onCompareClick,
-                enabled = selectedHotspots.size >= 2,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
-            ) {
-                Text(stringResource(R.string.map_compare_button_text, selectedHotspots.size), color = TextWhite)
-            }
-        }
-    }
-}
-
-@Composable
-fun HomeCountrySelectionDialog(
-    currentHomeCountryCode: String,
-    onDismiss: () -> Unit,
-    onCountrySelected: (CountrySetting) -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(16.dp), color = AuthCardBackground) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    stringResource(R.string.dialog_select_home_country),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextWhite,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                LazyColumn(modifier = Modifier.heightIn(max=300.dp)){
-                    items(UserSettingsManager.PREDEFINED_COUNTRIES) { country ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onCountrySelected(country); onDismiss() }
-                                .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (country.code == currentHomeCountryCode),
-                                onClick = { onCountrySelected(country); onDismiss() },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = GreenWave2,
-                                    unselectedColor = TextWhite.copy(alpha = 0.7f)
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(country.name, color = TextWhite, fontSize = 16.sp)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text(stringResource(android.R.string.cancel).uppercase(), color = GreenWave2)
-                }
-            }
         }
     }
 }

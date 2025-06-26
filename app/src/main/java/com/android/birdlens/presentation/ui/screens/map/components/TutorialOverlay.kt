@@ -1,5 +1,5 @@
 // app/src/main/java/com/android/birdlens/presentation/ui/screens/map/TutorialOverlay.kt
-package com.android.birdlens.presentation.ui.screens.map
+package com.android.birdlens.presentation.ui.screens.map.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
