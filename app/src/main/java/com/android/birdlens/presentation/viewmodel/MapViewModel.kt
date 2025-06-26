@@ -1,4 +1,4 @@
-// app/src/main/java/com/android/birdlens/presentation/viewmodel/MapViewModel.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/viewmodel/MapViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
 import android.app.Application
@@ -12,12 +12,10 @@ import com.android.birdlens.data.CountrySetting
 import com.android.birdlens.data.UserSettingsManager
 import com.android.birdlens.data.local.BirdSpecies
 import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
-import com.android.birdlens.data.model.ebird.EbirdObservation
 import com.android.birdlens.data.repository.BirdSpeciesRepository
 import com.android.birdlens.data.repository.HotspotRepository
 import com.android.birdlens.data.repository.TutorialRepository
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
@@ -98,8 +96,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentHomeCountrySetting = MutableStateFlow(userSettingsManager.getHomeCountrySetting(context))
     val currentHomeCountrySetting: StateFlow<CountrySetting> = _currentHomeCountrySetting.asStateFlow()
 
+    // Logic: Restore the StateFlow for the bottom sheet details.
+    // This will hold the data for the sheet when a marker is clicked.
     private val _selectedHotspotDetails = MutableStateFlow<HotspotSheetDetails?>(null)
     val selectedHotspotDetails: StateFlow<HotspotSheetDetails?> = _selectedHotspotDetails.asStateFlow()
+
 
     val _mapProperties = mutableStateOf(MapProperties(mapType = MapType.NORMAL))
     val mapProperties: androidx.compose.runtime.State<MapProperties> = _mapProperties
@@ -147,8 +148,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         get() = _currentHomeCountrySetting.value.center
     val initialMapZoom: Float
         get() = _currentHomeCountrySetting.value.zoom
-
-    var cameraPositionStateHolder: CameraPositionState? = null
 
     init {
         viewModelScope.launch {
@@ -250,14 +249,13 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onSearchQueryCleared(currentMapCenter: LatLng) {
+    fun onSearchQueryCleared(currentMapCenter: LatLng, currentMapZoom: Float) {
         _searchQuery.value = ""
         _searchResults.value = emptyList()
         if (isSearchActive) {
             isSearchActive = false
             fetchJob?.cancel()
-            val currentZoom = cameraPositionStateHolder?.position?.zoom ?: initialMapZoom
-            requestHotspotsForCurrentView(currentMapCenter, currentZoom, forceRefresh = true)
+            requestHotspotsForCurrentView(currentMapCenter, currentMapZoom, forceRefresh = true)
         }
     }
 
@@ -396,6 +394,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Logic: This function is restored to its original purpose. It now fetches data
+    // for the bottom sheet and updates the _selectedHotspotDetails state.
     fun onHotspotMarkerClick(hotspot: EbirdNearbyHotspot) {
         viewModelScope.launch {
             _selectedHotspotDetails.value = HotspotSheetDetails(
@@ -444,6 +444,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Logic: A new function to clear the bottom sheet state, typically called when the sheet is dismissed.
     fun clearSelectedHotspot() {
         _selectedHotspotDetails.value = null
     }
@@ -511,41 +512,31 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         _currentHomeCountrySetting.value = countrySetting
         Log.i(TAG, "Home country set to: ${countrySetting.name}. Map should re-center.")
 
-        // Camera will be animated by LaunchedEffect in MapScreen.
-        // Data fetching will be triggered after camera animation or by requestHotspotsForCurrentView
-        // based on the updated home country context.
-        // Forcing a refresh here to ensure data reflects the new country immediately.
         if (!isSearchActive) {
             requestHotspotsForCurrentView(countrySetting.center, countrySetting.zoom, forceRefresh = true)
         } else {
-            // If search is active, we might want to re-run search for the new country
             if (_searchQuery.value.isNotBlank()){
-                onBirdSearchSubmitted() // This will now use the new home country for region code
+                onBirdSearchSubmitted()
             }
         }
     }
 
-    fun setRadius(radiusKm: Int) {
+    fun setRadius(radiusKm: Int, currentMapCenter: LatLng, currentMapZoom: Float) {
         if (_currentRadiusKm.value != radiusKm) {
             _currentRadiusKm.value = radiusKm
             userSettingsManager.saveDefaultRadiusKm(context, radiusKm)
             Log.i(TAG, "Search radius set to $radiusKm km.")
-            // Re-fetch data with the new radius from the current map center
-            cameraPositionStateHolder?.let {
-                requestHotspotsForCurrentView(it.position.target, it.position.zoom, forceRefresh = true)
-            }
+            requestHotspotsForCurrentView(currentMapCenter, currentMapZoom, forceRefresh = true)
         }
     }
 
-    fun clearHotspotCache() {
+    fun clearHotspotCache(currentMapCenter: LatLng, currentMapZoom: Float) {
         viewModelScope.launch {
             hotspotRepository.clearAllHotspotsCache()
             lastFetchedCenter = null
             areHotspotsVisible = false
             Log.i(TAG, "Hotspot cache cleared.")
-            val currentCenter = cameraPositionStateHolder?.position?.target ?: initialMapCenter
-            val currentZoom = cameraPositionStateHolder?.position?.zoom ?: initialMapZoom
-            requestHotspotsForCurrentView(currentCenter, currentZoom, forceRefresh = true)
+            requestHotspotsForCurrentView(currentMapCenter, currentMapZoom, forceRefresh = true)
         }
     }
 
@@ -569,7 +560,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     currentSelection + hotspot
                 } else {
                     Log.w(TAG, context.getString(R.string.map_compare_max_items_toast, MAX_COMPARISON_ITEMS))
-                    // Optionally show a toast to the user
                     currentSelection
                 }
             }

@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -147,10 +148,15 @@ fun HotspotDetailContent(data: HotspotDetailData, navController: NavController) 
             )
         }
 
+        // Logic: This conditional block is the core of the premium feature gating.
+        // The `data.isSubscribed` boolean, determined by the ViewModel, decides whether
+        // to show the `AnalysisSection` (for paying users) or the `PremiumUpsellCard` (for free users).
         item {
             if (data.isSubscribed && data.analysis != null) {
+                // User has "ExBird", show the premium analysis data.
                 AnalysisSection(analysis = data.analysis)
             } else {
+                // User does not have "ExBird", show a clear message encouraging them to subscribe.
                 PremiumUpsellCard(navController)
             }
         }
@@ -254,6 +260,9 @@ fun AnalysisSection(analysis: VisitingTimesAnalysis) {
     }
 }
 
+// Logic: This Composable serves as the call-to-action for non-subscribed users.
+// It clearly explains the benefit of subscribing ("Unlock Pro Analysis") and provides
+// a direct button ("Go Premium") to navigate to the payment flow.
 @Composable
 fun PremiumUpsellCard(navController: NavController) {
     val context = LocalContext.current

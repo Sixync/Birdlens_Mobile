@@ -121,7 +121,6 @@ fun HotspotBirdListScreen(
                 title = stringResource(R.string.hotspot_birds_title),
                 onNavigateBack = { navController.popBackStack() },
                 onAnalysisClick = {
-                    // Logic: Add a log here to confirm the ID is present before navigating.
                     if (effectiveHotspotId.isNotBlank()) {
                         Log.d("HotspotBirdListScreen", "Navigating to HotspotDetail with locId: $effectiveHotspotId")
                         navController.navigate(Screen.HotspotDetail.createRoute(effectiveHotspotId))

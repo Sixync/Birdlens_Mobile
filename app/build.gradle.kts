@@ -1,3 +1,4 @@
+// EXE201/app/build.gradle.kts
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -14,8 +15,6 @@ val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 var googleMapsApiKeyFromProperties = "YOUR_API_KEY_MISSING_IN_LOCAL_PROPERTIES"
 var ebirdApiKeyFromProperties = "YOUR_EBIRD_API_KEY_MISSING"
-// Logic: Remove the variable that holds the Gemini API key. It will no longer be read from local.properties for the client.
-// var geminiApiKeyFromProperties = "YOUR_GEMINI_API_KEY_MISSING"
 var stripePublishableKeyFromProperties: String? = null
 var backendBaseUrlFromProperties: String? = null
 
@@ -25,8 +24,6 @@ if (localPropertiesFile.exists()) {
             localProperties.load(fis)
             googleMapsApiKeyFromProperties = localProperties.getProperty("MAPS_API_KEY")
             ebirdApiKeyFromProperties = localProperties.getProperty("EBIRD_API_KEY")
-            // Logic: No longer need to read the Gemini key here. The backend will handle it.
-            // geminiApiKeyFromProperties = localProperties.getProperty("GEMINI_API_KEY")
             stripePublishableKeyFromProperties = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY")
             backendBaseUrlFromProperties = localProperties.getProperty("BACKEND_BASE_URL_LOCAL")
 
@@ -41,12 +38,6 @@ if (localPropertiesFile.exists()) {
             } else {
                 println("Warning: EBIRD_API_KEY not found in local.properties.")
             }
-            // Logic: Remove the print statements related to the Gemini key.
-            // if (geminiApiKeyFromProperties != null) {
-            //     println("Successfully loaded GEMINI_API_KEY from local.properties.")
-            // } else {
-            //     println("Warning: GEMINI_API_KEY not found in local.properties.")
-            // }
 
             if (stripePublishableKeyFromProperties != null) {
                 println("Successfully loaded STRIPE_PUBLISHABLE_KEY from local.properties. Value: '${stripePublishableKeyFromProperties}'")
@@ -68,13 +59,6 @@ val ebirdApiKey = if (ebirdApiKeyFromProperties.isNullOrBlank() || ebirdApiKeyFr
 } else {
     ebirdApiKeyFromProperties!!
 }
-// Logic: Remove the logic for handling the Gemini key.
-// val geminiApiKey = if (geminiApiKeyFromProperties.isNullOrBlank() || geminiApiKeyFromProperties == "YOUR_GEMINI_API_KEY_MISSING") {
-//     println("Using default/fallback Gemini API Key because value from local.properties was null, blank, or placeholder.")
-//     "YOUR_GEMINI_API_KEY_MISSING_IN_CONFIG"
-// } else {
-//     geminiApiKeyFromProperties!!
-// }
 
 val googleMapsApiKey = if (googleMapsApiKeyFromProperties.isNullOrBlank()) {
     println("Using default/fallback API Key because value from local.properties was null or blank.")
@@ -118,8 +102,6 @@ android {
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
         resourceConfigurations.addAll(listOf("en", "vi"))
         buildConfigField("String", "EBIRD_API_KEY", "\"$ebirdApiKey\"")
-        // Logic: REMOVE the buildConfigField for the Gemini API key. This is the critical change to prevent the leak.
-        // buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
         buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
         buildConfigField("String", "BACKEND_BASE_URL", "\"$backendBaseUrl\"")
     }
@@ -136,8 +118,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Logic: This is where your production URL is defined. When you build a release APK,
-            // the value of BuildConfig.BACKEND_BASE_URL will be https://birdlens.duckdns.org/
             buildConfigField("String", "BACKEND_BASE_URL", "\"https://birdlens.duckdns.org/\"")
         }
     }
@@ -183,6 +163,7 @@ dependencies {
     // Google Maps Compose Utilities (Clustering, Heatmaps, etc.)
     implementation("com.google.maps.android:maps-compose-utils:4.3.3") // Updated to latest
     implementation("com.google.maps.android:maps-compose-widgets:4.3.3") // For ScaleBar, etc. - Updated to latest
+    // Logic: This dependency provides the HeatmapTileProvider and resolves the 'Unresolved reference: heatmaps' error.
     implementation ("com.google.maps.android:android-maps-utils:3.8.2") // For HeatmapTileProvider
 
     testImplementation(libs.junit)

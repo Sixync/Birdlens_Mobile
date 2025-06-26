@@ -1,4 +1,4 @@
-// app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
+// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/map/MapScreen.kt
 package com.android.birdlens.presentation.ui.screens.map
 
 import android.Manifest
@@ -156,8 +156,10 @@ fun MapScreen(
     val currentRadiusKm by mapViewModel.currentRadiusKm.collectAsState()
     var showHomeCountryDialog by remember { mutableStateOf(false) }
 
+    // Logic: The bottom sheet state and its visibility controller are restored.
     val selectedHotspotDetails by mapViewModel.selectedHotspotDetails.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+
 
     val mapProperties by mapViewModel.mapProperties
     val uiSettings by mapViewModel.mapUiSettings
@@ -196,10 +198,6 @@ fun MapScreen(
         position = CameraPosition.fromLatLngZoom(mapViewModel.initialMapCenter, mapViewModel.initialMapZoom)
     }
 
-    LaunchedEffect(cameraPositionState) {
-        mapViewModel.cameraPositionStateHolder = cameraPositionState
-    }
-
     LaunchedEffect(currentHomeCountrySetting) {
         coroutineScope.launch {
             Log.d("MapScreen", "Home country changed to ${currentHomeCountrySetting.name}. Animating map.")
@@ -207,7 +205,6 @@ fun MapScreen(
                 CameraUpdateFactory.newLatLngZoom(currentHomeCountrySetting.center, currentHomeCountrySetting.zoom),
                 1000
             )
-            // Data fetch will be triggered by requestHotspotsForCurrentView in ViewModel
         }
     }
 
@@ -305,7 +302,7 @@ fun MapScreen(
                 },
                 onClearSearch = {
                     keyboardController?.hide()
-                    mapViewModel.onSearchQueryCleared(cameraPositionState.position.target)
+                    mapViewModel.onSearchQueryCleared(cameraPositionState.position.target, cameraPositionState.position.zoom)
                 },
                 onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() else { /* Handle no backstack */ } },
                 onNavigateToCart = { navController.navigate(Screen.Cart.route) },
@@ -342,6 +339,8 @@ fun MapScreen(
             }
         }
     ) { innerPadding ->
+        // Logic: The ModalBottomSheet is re-introduced. Its visibility is controlled
+        // by checking if the ViewModel's selectedHotspotDetails state is null or not.
         if (selectedHotspotDetails != null) {
             ModalBottomSheet(
                 onDismissRequest = { mapViewModel.clearSelectedHotspot() },
@@ -352,8 +351,9 @@ fun MapScreen(
                 selectedHotspotDetails?.let { details ->
                     HotspotDetailsSheetContent(
                         details = details,
+                        // Logic: The main action button now navigates to the bird list screen.
                         onNavigateToFullDetails = {
-                            navController.navigate(Screen.HotspotDetail.createRoute(details.hotspot.locId))
+                            navController.navigate(Screen.HotspotBirdList.createRoute(details.hotspot.locId))
                             coroutineScope.launch { sheetState.hide() }
                                 .invokeOnCompletion { if (it == null) mapViewModel.clearSelectedHotspot() }
                         },
@@ -394,22 +394,20 @@ fun MapScreen(
                         Clustering(
                             items = currentHotspots,
                             onClusterClick = { cluster ->
-                                // FIX: The cluster object can be null in some edge cases with the library.
-                                // Add a null check to prevent the NullPointerException crash.
                                 if (cluster != null) {
                                     val newZoom = cameraPositionState.position.zoom + 2
                                     cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(cluster.position, newZoom))
                                 }
                                 false
                             },
+                            // Logic: When a hotspot marker is clicked, the ViewModel fetches its details,
+                            // and the coroutine expands the now-visible bottom sheet.
                             onClusterItemClick = { hotspot ->
                                 mapViewModel.onHotspotMarkerClick(hotspot)
                                 coroutineScope.launch { sheetState.expand() }
                                 true
                             },
                             clusterContent = { cluster ->
-                                // FIX: The cluster object can be null, which causes the default red pin to be rendered.
-                                // A null check prevents the fallback to the library's default renderer.
                                 if (cluster != null) {
                                     Surface(
                                         shape = CircleShape,
@@ -518,7 +516,13 @@ fun MapScreen(
                         FilterChip(
                             selected = isSelected,
                             enabled = true,
-                            onClick = { mapViewModel.setRadius(radius) },
+                            onClick = {
+                                mapViewModel.setRadius(
+                                    radius,
+                                    cameraPositionState.position.target,
+                                    cameraPositionState.position.zoom
+                                )
+                            },
                             label = { Text("${radius}km", color = if (isSelected) VeryDarkGreenBase else TextWhite) },
                             colors = FilterChipDefaults.filterChipColors(
                                 containerColor = CardBackground.copy(alpha = 0.7f),
@@ -575,24 +579,23 @@ fun MapScreen(
             // --- TUTORIAL OVERLAY ---
             val currentTutorialKey = if (tutorialStepIndex < mapViewModel.tutorialSteps.size) mapViewModel.tutorialSteps[tutorialStepIndex].first else null
             val currentTutorialText = if (tutorialStepIndex < mapViewModel.tutorialSteps.size) mapViewModel.tutorialSteps[tutorialStepIndex].second else ""
-            var currentRect = elementCoordinates[currentTutorialKey]
+            var currentRect by remember { mutableStateOf<Rect?>(null) } // Use remember for the Rect
 
-            // For the map hotspot step, if coordinates are not available (e.g., no marker on screen), create a fake Rect in the center.
-            if (currentTutorialKey == "map_hotspot" && currentRect == null) {
-                cameraPositionState?.let {
-                    val centerPoint = it.projection?.toScreenLocation(it.position.target)
-                    if (centerPoint != null) {
-                        // Create a Rect representing a typical marker size.
-                        val markerHeightDp = 48.dp
-                        val markerWidthDp = 36.dp
-                        currentRect = Rect(
-                            left = centerPoint.x - with(LocalDensity.current) { markerWidthDp.toPx() / 2 },
-                            top = centerPoint.y - with(LocalDensity.current) { markerHeightDp.toPx() },
-                            right = centerPoint.x + with(LocalDensity.current) { markerWidthDp.toPx() / 2 },
-                            bottom = centerPoint.y.toFloat()
-                        )
-                    }
+            if (currentTutorialKey == "map_hotspot" && elementCoordinates[currentTutorialKey] == null) {
+                val centerPoint = cameraPositionState.projection?.toScreenLocation(cameraPositionState.position.target)
+                if (centerPoint != null) {
+                    val density = LocalDensity.current
+                    val markerHeightPx = with(density) { 48.dp.toPx() }
+                    val markerWidthPx = with(density) { 36.dp.toPx() }
+                    currentRect = Rect(
+                        left = centerPoint.x - markerWidthPx / 2,
+                        top = centerPoint.y - markerHeightPx,
+                        right = centerPoint.x + markerWidthPx / 2,
+                        bottom = centerPoint.y.toFloat()
+                    )
                 }
+            } else {
+                currentRect = elementCoordinates[currentTutorialKey]
             }
 
             val currentStep = if (currentTutorialKey != null) {
@@ -609,7 +612,7 @@ fun MapScreen(
                 currentStep = currentStep,
                 totalSteps = mapViewModel.tutorialSteps.size,
                 currentStepIndex = tutorialStepIndex,
-                contentPadding = innerPadding, // **THE FIX**: Pass the scaffold's padding
+                contentPadding = innerPadding,
                 onNext = { mapViewModel.nextTutorialStep() },
                 onPrevious = { mapViewModel.previousTutorialStep() },
                 onSkip = { mapViewModel.skipTutorial() }
@@ -630,6 +633,9 @@ fun MapScreen(
     }
 }
 
+// Logic: This bottom sheet is now reinstated with one crucial change:
+// the main action button now says "View Bird List" and its `onClick`
+// lambda navigates to the HotspotBirdListScreen.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HotspotDetailsSheetContent(
@@ -752,7 +758,8 @@ fun HotspotDetailsSheetContent(
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
             ) {
-                Text(stringResource(R.string.map_sheet_view_full_details), color = TextWhite)
+                // Logic: Changed the text of the button to reflect its new purpose.
+                Text("View Bird List", color = TextWhite)
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = TextWhite)
             }
