@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/viewmodel/BirdIdentifierViewModel.kt
+// Birdlens_Mobile/app/src/main/java/com/android/birdlens/presentation/viewmodel/BirdIdentifierViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
 import android.app.Application
@@ -111,12 +111,23 @@ class BirdIdentifierViewModel(application: Application) : AndroidViewModel(appli
 
 
     fun startChatWithImage(bitmap: Bitmap, prompt: String) {
-        val effectivePrompt = if (prompt.isNotBlank()) prompt else "Identify this bird and tell me about it."
+        // This new default prompt specifically asks for a list.
+        val defaultPrompt = "Identify the bird in this image. Please provide a list of up to 3 possible species it could be, with the most likely one first, even if you are confident."
+
+        val effectivePrompt = if (prompt.isNotBlank()) {
+            // If user provides a prompt, we combine it.
+            "$defaultPrompt. The user also asked: '$prompt'"
+        } else {
+            defaultPrompt
+        }
         handleIdentification(bitmap, effectivePrompt)
     }
 
     fun startChatWithText(prompt: String) {
-        handleIdentification(null, prompt)
+        // Wrap the user's prompt with instructions for the AI to handle ambiguity.
+        val basePrompt = context.getString(R.string.gemini_prompt_extract_name_from_text)
+        val effectivePrompt = String.format(basePrompt, prompt)
+        handleIdentification(null, effectivePrompt)
     }
 
     fun selectBirdAndStartConversation(birdName: String, userPrompt: String) {
