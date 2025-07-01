@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.android.birdlens.data.repository.SpeciesRepository
 import com.android.birdlens.utils.ErrorUtils
 import com.google.android.gms.maps.model.LatLng
+// Import LatLngBounds and its builder.
+import com.google.android.gms.maps.model.LatLngBounds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,15 +18,15 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
- * Processed data class ready for the UI. It contains lists of LatLng points
- * for each type of habitat, parsed from the raw GeoJSON.
+ * Processed data class ready for the UI. It now includes the calculated
+ * geographic bounds of all its polygons.
  */
 data class SpeciesRangeData(
     val residentPolygons: List<List<LatLng>> = emptyList(),
     val breedingPolygons: List<List<LatLng>> = emptyList(),
     val nonBreedingPolygons: List<List<LatLng>> = emptyList(),
-    val passagePolygons: List<List<LatLng>> = emptyList()
-    // Add other presence types as needed
+    val passagePolygons: List<List<LatLng>> = emptyList(),
+    val bounds: LatLngBounds? = null // This will hold the encompassing bounds.
 )
 
 /**
@@ -46,7 +48,6 @@ class BirdRangeMapViewModel(
     private val _uiState = MutableStateFlow<BirdRangeUiState>(BirdRangeUiState.Loading)
     val uiState: StateFlow<BirdRangeUiState> = _uiState.asStateFlow()
 
-    // Logic: The scientific name is retrieved from the SavedStateHandle.
     private val scientificName: String? = savedStateHandle["scientificName"]
 
     companion object {
@@ -54,8 +55,6 @@ class BirdRangeMapViewModel(
     }
 
     init {
-        // Logic: The ViewModel now fetches data dynamically based on the name passed to it.
-        // It checks if the scientificName is valid before making a network call.
         if (!scientificName.isNullOrBlank()) {
             Log.d(TAG, "ViewModel initialized. Fetching range data for: $scientificName")
             fetchRangeData(scientificName)
@@ -65,12 +64,10 @@ class BirdRangeMapViewModel(
         }
     }
 
-    // Logic: The function now takes the scientific name as a parameter.
     fun fetchRangeData(scientificName: String) {
         viewModelScope.launch {
             _uiState.value = BirdRangeUiState.Loading
             try {
-                // Logic: The repository is called with the specific scientific name.
                 val response = speciesRepository.getSpeciesRange(scientificName)
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
@@ -93,23 +90,36 @@ class BirdRangeMapViewModel(
     }
 
     private fun parseApiResponse(apiData: List<com.android.birdlens.data.model.ApiRangeData>): SpeciesRangeData {
+        val allPolygons = mutableListOf<List<LatLng>>()
         val resident = mutableListOf<List<LatLng>>()
         val breeding = mutableListOf<List<LatLng>>()
         val nonBreeding = mutableListOf<List<LatLng>>()
         val passage = mutableListOf<List<LatLng>>()
 
         apiData.forEach { rangeData ->
-            // Logic: The geoJson property is now a nullable String containing the GeoJSON data.
-            // Check if it's not null or blank before attempting to parse it.
             if (!rangeData.geoJson.isNullOrBlank()) {
                 val polygons = parseGeoJsonToLatLngLists(rangeData.geoJson)
-                // For the test, we'll just add all polygons to the 'resident' list.
-                // In a real scenario, you would check a 'presence' or 'origin' field
-                // to decide which list (resident, breeding, etc.) to add the polygons to.
                 resident.addAll(polygons)
+                // Add all polygons to a master list for bounds calculation.
+                allPolygons.addAll(polygons)
             }
         }
-        return SpeciesRangeData(resident, breeding, nonBreeding, passage)
+
+        // Create a bounds builder.
+        val boundsBuilder = LatLngBounds.Builder()
+        var hasPoints = false
+        // Include every point from every polygon into the builder.
+        allPolygons.forEach { polygon ->
+            polygon.forEach { point ->
+                boundsBuilder.include(point)
+                hasPoints = true
+            }
+        }
+
+        // Build the bounds if points were added, otherwise it remains null.
+        val bounds = if (hasPoints) boundsBuilder.build() else null
+
+        return SpeciesRangeData(resident, breeding, nonBreeding, passage, bounds)
     }
 
     /**
