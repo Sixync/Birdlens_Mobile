@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -51,14 +52,19 @@ fun AccountInfoScreen(
 ) {
     val uiState by accountInfoViewModel.uiState.collectAsState()
 
+    // Logic: Added a LaunchedEffect to trigger the data fetch when the screen is first composed.
+    // This ensures user data is loaded whenever this screen becomes visible, resolving the infinite loading bug.
+    // The ViewModel is now robust against re-fetching if data is already present.
+    LaunchedEffect(key1 = Unit) {
+        accountInfoViewModel.fetchCurrentUser()
+    }
+
     AppScaffold(
         navController = navController,
         topBar = {
-            // Logic: The TopAppBar now includes an action icon to navigate to the settings screen.
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(id = R.string.account_info_title), color = TextWhite, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    // Show back arrow only if there's a back stack entry, otherwise it's the root of the 'Me' tab.
                     if (navController.previousBackStackEntry != null) {
                         IconButton(onClick = { navController.popBackStack() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextWhite)
@@ -75,7 +81,6 @@ fun AccountInfoScreen(
                 )
             )
         },
-        // Logic: showBottomBar is set to true as this is now a main tab screen.
         showBottomBar = true
     ) { innerPadding ->
         Box(

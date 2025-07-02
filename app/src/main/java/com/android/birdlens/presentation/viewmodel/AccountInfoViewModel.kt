@@ -27,8 +27,12 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun fetchCurrentUser() {
-        // Prevent fetching if already loading or successful to avoid redundant calls.
-        if (_uiState.value is AccountInfoUiState.Loading) return
+        // Logic: Prevent redundant API calls if data is already being loaded or has been successfully loaded.
+        // This makes the function safer to call from multiple places without causing unnecessary network traffic.
+        if (_uiState.value is AccountInfoUiState.Loading || _uiState.value is AccountInfoUiState.Success) {
+            Log.d("AccountInfoVM", "FetchCurrentUser skipped. State is already Loading or Success.")
+            return
+        }
         _uiState.value = AccountInfoUiState.Loading
         viewModelScope.launch {
             try {
