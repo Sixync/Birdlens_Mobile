@@ -34,8 +34,6 @@ sealed class Screen(val route: String) {
     data object BirdInfo : Screen("bird_info_screen/{speciesCode}") {
         fun createRoute(speciesCode: String) = "bird_info_screen/$speciesCode"
     }
-    // Logic: The route is updated to accept a mandatory 'scientificName' argument.
-    // A helper function `createRoute` is added for type-safe navigation.
     data object BirdRangeMap : Screen("bird_range_map_screen/{scientificName}") {
         fun createRoute(scientificName: String) = "bird_range_map_screen/$scientificName"
     }

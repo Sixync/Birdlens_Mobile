@@ -1,13 +1,11 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/viewmodel/HotspotBirdListViewModel.kt
+// app/src/main/java/com/android/birdlens/presentation/viewmodel/HotspotBirdListViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.birdlens.data.model.ebird.EbirdObservation
 import com.android.birdlens.data.model.ebird.EbirdRetrofitInstance
-import com.android.birdlens.data.model.ebird.EbirdTaxonomy
 import com.android.birdlens.data.model.wiki.WikiRetrofitInstance
 import com.android.birdlens.utils.ErrorUtils
 import kotlinx.coroutines.Job
@@ -46,7 +44,6 @@ open class HotspotBirdListViewModel(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // Logic: Change initialLocId to be public so the screen can access it directly and reliably.
     val initialLocId: String?
 
     val _uiState = MutableStateFlow<HotspotBirdListUiState>(HotspotBirdListUiState.Idle)
@@ -57,12 +54,10 @@ open class HotspotBirdListViewModel(
 
     companion object {
         private const val TAG = "HotspotBirdListVM"
-        private const val RECENT_DAYS_BACK = 30
         private const val DETAILS_PAGE_SIZE = 15
     }
 
     private var allSpeciesCodesForHotspot: List<String> = emptyList()
-    private var recentObsMapForHotspot: Map<String, EbirdObservation> = emptyMap()
     private var currentDetailsPage = 0
     private var isLoadingDetails = false
     private var allDetailsLoaded = false
@@ -81,44 +76,25 @@ open class HotspotBirdListViewModel(
 
     private fun fetchAllSpeciesCodesAndInitialDetails(locId: String) {
         _uiState.value = HotspotBirdListUiState.Loading
-        Log.i(TAG, "Fetching all species codes and recent observations for locId: '$locId'")
+        Log.i(TAG, "Fetching all species codes for locId: '$locId'")
         viewModelScope.launch {
             try {
-                coroutineScope {
-                    val allSpeciesCodesDeferred = async { ebirdApiService.getSpeciesListForHotspot(locId) }
-                    val recentObservationsDeferred = async {
-                        ebirdApiService.getRecentObservationsForHotspot(
-                            locId = locId,
-                            back = RECENT_DAYS_BACK,
-                            detail = "simple",
-                            maxResults = 1000
-                        )
-                    }
-                    val allSpeciesResponse = allSpeciesCodesDeferred.await()
-                    val recentObsResponse = recentObservationsDeferred.await()
+                val allSpeciesResponse = ebirdApiService.getSpeciesListForHotspot(locId)
 
-                    if (!allSpeciesResponse.isSuccessful || allSpeciesResponse.body() == null) {
-                        val errorBody = allSpeciesResponse.errorBody()?.string()
-                        val extractedMessage = ErrorUtils.extractMessage(errorBody, "Failed to fetch species list (HTTP ${allSpeciesResponse.code()})")
-                        _uiState.value = HotspotBirdListUiState.Error(extractedMessage)
-                        Log.e(TAG, "Error fetching species list for '$locId': $extractedMessage. Full Body: $errorBody")
-                        return@coroutineScope
-                    }
-                    allSpeciesCodesForHotspot = allSpeciesResponse.body()!!
+                if (!allSpeciesResponse.isSuccessful || allSpeciesResponse.body() == null) {
+                    val errorBody = allSpeciesResponse.errorBody()?.string()
+                    val extractedMessage = ErrorUtils.extractMessage(errorBody, "Failed to fetch species list (HTTP ${allSpeciesResponse.code()})")
+                    _uiState.value = HotspotBirdListUiState.Error(extractedMessage)
+                    Log.e(TAG, "Error fetching species list for '$locId': $extractedMessage. Full Body: $errorBody")
+                    return@launch
+                }
+                allSpeciesCodesForHotspot = allSpeciesResponse.body()!!
 
-                    recentObsMapForHotspot = if (recentObsResponse.isSuccessful && recentObsResponse.body() != null) {
-                        recentObsResponse.body()!!.associateBy { it.speciesCode }
-                    } else {
-                        Log.w(TAG, "Failed to fetch recent observations for '$locId'. Code: ${recentObsResponse.code()}. Error: ${recentObsResponse.errorBody()?.string()}")
-                        emptyMap()
-                    }
-
-                    if (allSpeciesCodesForHotspot.isEmpty()) {
-                        Log.i(TAG, "No species recorded at hotspot '$locId'.")
-                        _uiState.value = HotspotBirdListUiState.Success(emptyList(), canLoadMore = false)
-                        allDetailsLoaded = true
-                        return@coroutineScope
-                    }
+                if (allSpeciesCodesForHotspot.isEmpty()) {
+                    Log.i(TAG, "No species recorded at hotspot '$locId'.")
+                    _uiState.value = HotspotBirdListUiState.Success(emptyList(), canLoadMore = false)
+                    allDetailsLoaded = true
+                    return@launch
                 }
 
                 currentDetailsPage = 0
@@ -218,14 +194,13 @@ open class HotspotBirdListViewModel(
                             return@async null
                         }
                         val imageUrl = fetchImageUrlForBird(taxon.commonName)
-                        val recentObservation = recentObsMapForHotspot[taxon.speciesCode]
                         BirdSpeciesInfo(
                             commonName = taxon.commonName,
                             speciesCode = taxon.speciesCode,
                             scientificName = taxon.scientificName,
-                            observationDate = recentObservation?.obsDt?.split(" ")?.firstOrNull(),
-                            count = recentObservation?.howMany,
-                            isRecent = recentObservation != null,
+                            observationDate = null,
+                            count = null,
+                            isRecent = false,
                             imageUrl = imageUrl
                         )
                     }
@@ -236,10 +211,8 @@ open class HotspotBirdListViewModel(
             currentDetailsPage++
             allDetailsLoaded = endIndex >= allSpeciesCodesForHotspot.size
 
-            val finalBirdList = existingBirds.distinctBy { it.speciesCode }.sortedWith(
-                compareByDescending<BirdSpeciesInfo> { it.isRecent }
-                    .thenBy { it.commonName }
-            )
+            val finalBirdList = existingBirds.distinctBy { it.speciesCode }.sortedBy { it.commonName }
+
             _uiState.value = HotspotBirdListUiState.Success(finalBirdList, canLoadMore = !allDetailsLoaded, isLoadingMore = false)
             Log.d(TAG, "Page ${currentDetailsPage-1} loaded. Total birds: ${finalBirdList.size}. Can load more: ${!allDetailsLoaded}")
 
@@ -285,7 +258,6 @@ open class HotspotBirdListViewModel(
         if (!initialLocId.isNullOrBlank()) {
             Log.i(TAG, "REFRESH_TRIGGERED: Refreshing all data for initialLocId: '$initialLocId'")
             allSpeciesCodesForHotspot = emptyList()
-            recentObsMapForHotspot = emptyMap()
             fetchAllSpeciesCodesAndInitialDetails(initialLocId)
         } else {
             Log.e(TAG, "REFRESH_FAIL: Cannot refresh, initialLocId is missing or blank.")

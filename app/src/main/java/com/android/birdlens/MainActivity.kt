@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/android/birdlens/MainActivity.kt
+// app/src/main/java/com/android/birdlens/MainActivity.kt
 package com.android.birdlens
 
 import android.content.Context

@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/hotspotbirdlist/HotspotBirdListScreen.kt
+// app/src/main/java/com/android/birdlens/presentation/ui/screens/hotspotbirdlist/HotspotBirdListScreen.kt
 package com.android.birdlens.presentation.ui.screens.hotspotbirdlist
 
 import android.annotation.SuppressLint
@@ -14,7 +14,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -48,10 +48,10 @@ import kotlinx.coroutines.flow.debounce
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SimpleTopAppBarWithAnalysisAction(
+fun SimpleTopAppBarWithInfoAction(
     title: String,
     onNavigateBack: () -> Unit,
-    onAnalysisClick: () -> Unit
+    onInfoClick: () -> Unit
 ) {
     CenterAlignedTopAppBar(
         title = { Text(title, color = TextWhite, fontWeight = FontWeight.Bold) },
@@ -61,8 +61,8 @@ fun SimpleTopAppBarWithAnalysisAction(
             }
         },
         actions = {
-            IconButton(onClick = onAnalysisClick) {
-                Icon(Icons.Default.Analytics, contentDescription = "View Analysis", tint = TextWhite)
+            IconButton(onClick = onInfoClick) {
+                Icon(Icons.Default.Info, contentDescription = "View Hotspot Info", tint = TextWhite)
             }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -117,10 +117,10 @@ fun HotspotBirdListScreen(
     AppScaffold(
         navController = navController,
         topBar = {
-            SimpleTopAppBarWithAnalysisAction(
+            SimpleTopAppBarWithInfoAction(
                 title = stringResource(R.string.hotspot_birds_title),
                 onNavigateBack = { navController.popBackStack() },
-                onAnalysisClick = {
+                onInfoClick = {
                     if (effectiveHotspotId.isNotBlank()) {
                         Log.d("HotspotBirdListScreen", "Navigating to HotspotDetail with locId: $effectiveHotspotId")
                         navController.navigate(Screen.HotspotDetail.createRoute(effectiveHotspotId))

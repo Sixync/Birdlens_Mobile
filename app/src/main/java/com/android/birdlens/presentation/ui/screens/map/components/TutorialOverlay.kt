@@ -1,4 +1,4 @@
-// app/src/main/java/com/android/birdlens/presentation/ui/screens/map/TutorialOverlay.kt
+// app/src/main/java/com/android/birdlens/presentation/ui/screens/map/components/TutorialOverlay.kt
 package com.android.birdlens.presentation.ui.screens.map.components
 
 import androidx.compose.animation.AnimatedVisibility
@@ -25,27 +25,22 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.android.birdlens.presentation.ui.screens.map.TutorialStepInfo
 import com.android.birdlens.ui.theme.ButtonGreen
 import com.android.birdlens.ui.theme.CardBackground
 import com.android.birdlens.ui.theme.GreenWave2
 import com.android.birdlens.ui.theme.TextWhite
 import com.android.birdlens.ui.theme.VeryDarkGreenBase
-
-data class TutorialStepInfo(
-    val key: String,
-    val text: String,
-    val targetRect: Rect?,
-    val isCircleSpotlight: Boolean = true
-)
 
 @Composable
 fun TutorialOverlay(
@@ -53,7 +48,7 @@ fun TutorialOverlay(
     currentStep: TutorialStepInfo?,
     totalSteps: Int,
     currentStepIndex: Int,
-    contentPadding: PaddingValues, // Accept the scaffold's content padding
+    contentPadding: PaddingValues,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onSkip: () -> Unit
@@ -61,14 +56,9 @@ fun TutorialOverlay(
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
 
-    // Logic: Get the status bar height in pixels.
     val statusBarHeightPx = WindowInsets.statusBars.getTop(density).toFloat()
-
-    // Calculate content padding in pixels.
     val topPaddingPx = with(density) { contentPadding.calculateTopPadding().toPx() }
     val leftPaddingPx = with(density) { contentPadding.calculateLeftPadding(layoutDirection).toPx() }
-
-    // Logic: The total offset from the top of the window includes both the status bar and the top bar.
     val totalTopOffset = topPaddingPx + statusBarHeightPx
 
     AnimatedVisibility(
@@ -76,30 +66,34 @@ fun TutorialOverlay(
         enter = fadeIn(animationSpec = tween(300)),
         exit = fadeOut(animationSpec = tween(300))
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
-                    onClick = { /* Consume clicks */ }
+                    onClick = { /* Consume clicks to prevent interaction with underlying UI */ }
                 )
         ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
+            val fullHeightDp = this.maxHeight
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+            ) {
                 drawRect(color = Color.Black.copy(alpha = 0.8f))
 
                 currentStep?.targetRect?.let { rect ->
-                    // Logic: Use the new totalTopOffset for translation.
                     val adjustedRect = rect.translate(-leftPaddingPx, -totalTopOffset)
 
-                    // Define Dp to Px conversions here, within the DrawScope, which is a Density scope
-                    val inflatedAmountOval = 12.dp.toPx()
+                    val inflatedAmountOval = 6.dp.toPx() // Tighter spotlight
                     val inflatedAmountRoundRect = 8.dp.toPx()
                     val cornerRadius = 16.dp.toPx()
 
                     val path = Path().apply {
                         if (currentStep.isCircleSpotlight) {
-                            addOval(adjustedRect.inflate(inflatedAmountOval)) // Inflate for a bit of padding
+                            addOval(adjustedRect.inflate(inflatedAmountOval))
                         } else {
                             addRoundRect(
                                 RoundRect(
@@ -116,52 +110,39 @@ fun TutorialOverlay(
                 }
             }
 
-            currentStep?.let { step ->
-                val targetRect = step.targetRect
-                val screenHeightPx = LocalConfiguration.current.screenHeightDp * density.density
-                val isTooltipAbove = targetRect != null && targetRect.center.y > screenHeightPx / 1.9
+            Box(modifier = Modifier.fillMaxSize()) {
+                currentStep?.let { step ->
+                    val targetRect = step.targetRect
+                    val isTooltipAbove = targetRect != null && with(density) { (targetRect.center.y - totalTopOffset).toDp() } > (fullHeightDp / 2)
 
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    if (targetRect != null) {
-                        if (isTooltipAbove) {
-                            // This box takes all the space above the spotlight
-                            // Logic: Use the new totalTopOffset for positioning.
-                            val boxHeight = with(density) { (targetRect.top - totalTopOffset).toDp() }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(boxHeight.coerceAtLeast(0.dp)),
-                                contentAlignment = Alignment.BottomCenter
-                            ) {
-                                // Place tooltip at the bottom of this box
-                                Box(modifier = Modifier.padding(bottom = 24.dp)) {
-                                    TooltipBox(step.text)
-                                }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (targetRect != null) {
+                            if (isTooltipAbove) {
+                                val spaceAboveDp = with(density) { (targetRect.top - totalTopOffset).toDp() }
+                                val tooltipHeightApproximation = 120.dp
+                                val bottomPadding = 24.dp
+                                Spacer(modifier = Modifier.height((spaceAboveDp - tooltipHeightApproximation - bottomPadding).coerceAtLeast(0.dp)))
+                                TooltipBox(step.text)
+                                Spacer(modifier = Modifier.weight(1f))
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                                val spaceBelowDp = fullHeightDp - with(density) { (targetRect.bottom - totalTopOffset).toDp() }
+                                val navControlsHeightApproximation = 80.dp
+                                val topPadding = 24.dp
+                                TooltipBox(step.text)
+                                Spacer(modifier = Modifier.height((spaceBelowDp - navControlsHeightApproximation - topPadding).coerceAtLeast(0.dp)))
                             }
-                        } else { // Tooltip below
-                            // Spacer to occupy space down to the bottom of the spotlight
-                            // Logic: Use the new totalTopOffset for positioning.
-                            val spacerHeight = with(density) { (targetRect.bottom - totalTopOffset).toDp() }
-                            Spacer(modifier = Modifier.height(spacerHeight.coerceAtLeast(0.dp)))
-                            // Tooltip appears right after the spacer
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.TopCenter
-                            ) {
-                                Box(modifier = Modifier.padding(top = 24.dp)) {
-                                    TooltipBox(step.text)
-                                }
-                            }
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                            TooltipBox(step.text)
+                            Spacer(modifier = Modifier.weight(1f))
                         }
-                    } else { // No target rect, so tooltip is in the middle of the available space
-                        Spacer(modifier = Modifier.weight(1f))
-                        TooltipBox(step.text)
                     }
-
-
-                    Spacer(modifier = Modifier.weight(1f)) // Pushes navigation to the bottom
 
                     TutorialNavigation(
                         onNext = onNext,
@@ -169,7 +150,10 @@ fun TutorialOverlay(
                         onSkip = onSkip,
                         isFirstStep = currentStepIndex == 0,
                         isLastStep = currentStepIndex == totalSteps - 1,
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(16.dp)
+                            .navigationBarsPadding()
                     )
                 }
             }
@@ -177,7 +161,6 @@ fun TutorialOverlay(
     }
 }
 
-@Composable
 private fun Rect.inflate(amount: Float): Rect {
     return Rect(
         left = this.left - amount,
@@ -188,13 +171,12 @@ private fun Rect.inflate(amount: Float): Rect {
 }
 
 @Composable
-fun TooltipBox(text: String) {
+fun TooltipBox(text: String, modifier: Modifier = Modifier) {
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.95f)),
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .padding(16.dp),
+        modifier = modifier
+            .fillMaxWidth(0.9f),
         elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Text(

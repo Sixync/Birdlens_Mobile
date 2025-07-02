@@ -21,7 +21,8 @@ coreKtxVersion = "1.6.1"
 room = "2.7.1"
 generativeai = "0.9.0"
 appcompat = "1.7.0"
-composeMaterial = "1.4.1" # Added appcompat version
+composeMaterial = "1.4.1"
+playServicesLocation = "21.3.0" # Added appcompat version
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -55,7 +56,8 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "generativeai" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-androidx-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "composeMaterial" } # Added appcompat library
+androidx-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "composeMaterial" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" } # Added appcompat library
 
 
 [plugins]

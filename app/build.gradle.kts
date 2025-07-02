@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.kapt)
+    id("kotlin-parcelize")
     id("com.google.gms.google-services")
 }
 
@@ -164,7 +165,8 @@ dependencies {
     implementation("com.google.maps.android:maps-compose-utils:4.3.3") // Updated to latest
     implementation("com.google.maps.android:maps-compose-widgets:4.3.3") // For ScaleBar, etc. - Updated to latest
     // Logic: This dependency provides the HeatmapTileProvider and resolves the 'Unresolved reference: heatmaps' error.
-    implementation ("com.google.maps.android:android-maps-utils:3.8.2") // For HeatmapTileProvider
+    implementation ("com.google.maps.android:android-maps-utils:3.8.2")
+    implementation(libs.play.services.location) // For HeatmapTileProvider
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -189,6 +191,9 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
+
+    implementation(platform("androidx.compose:compose-bom:2025.05.00"))
+    implementation("androidx.compose.foundation:foundation")
 
     // Stripe SDK Dependencies
     implementation("com.stripe:stripe-android:21.17.0")

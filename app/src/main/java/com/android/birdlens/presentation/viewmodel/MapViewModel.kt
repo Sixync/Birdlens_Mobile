@@ -1,6 +1,7 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/viewmodel/MapViewModel.kt
+// app/src/main/java/com/android/birdlens/presentation/viewmodel/MapViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
@@ -15,6 +16,7 @@ import com.android.birdlens.data.model.ebird.EbirdNearbyHotspot
 import com.android.birdlens.data.repository.BirdSpeciesRepository
 import com.android.birdlens.data.repository.HotspotRepository
 import com.android.birdlens.data.repository.TutorialRepository
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
@@ -22,16 +24,22 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.heatmaps.WeightedLatLng
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlin.math.abs
 
+sealed class MapAction {
+    data class AnimateToLocation(val latLng: LatLng, val zoom: Float) : MapAction()
+}
 
 sealed class MapUiState {
     data object Idle : MapUiState()
@@ -62,8 +70,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val userSettingsManager = UserSettingsManager
     private val context = application.applicationContext
     private val tutorialRepository = TutorialRepository(application.applicationContext)
+    private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
-    // Tutorial State
     private val _showTutorial = MutableStateFlow(false)
     val showTutorial: StateFlow<Boolean> = _showTutorial.asStateFlow()
 
@@ -72,6 +80,9 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _elementCoordinates = MutableStateFlow<Map<String, Rect>>(emptyMap())
     val elementCoordinates: StateFlow<Map<String, Rect>> = _elementCoordinates.asStateFlow()
+
+    private val _mapActions = Channel<MapAction>()
+    val mapActions = _mapActions.receiveAsFlow()
 
     val tutorialSteps = listOf(
         "heatmap_toggle" to "Toggle here to switch between heatmap and clustered hotspots.",
@@ -96,11 +107,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentHomeCountrySetting = MutableStateFlow(userSettingsManager.getHomeCountrySetting(context))
     val currentHomeCountrySetting: StateFlow<CountrySetting> = _currentHomeCountrySetting.asStateFlow()
 
-    // Logic: Restore the StateFlow for the bottom sheet details.
-    // This will hold the data for the sheet when a marker is clicked.
     private val _selectedHotspotDetails = MutableStateFlow<HotspotSheetDetails?>(null)
     val selectedHotspotDetails: StateFlow<HotspotSheetDetails?> = _selectedHotspotDetails.asStateFlow()
-
 
     val _mapProperties = mutableStateOf(MapProperties(mapType = MapType.NORMAL))
     val mapProperties: androidx.compose.runtime.State<MapProperties> = _mapProperties
@@ -149,11 +157,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     val initialMapZoom: Float
         get() = _currentHomeCountrySetting.value.zoom
 
+
     init {
         viewModelScope.launch {
             val hasSeen = tutorialRepository.hasSeenMapTutorial.first()
             if (!hasSeen) {
-                // Delay to allow UI to compose and report positions
                 delay(1500)
                 startTutorial()
             }
@@ -163,11 +171,15 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     fun startTutorial() {
         _tutorialStepIndex.value = 0
         _showTutorial.value = true
+        _elementCoordinates.value = emptyMap()
+        handleTutorialStepAction(0)
     }
 
     fun nextTutorialStep() {
         if (_tutorialStepIndex.value < tutorialSteps.size - 1) {
-            _tutorialStepIndex.value++
+            val nextIndex = _tutorialStepIndex.value + 1
+            _tutorialStepIndex.value = nextIndex
+            handleTutorialStepAction(nextIndex)
         } else {
             skipTutorial()
         }
@@ -175,9 +187,38 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     fun previousTutorialStep() {
         if (_tutorialStepIndex.value > 0) {
-            _tutorialStepIndex.value--
+            val prevIndex = _tutorialStepIndex.value - 1
+            _tutorialStepIndex.value = prevIndex
+            handleTutorialStepAction(prevIndex)
         }
     }
+
+    private fun handleTutorialStepAction(stepIndex: Int) {
+        val stepKey = tutorialSteps.getOrNull(stepIndex)?.first
+        if (stepKey == "map_hotspot") {
+            zoomToUserLocation()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun zoomToUserLocation() {
+        viewModelScope.launch {
+            try {
+                val location = fusedLocationClient.lastLocation.await()
+                val targetLocation = if (location != null) {
+                    LatLng(location.latitude, location.longitude)
+                } else {
+                    Log.w(TAG, "Last known location is null, using default home country center for tutorial.")
+                    _currentHomeCountrySetting.value.center
+                }
+                _mapActions.send(MapAction.AnimateToLocation(targetLocation, 10f)) // Zoom level 10 is good for cities
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get user location for tutorial.", e)
+                _mapActions.send(MapAction.AnimateToLocation(_currentHomeCountrySetting.value.center, _currentHomeCountrySetting.value.zoom))
+            }
+        }
+    }
+
 
     fun skipTutorial() {
         _showTutorial.value = false
@@ -189,7 +230,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     fun registerUiElement(key: String, newRect: Rect) {
         _elementCoordinates.update { currentCoordinates ->
             val existingRect = currentCoordinates[key]
-            // Only update if the rect is different to avoid unnecessary recompositions
             if (existingRect != newRect) {
                 currentCoordinates + (key to newRect)
             } else {
@@ -394,8 +434,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Logic: This function is restored to its original purpose. It now fetches data
-    // for the bottom sheet and updates the _selectedHotspotDetails state.
     fun onHotspotMarkerClick(hotspot: EbirdNearbyHotspot) {
         viewModelScope.launch {
             _selectedHotspotDetails.value = HotspotSheetDetails(
@@ -444,7 +482,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Logic: A new function to clear the bottom sheet state, typically called when the sheet is dismissed.
     fun clearSelectedHotspot() {
         _selectedHotspotDetails.value = null
     }
@@ -560,6 +597,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     currentSelection + hotspot
                 } else {
                     Log.w(TAG, context.getString(R.string.map_compare_max_items_toast, MAX_COMPARISON_ITEMS))
+                    // Optionally show a toast to the user
                     currentSelection
                 }
             }
