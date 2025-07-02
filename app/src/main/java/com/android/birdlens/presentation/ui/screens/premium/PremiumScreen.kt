@@ -1,4 +1,5 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/premium/PremiumScreen.kt
+// path: EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/premium/PremiumScreen.kt
+// (complete file content here - full imports, package names, all code)
 package com.android.birdlens.presentation.ui.screens.premium
 
 import android.app.Activity
@@ -16,10 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,51 +25,69 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.android.birdlens.R
 import com.android.birdlens.data.model.Subscription
+import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
 import com.android.birdlens.presentation.ui.screens.payment.CheckoutActivity
 import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.presentation.viewmodel.GenericUiState
+import com.android.birdlens.presentation.viewmodel.PaymentUiState
+import com.android.birdlens.presentation.viewmodel.PaymentViewModel
 import com.android.birdlens.presentation.viewmodel.SubscriptionViewModel
 import com.android.birdlens.ui.theme.*
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumScreen(
     navController: NavController,
     subscriptionViewModel: SubscriptionViewModel = viewModel(),
-    accountInfoViewModel: AccountInfoViewModel = viewModel()
+    accountInfoViewModel: AccountInfoViewModel = viewModel(),
+    paymentViewModel: PaymentViewModel = viewModel() // Add the PaymentViewModel
 ) {
     val subscriptionState by subscriptionViewModel.subscriptionsState.collectAsState()
     val accountState by accountInfoViewModel.uiState.collectAsState()
+    val paymentState by paymentViewModel.uiState.collectAsState() // Observe payment state
     val context = LocalContext.current
 
     val isAlreadySubscribed = (accountState as? AccountInfoUiState.Success)?.user?.subscription == "ExBird"
 
-    // Logic: This launcher starts the CheckoutActivity and waits for a result.
-    val checkoutLauncher = rememberLauncherForActivityResult(
+    val stripeCheckoutLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            // Payment was successful. Show feedback and refresh the user's profile data.
             Toast.makeText(context, "Subscription successful! Refreshing profile...", Toast.LENGTH_SHORT).show()
             accountInfoViewModel.fetchCurrentUser()
         } else {
-            // Payment was cancelled or failed.
             Toast.makeText(context, "Payment process was not completed.", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // Logic: This ensures the latest user data is fetched every time this screen is entered.
-    // This prevents the user from seeing the "Subscribe" button if they already have a subscription.
+    // Logic: Handle the PayOS link creation state
+    LaunchedEffect(paymentState) {
+        when (val state = paymentState) {
+            is PaymentUiState.LinkCreated -> {
+                navController.navigate(Screen.PayOSCheckout.createRoute(state.checkoutUrl))
+                paymentViewModel.resetState() // Reset state after navigation
+            }
+            is PaymentUiState.Error -> {
+                Toast.makeText(context, "Error: ${state.message}", Toast.LENGTH_LONG).show()
+                paymentViewModel.resetState()
+            }
+            else -> { /* Idle or Loading */ }
+        }
+    }
+
     LaunchedEffect(key1 = Unit) {
         accountInfoViewModel.fetchCurrentUser()
     }
@@ -110,10 +126,13 @@ fun PremiumScreen(
                         PremiumContent(
                             subscription = exBirdSubscription,
                             isSubscribed = isAlreadySubscribed,
-                            onSubscribeClick = {
-                                // Logic: Launch the CheckoutActivity using the new launcher.
+                            isLoadingPayment = paymentState is PaymentUiState.Loading,
+                            onPayWithStripeClick = {
                                 val intent = Intent(context, CheckoutActivity::class.java)
-                                checkoutLauncher.launch(intent)
+                                stripeCheckoutLauncher.launch(intent)
+                            },
+                            onPayWithPayOSClick = {
+                                paymentViewModel.createPayOSPaymentLink()
                             }
                         )
                     } else {
@@ -139,7 +158,9 @@ fun PremiumScreen(
 fun PremiumContent(
     subscription: Subscription,
     isSubscribed: Boolean,
-    onSubscribeClick: () -> Unit
+    isLoadingPayment: Boolean,
+    onPayWithStripeClick: () -> Unit,
+    onPayWithPayOSClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -178,20 +199,50 @@ fun PremiumContent(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         } else {
-            Button(
-                onClick = onSubscribeClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
+            // Logic: Show two distinct payment options.
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = String.format(Locale.US, "Subscribe Now for $%.2f", subscription.price),
-                    color = TextWhite,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                if (isLoadingPayment) {
+                    CircularProgressIndicator(color = TextWhite)
+                } else {
+                    Button(
+                        onClick = onPayWithPayOSClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
+                    ) {
+                        Icon(painter = painterResource(id = R.drawable.ic_launcher_foreground), contentDescription = "VietQR", modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = String.format(Locale.US, "Pay with VietQR (%,d VND)", subscription.price.toInt()),
+                            color = TextWhite,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Button(
+                        onClick = onPayWithStripeClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5469C4)) // Stripe's brand color
+                    ) {
+                        Icon(painter = painterResource(id = R.drawable.ic_launcher_foreground), contentDescription = "Stripe", modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Pay with International Card",
+                            color = TextWhite,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
 
@@ -204,6 +255,7 @@ fun PremiumContent(
     }
 }
 
+// FeatureList and FeatureItem composables remain unchanged
 @Composable
 fun FeatureList() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {

@@ -36,6 +36,8 @@ import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
+import com.android.birdlens.presentation.ui.screens.payment.PayOSCheckoutScreen
+import com.android.birdlens.presentation.ui.screens.payment.PaymentResultScreen
 import com.android.birdlens.presentation.ui.screens.pickdays.PickDaysScreen
 import com.android.birdlens.presentation.ui.screens.pleaseverify.PleaseVerifyEmailScreen
 import com.android.birdlens.presentation.ui.screens.premium.PremiumScreen
@@ -322,6 +324,22 @@ fun AppNavigation(
                 navController = navController,
                 viewModel = birdRangeMapViewModel
             )
+        }
+        composable(
+            route = Screen.PayOSCheckout.route,
+            arguments = listOf(navArgument("checkoutUrl") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val checkoutUrl = backStackEntry.arguments?.getString("checkoutUrl") ?: ""
+            PayOSCheckoutScreen(navController = navController, checkoutUrl = checkoutUrl)
+        }
+
+        // Logic: Add the new PaymentResult screen to the navigation graph.
+        composable(
+            route = Screen.PaymentResult.route,
+            arguments = listOf(navArgument("isSuccess") { type = NavType.BoolType })
+        ) { backStackEntry ->
+            val isSuccess = backStackEntry.arguments?.getBoolean("isSuccess") ?: false
+            PaymentResultScreen(navController = navController, isSuccess = isSuccess)
         }
     }
 }

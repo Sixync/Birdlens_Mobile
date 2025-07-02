@@ -9,7 +9,6 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-
     <application
         android:name=".MyApp"
         android:allowBackup="true"
@@ -23,7 +22,6 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
-
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${GOOGLE_MAPS_API_KEY}" />
@@ -31,7 +29,6 @@
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-7643061698514707~1593445359"/>
-
 
         <activity
             android:name=".MainActivity"
@@ -44,8 +41,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-
-            <!-- This intent filter now correctly handles the custom app scheme for password resets -->
+            <!-- This intent filter handles the password reset deep links. It remains unchanged. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -56,8 +52,21 @@
                     android:scheme="app" />
             </intent-filter>
 
-            <!-- Logic: Add an intent-filter to handle the custom "birdlens://" scheme. -->
-            <!-- This allows the website to open the app directly via a deep link. -->
+            <!-- Logic: Add intent filters to handle PayOS return URLs -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="app" android:host="birdlens" android:path="/payment-success" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="app" android:host="birdlens" android:path="/payment-cancel" />
+            </intent-filter>
+
+            <!-- This intent filter handles the generic app open deep link. It remains unchanged. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

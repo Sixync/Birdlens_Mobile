@@ -1,4 +1,4 @@
-// EXE201/app/build.gradle.kts
+// path: EXE201/app/build.gradle.kts
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -158,12 +158,14 @@ dependencies {
     implementation(libs.core.ktx)
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+    // Logic: Add the Accompanist WebView library. This provides a Composable wrapper
+    // for Android's WebView, which we need to display the PayOS checkout page.
+    implementation("com.google.accompanist:accompanist-webview:0.34.0")
     implementation(libs.androidx.compose.material)
 
     // Google Maps Compose Utilities (Clustering, Heatmaps, etc.)
     implementation("com.google.maps.android:maps-compose-utils:4.3.3") // Updated to latest
     implementation("com.google.maps.android:maps-compose-widgets:4.3.3") // For ScaleBar, etc. - Updated to latest
-    // Logic: This dependency provides the HeatmapTileProvider and resolves the 'Unresolved reference: heatmaps' error.
     implementation ("com.google.maps.android:android-maps-utils:3.8.2") // For HeatmapTileProvider
 
     testImplementation(libs.junit)

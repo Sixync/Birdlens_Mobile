@@ -1,4 +1,4 @@
-// EXE201/app/src/main/java/com/android/birdlens/data/network/ApiService.kt
+// path: EXE201/app/src/main/java/com/android/birdlens/data/network/ApiService.kt
 package com.android.birdlens.data.network
 
 import com.android.birdlens.data.model.*
@@ -42,7 +42,6 @@ interface ApiService {
 
     @POST("auth/reset-password")
     suspend fun resetPassword(@Body resetPasswordRequest: ResetPasswordRequest): Response<GenericApiResponse<Unit?>>
-
 
     // Tour Endpoints
     @GET("tours")
@@ -135,17 +134,12 @@ interface ApiService {
         @Query("reaction_type") reactionType: String
     ): Response<GenericApiResponse<ReactionResponseData?>>
 
-    // Logic: Add the new function to get visiting times.
-    // This will be called to get the premium analysis data.
     @GET("hotspots/{locId}/visiting-times")
     suspend fun getHotspotVisitingTimes(
         @Path("locId") locId: String,
         @Query("speciesCode") speciesCode: String? // Optional: for species-specific analysis
     ): Response<GenericApiResponse<VisitingTimesAnalysis>>
 
-    // Logic: Add a new endpoint to proxy the bird identification request to the backend.
-    // The image is sent as a multipart file, and the prompt as a separate part.
-    // This removes the need for the client to have the Gemini API key.
     @Multipart
     @POST("ai/identify-bird")
     suspend fun identifyBird(
@@ -153,14 +147,13 @@ interface ApiService {
         @Part("prompt") prompt: RequestBody
     ): Response<GenericApiResponse<AIIdentifyResponse>>
 
-    // Logic: Add a new endpoint for asking follow-up questions to the AI.
-    // It sends the context (bird name, question, history) to the backend.
     @POST("ai/ask-question")
     suspend fun askAiQuestion(@Body request: AIQuestionRequest): Response<GenericApiResponse<AIQuestionResponse>>
 
-    // Logic: The function signature is updated to accept the scientific name.
-    // This name will be sent as a query parameter in the GET request.
-    // e.g., GET /species/range?scientific_name=Anas%20platyrhynchos
     @GET("species/range")
     suspend fun getSpeciesRange(@Query("scientific_name") scientificName: String): Response<SpeciesRangeApiResponse>
+
+    // Logic: Add the new endpoint for creating a PayOS payment link.
+    @POST("payos/create-payment-link")
+    suspend fun createPayOSPaymentLink(@Body request: CreatePaymentRequest): Response<GenericApiResponse<CreatePayOSLinkResponse>>
 }

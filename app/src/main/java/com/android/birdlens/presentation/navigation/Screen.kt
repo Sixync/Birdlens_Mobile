@@ -1,5 +1,9 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/Screen.kt
+// path: EXE201/app/src/main/java/com/android/birdlens/presentation/navigation/Screen.kt
+// (complete file content here - full imports, package names, all code)
 package com.android.birdlens.presentation.navigation
+
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome_screen")
@@ -34,27 +38,32 @@ sealed class Screen(val route: String) {
     data object BirdInfo : Screen("bird_info_screen/{speciesCode}") {
         fun createRoute(speciesCode: String) = "bird_info_screen/$speciesCode"
     }
-    // Logic: The route is updated to accept a mandatory 'scientificName' argument.
-    // A helper function `createRoute` is added for type-safe navigation.
     data object BirdRangeMap : Screen("bird_range_map_screen/{scientificName}") {
         fun createRoute(scientificName: String) = "bird_range_map_screen/$scientificName"
     }
-
     data object HotspotBirdList : Screen("hotspot_bird_list_screen/{hotspotId}") {
         fun createRoute(hotspotId: String) = "hotspot_bird_list_screen/$hotspotId"
     }
     data object HotspotDetail : Screen("hotspot_detail_screen/{locId}") {
         fun createRoute(locId: String) = "hotspot_detail_screen/$locId"
     }
-
     data object BirdIdentifier : Screen("bird_identifier_screen")
     data object AdminSubscriptionList : Screen("admin_subscription_list_screen")
     data object AdminCreateSubscription : Screen("admin_create_subscription_screen")
     data object CreatePost : Screen("create_post_screen")
-
     data object HotspotComparison : Screen("hotspot_comparison_screen/{locIds}") {
         fun createRoute(locIds: List<String>) = "hotspot_comparison_screen/${locIds.joinToString(",")}"
     }
-
     data object Premium : Screen("premium_screen")
+
+    // Logic: Add new screens for the PayOS flow.
+    data object PayOSCheckout : Screen("payos_checkout_screen/{checkoutUrl}") {
+        fun createRoute(checkoutUrl: String): String {
+            val encodedUrl = URLEncoder.encode(checkoutUrl, StandardCharsets.UTF_8.toString())
+            return "payos_checkout_screen/$encodedUrl"
+        }
+    }
+    data object PaymentResult : Screen("payment_result_screen/{isSuccess}") {
+        fun createRoute(isSuccess: Boolean) = "payment_result_screen/$isSuccess"
+    }
 }

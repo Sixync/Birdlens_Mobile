@@ -1,4 +1,5 @@
-// EXE201/app/src/main/java/com/android/birdlens/MainActivity.kt
+// path: EXE201/app/src/main/java/com/android/birdlens/MainActivity.kt
+// (complete file content here - full imports, package names, all code)
 package com.android.birdlens
 
 import android.content.Context
@@ -109,12 +110,9 @@ class MainActivity : ComponentActivity() {
                     AuthEventBus.events.collect { event ->
                         when (event) {
                             is AuthEvent.TokenExpiredOrInvalid -> {
-                                // Logic: Added a check to prevent multiple navigations if events fire rapidly.
-                                // It checks if the user is not already on or being navigated to the Welcome screen.
                                 if (navController.currentDestination?.route != Screen.Welcome.route) {
                                     Log.w(TAG_AUTH, "Token expired/invalid event received. Logging out user.")
                                     Toast.makeText(this@MainActivity, "Your session has expired. Please log in again.", Toast.LENGTH_LONG).show()
-                                    // Logic: Explicitly reset the account info state and sign out completely.
                                     accountInfoViewModel.onUserLoggedOut()
                                     googleAuthViewModel.signOut(applicationContext)
                                     navController.navigate(Screen.Welcome.route) {
@@ -149,12 +147,46 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        // Logic: Process the initial intent when the app is created.
+        handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Log.d(TAG_AUTH, "onNewIntent called with: $intent. Navigation Component will handle deep links.")
+        // Logic: Process subsequent intents (e.g., if the app is already open).
+        handleIntent(intent)
     }
+
+    private fun handleIntent(intent: Intent?) {
+        val uri = intent?.data
+        if (uri != null && uri.scheme == "app" && uri.host == "birdlens") {
+            Log.d(TAG_AUTH, "Handling deep link: $uri")
+            when (uri.path) {
+                "/payment-success" -> {
+                    // Navigate to a success screen. Pop up everything back to home first.
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+                    navController.navigate(Screen.PaymentResult.createRoute(true))
+                }
+                "/payment-cancel" -> {
+                    // Navigate to a failure/cancelled screen.
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+                    navController.navigate(Screen.PaymentResult.createRoute(false))
+                }
+                else -> {
+                    // Handle other deep links like password reset if needed
+                    Log.d(TAG_AUTH, "onNewIntent called with unhandled deep link path: ${uri.path}")
+                }
+            }
+            // Clear the intent data so it's not processed again on configuration change.
+            setIntent(null)
+        }
+    }
+
 
     private fun startAdTimer() {
         if (adTimerJob?.isActive == true) {
