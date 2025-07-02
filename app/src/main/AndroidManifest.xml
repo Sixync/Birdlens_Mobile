@@ -56,6 +56,17 @@
                     android:scheme="app" />
             </intent-filter>
 
+            <!-- Logic: Add an intent-filter to handle the custom "birdlens://" scheme. -->
+            <!-- This allows the website to open the app directly via a deep link. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="open"
+                    android:scheme="birdlens" />
+            </intent-filter>
+
         </activity>
 
         <activity

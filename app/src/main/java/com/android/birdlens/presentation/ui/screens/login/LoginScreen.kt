@@ -193,34 +193,43 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Logic: Replaced the small circular icon button with a full-width, descriptive button.
+                // This improves user experience by providing a larger touch target and clearer text-based call to action ("Login"),
+                // enhancing usability and aligning with modern UI conventions.
                 Button(
                     onClick = {
-                        if (email.isNotBlank() && password.isNotBlank()) {
-                            googleAuthViewModel.loginUser(LoginRequest(email, password))
+                        // Logic: Trim leading/trailing whitespace from email and password before submitting.
+                        // This prevents login failures due to accidental spaces entered by the user, improving robustness.
+                        val trimmedEmail = email.trim()
+                        val trimmedPassword = password.trim()
+                        if (trimmedEmail.isNotBlank() && trimmedPassword.isNotBlank()) {
+                            googleAuthViewModel.loginUser(LoginRequest(trimmedEmail, trimmedPassword))
                         } else {
                             Toast.makeText(context, loginErrorCredentialsText, Toast.LENGTH_SHORT).show()
                         }
                     },
-                    shape = CircleShape,
+                    shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen),
-                    modifier = Modifier.size(60.dp),
-                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                     enabled = !isLoading
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = loginText,
-                        tint = TextWhite,
-                        modifier = Modifier.size(30.dp)
-                    )
+                    // Logic: The loading indicator is now placed inside the button, providing direct feedback
+                    // on the action being processed. This replaces the separate indicator at the bottom of the screen.
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = TextWhite,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(loginText, color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                if (isLoading) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    CircularProgressIndicator(color = TextWhite)
-                }
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }

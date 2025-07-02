@@ -3,6 +3,8 @@ package com.android.birdlens.presentation.ui.screens.settings
 
 import android.annotation.SuppressLint
 import android.app.Application // For ViewModel preview
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -84,6 +86,13 @@ fun SettingsScreen(
     }
 
 
+    // Logic: Create an intent to open the official website in a browser.
+    // This is triggered by the "Help & Support" settings item.
+    val openWebsiteIntent = remember {
+        Intent(Intent.ACTION_VIEW, Uri.parse("https://birdlens.netlify.app/"))
+    }
+
+
     val settingsItemsSection1 = listOf(
         SettingsItem(R.string.settings_account, Icons.Outlined.AccountCircle, {
             navController.navigate(Screen.Me.route)
@@ -102,7 +111,8 @@ fun SettingsScreen(
         ),
         SettingsItem(R.string.settings_notifications, Icons.Outlined.Notifications, { /* TODO */ }),
         SettingsItem(R.string.settings_privacy_security, Icons.Outlined.Lock, { /* TODO */ }),
-        SettingsItem(R.string.settings_help_support, Icons.AutoMirrored.Filled.HelpOutline, { /* TODO */ }, isExternalLink = true),
+        // Logic: The onClick for this item now launches the browser intent.
+        SettingsItem(R.string.settings_help_support, Icons.AutoMirrored.Filled.HelpOutline, { context.startActivity(openWebsiteIntent) }, isExternalLink = true),
         SettingsItem(R.string.settings_about, Icons.Outlined.Info, { /* TODO */ }, isExternalLink = true)
     )
     val settingsItemsSection2 = listOf(
@@ -281,9 +291,6 @@ fun SettingsScreen(
         )
     }
 }
-
-// The rest of the SettingsScreen.kt file (SettingsListItem, LanguageSelectionDialog, and Preview) remains the same.
-// The code is omitted for brevity but should be kept in your file.
 @Composable
 fun SettingsListItem(item: SettingsItem) {
     // stringResource will fetch the string based on the current LocalContext's locale

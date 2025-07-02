@@ -24,9 +24,14 @@ import com.android.birdlens.presentation.viewmodel.BirdRangeUiState
 import com.android.birdlens.ui.theme.*
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+// Import CameraUpdateFactory to create camera updates.
+import com.google.android.gms.maps.CameraUpdateFactory
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlinx.coroutines.launch
 
 @Composable
 fun BirdRangeMapScreen(
@@ -36,6 +41,24 @@ fun BirdRangeMapScreen(
     val uiState by viewModel.uiState.collectAsState()
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(20.5937, 78.9629), 3f) // Default to world view
+    }
+    val coroutineScope = rememberCoroutineScope()
+
+    // This effect observes the UI state. When the state is Success and contains
+    // valid bounds, it animates the camera to that position.
+    LaunchedEffect(uiState) {
+        if (uiState is BirdRangeUiState.Success) {
+            val bounds = (uiState as BirdRangeUiState.Success).rangeData.bounds
+            if (bounds != null) {
+                coroutineScope.launch {
+                    // Animate the camera to fit the calculated bounds with 100px padding.
+                    cameraPositionState.animate(
+                        update = CameraUpdateFactory.newLatLngBounds(bounds, 100),
+                        durationMs = 1500 // Smooth animation over 1.5 seconds
+                    )
+                }
+            }
+        }
     }
 
     AppScaffold(
@@ -119,12 +142,3 @@ fun LegendItem(color: Color, label: String) {
         Text(text = label, color = TextWhite, fontSize = 12.sp)
     }
 }
-
-// Add these new colors to your Color.kt file
-// in ui.theme package
-/*
-val RangeResident = Color(0x994CAF50) // Green
-val RangeBreeding = Color(0x99FFC107) // Amber/Yellow
-val RangeNonBreeding = Color(0x992196F3) // Blue
-val RangePassage = Color(0x999C27B0) // Purple
-*/

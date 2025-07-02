@@ -9,14 +9,13 @@
     <string name="error_unknown">Đã xảy ra lỗi không xác định.</string>
     <string name="back">Quay lại</string>
     <string name="continue_button">Tiếp tục</string>
-    <string name="search_something">Tìm kiếm…</string>
+    <string name="search_something">Tìm kiếm gì đó…</string>
     <string name="see_all">Xem tất cả -</string>
     <string name="confirm">XÁC NHẬN</string>
     <string name="buy_now">MUA NGAY</string>
     <string name="all_selected_count">TẤT CẢ (%d)</string>
     <string name="initializing">Đang khởi tạo…</string>
     <string name="error_title">Lỗi</string>
-
 
     <!-- Welcome Screen -->
     <string name="welcome_title">Chào mừng</string>
@@ -30,16 +29,16 @@
     <string name="forgot_password_prompt">Quên mật khẩu?</string>
     <string name="click_here">Nhấn vào đây</string>
     <string name="login_error_credentials">Vui lòng nhập email và mật khẩu</string>
-    <string name="welcome_user">Đã đăng nhập với tên %1$s</string>
+    <string name="welcome_user">Đã đăng nhập với tư cách %1$s</string>
 
     <!-- Register Screen -->
-    <string name="create_account_title">TẠO TÀI KHOẢN</string>
+    <string name="create_account_title">TẠO TÀI KHOẢN CỦA BẠN</string>
     <string name="first_name_placeholder">Tên</string>
     <string name="last_name_placeholder">Họ</string>
     <string name="age_placeholder">Tuổi</string>
     <string name="username_placeholder">Tên người dùng</string>
     <string name="retype_password_placeholder">Nhập lại mật khẩu</string>
-    <string name="register_error_all_fields">Vui lòng điền tất cả các trường.</string>
+    <string name="register_error_all_fields">Tất cả các trường là bắt buộc.</string>
     <string name="register_error_valid_age">Vui lòng nhập tuổi hợp lệ.</string>
     <string name="register_error_password_min_length">Mật khẩu phải có ít nhất %d ký tự.</string>
     <string name="register_error_passwords_mismatch">Mật khẩu không khớp.</string>
@@ -48,7 +47,6 @@
     <string name="register_error_firstname_length">Tên phải từ 3 đến 20 ký tự.</string>
     <string name="register_error_lastname_length">Họ phải từ 3 đến 20 ký tự.</string>
     <string name="register_error_age_range">Tuổi phải từ 1 đến 120.</string>
-
 
     <!-- Login Success Screen -->
     <string name="login_successful_title">Đăng nhập thành công</string>
@@ -61,7 +59,7 @@
     <string name="bottom_nav_premium">Premium</string>
     <string name="bottom_nav_me">Cá nhân</string>
     <string name="bottom_nav_marketplace">Chợ</string>
-    <string name="bottom_nav_tours">Tour</string>
+    <string name="bottom_nav_tours">Chuyến đi</string>
 
     <!-- Settings Screen -->
     <string name="settings_title">Cài đặt</string>
@@ -69,7 +67,7 @@
     <string name="settings_notifications">Thông báo</string>
     <string name="settings_privacy_security">Riêng tư &amp; Bảo mật</string>
     <string name="settings_help_support">Trợ giúp &amp; Hỗ trợ</string>
-    <string name="settings_about">Về ứng dụng</string>
+    <string name="settings_about">Về chúng tôi</string>
     <string name="settings_saved">Đã lưu</string>
     <string name="settings_liked">Đã thích</string>
     <string name="settings_logout">ĐĂNG XUẤT</string>
@@ -77,7 +75,6 @@
     <string name="settings_select_language">Chọn ngôn ngữ</string>
     <string name="language_english">Tiếng Anh</string>
     <string name="language_vietnamese">Tiếng Việt</string>
-
 
     <!-- Account Info Screen -->
     <string name="account_info_title">Thông tin tài khoản</string>
@@ -105,18 +102,35 @@
     <!-- All Events/Tours List Screens -->
     <string name="all_events_title">Tất cả sự kiện</string>
     <string name="all_tours_title">Tất cả tour</string>
+    <string name="manage_subscription">Quản lý gói</string>
+
+    <!-- Tour Screen -->
+    <string name="tour_screen_title_birdlens">BIRDLENS</string>
+    <string name="tour_screen_subtitle_tours">Chuyến đi</string>
+    <string name="tour_screen_events_of_year">Sự kiện trong năm</string>
+    <string name="tour_screen_popular_tour">Chuyến đi nổi bật</string>
+    <string name="tour_screen_all_tours">Tất cả chuyến đi</string>
+    <string name="tour_image_description">Ảnh chuyến đi</string>
+    <string name="popular_tour_image_description">Ảnh chuyến đi nổi bật</string>
+    <string name="tour_screen_preview_image_small">Ảnh xem trước</string>
+    <string name="tour_screen_preview_image_popular">Ảnh xem trước nổi bật</string>
+
+    <!-- All Events/Tours List Screens -->
+    <string name="all_events_title">Tất cả sự kiện</string>
+    <string name="all_tours_title">Tất cả chuyến đi</string>
     <string name="results_found_count">Tìm thấy (%d) kết quả</string>
     <string name="sort_by">Sắp xếp theo</string>
     <string name="sort_icon_description">Sắp xếp</string>
     <string name="preview_image_placeholder">Ảnh xem trước</string>
-    <string name="tour_type_icon_description">Loại tour</string>
+    <string name="tour_type_icon_description">Loại chuyến đi</string>
     <string name="free_rental_badge">MIỄN PHÍ THUÊ</string>
     <string name="rating_star_description">Sao đánh giá</string>
-    <string name="tour_id_prefix">Tour #%d</string>
+    <string name="tour_id_prefix">Chuyến đi #%d</string>
+
     <!-- Tour Detail Screen Specific -->
-    <string name="tour_detail_preview_pager_image">Xem trước ảnh %d</string>
-    <string name="tour_detail_image_description">Ảnh tour %d</string>
-    <string name="tour_detail_reviews_count">%d Đánh giá</string>
+    <string name="tour_detail_preview_pager_image">Ảnh xem trước %d</string>
+    <string name="tour_detail_image_description">Ảnh chuyến đi %d</string>
+    <string name="tour_detail_reviews_count">%d đánh giá</string>
     <string name="tour_detail_price_format">Giá: %s/chuyến</string>
     <string name="tour_detail_description_label">Mô tả</string>
     <string name="tour_detail_pick_days_button">Chọn ngày của bạn</string>
@@ -133,24 +147,22 @@
     <string name="days_of_week_sat">T7</string>
     <string name="days_of_week_sun">CN</string>
 
-
     <!-- Cart Screen -->
-    <string name="cart_title">GIỎ HÀNG</string>
+    <string name="cart_title">GIỎ HÀNG CỦA BẠN</string>
     <string name="cart_item_price_format">Giá %s</string>
-    <string name="cart_decrement_quantity">Giảm số lượng</string>
-    <string name="cart_increment_quantity">Tăng số lượng</string>
+    <string name="cart_decrement_quantity">Giảm</string>
+    <string name="cart_increment_quantity">Tăng</string>
     <string name="cart_item_image_preview_placeholder">Ảnh</string>
     <string name="cart_item_image_preview_placeholder_detail">Ảnh xem trước</string>
 
     <!-- Community Screen -->
     <string name="community_title">Cộng đồng</string>
     <string name="community_search_placeholder">Tìm kiếm bài viết…</string>
-    <string name="community_user_avatar_description">Ảnh đại diện người dùng</string>
+    <string name="community_user_avatar_description">Ảnh đại diện</string>
     <string name="community_post_image_description">Ảnh bài viết</string>
     <string name="community_action_like">Thích</string>
     <string name="community_action_comment">Bình luận</string>
     <string name="community_action_share">Chia sẻ</string>
-
 
     <!-- Map Screen -->
     <string name="map_screen_title_birdlens">BIRDLENS</string>
@@ -158,39 +170,39 @@
     <string name="map_action_bird_locations">Vị trí chim</string>
     <string name="map_action_bookmarks">Đã lưu</string>
     <string name="map_action_weather">Thời tiết</string>
-    <string name="map_action_popular_hotspots">Địa điểm nổi bật</string>
-    <string name="map_action_migration_routes">Tuyến di cư</string>
+    <string name="map_action_popular_hotspots">Điểm nóng nổi bật</string>
+    <string name="map_action_migration_routes">Đường di cư</string>
     <string name="map_action_show_bird_locations_toast">Hiển thị vị trí chim</string>
     <string name="map_action_show_bookmarks_toast">Hiển thị đã lưu</string>
     <string name="map_action_show_weather_toast">Hiển thị thời tiết</string>
-    <string name="map_action_show_hotspots_toast">Hiển thị địa điểm nổi bật</string>
-    <string name="map_action_show_migration_toast">Hiển thị tuyến di cư (Chưa thực hiện)</string>
+    <string name="map_action_show_hotspots_toast">Hiển thị điểm nóng</string>
+    <string name="map_action_show_migration_toast">Hiển thị di cư (chưa thực hiện)</string>
     <string name="map_action_home">Về vị trí nhà</string>
-    <string name="map_action_refresh_hotspots">Làm mới địa điểm</string>
+    <string name="map_action_refresh_hotspots">Làm mới điểm nóng</string>
     <string name="map_action_identify_bird">Nhận dạng chim</string>
-    <string name="map_toast_refreshing_hotspots">Đang làm mới các địa điểm…</string>
+    <string name="map_toast_refreshing_hotspots">Đang làm mới điểm nóng…</string>
     <string name="map_toast_map_not_ready">Bản đồ chưa sẵn sàng hoặc SDK chưa được khởi tạo.</string>
     <string name="map_toast_poi_clicked">Đã nhấn vào POI: %1$s</string>
-    <string name="map_toast_play_services_unavailable">Dịch vụ Google Play không khả dụng hoặc đã lỗi thời. Chức năng bản đồ có thể bị hạn chế.</string>
-    <string name="map_permission_required_message">Cần có quyền truy cập vị trí để hiển thị vị trí hiện tại của bạn và các tính năng bản đồ liên quan.</string>
+    <string name="map_toast_play_services_unavailable">Dịch vụ Google Play không có sẵn hoặc đã lỗi thời. Chức năng bản đồ có thể bị hạn chế.</string>
+    <string name="map_permission_required_message">Cần có quyền truy cập vị trí để hiển thị vị trí hiện tại và các tính năng bản đồ liên quan.</string>
     <string name="map_grant_permissions_button">Cấp quyền</string>
     <string name="map_permission_denied_rationale">Nếu bạn đã từ chối vĩnh viễn, bạn cần bật quyền trong cài đặt ứng dụng.</string>
-    <string name="map_error_loading_detailed">Không thể tải bản đồ. Hãy đảm bảo Dịch vụ Google Play đã được cập nhật, khóa API hợp lệ và SDK Bản đồ được khởi tạo chính xác.</string>
+    <string name="map_error_loading_detailed">Không thể tải bản đồ. Đảm bảo Dịch vụ Google Play được cập nhật, khóa API hợp lệ và SDK Bản đồ được khởi tạo đúng cách.</string>
     <string name="map_marker_snippet_species">Loài: %1$s</string>
     <string name="map_action_change_map_type">Thay đổi loại bản đồ</string>
     <string name="map_action_lock_map">Khóa bản đồ</string>
     <string name="map_action_unlock_map">Mở khóa bản đồ</string>
     <string name="map_action_show_heatmap">Hiển thị bản đồ nhiệt</string>
     <string name="map_action_hide_heatmap">Ẩn bản đồ nhiệt</string>
-    <string name="map_action_bookmark_hotspot">Lưu địa điểm</string>
-    <string name="map_action_unbookmark_hotspot">Bỏ lưu địa điểm</string>
-    <string name="map_sheet_recent_sightings">Lần nhìn thấy gần đây (7 ngày)</string>
-    <string name="map_sheet_total_species">Tổng số loài đã ghi nhận</string>
-    <string name="map_sheet_notable_bird">Ví dụ chim đáng chú ý</string>
+    <string name="map_action_bookmark_hotspot">Lưu điểm nóng</string>
+    <string name="map_action_unbookmark_hotspot">Bỏ lưu điểm nóng</string>
+    <string name="map_sheet_recent_sightings">Lượt xem gần đây (7 ngày)</string>
+    <string name="map_sheet_total_species">Tổng số loài được ghi nhận</string>
+    <string name="map_sheet_notable_bird">Ví dụ về chim nổi bật</string>
     <string name="map_sheet_view_full_details">Xem chi tiết đầy đủ</string>
     <string name="map_type_normal">Bình thường</string>
     <string name="map_type_satellite">Vệ tinh</string>
-    <string name="map_type_hybrid">Kết hợp</string>
+    <string name="map_type_hybrid">Hỗn hợp</string>
     <string name="map_type_terrain">Địa hình</string>
     <string name="map_sheet_species_list_title">Một số loài đã thấy ở đây</string>
 
@@ -198,16 +210,15 @@
     <string name="map_search_placeholder">Tìm kiếm loài chim…</string>
     <string name="map_search_icon_description">Tìm chim</string>
     <string name="map_search_clear_description">Xóa tìm kiếm</string>
-    <string name="map_search_error_not_found">Không tìm thấy chim có tên \'%1$s\'. Vui lòng kiểm tra lại chính tả.</string>
-    <string name="map_search_error_no_hotspots">Không tìm thấy quan sát gần đây của \'%1$s\' ở Việt Nam.</string>
-    <string name="map_search_local_finding">Đang tìm kiếm \'%1$s\'…</string>
-    <string name="map_search_ai_finding">Đang tìm vị trí của %1$s…</string>
-
+    <string name="map_search_error_not_found">Không tìm thấy loài chim có tên \'%1$s\'. Vui lòng kiểm tra chính tả.</string>
+    <string name="map_search_error_no_hotspots">Không tìm thấy quan sát gần đây của \'%1$s\' tại Việt Nam.</string>
+    <string name="map_search_local_finding">Đang tìm \'%1$s\'…</string>
+    <string name="map_search_ai_finding">Đang tìm địa điểm cho %1$s…</string>
 
     <!-- Marketplace Screen -->
     <string name="marketplace_title_birdlens">BIRDLENS</string>
     <string name="marketplace_subtitle">Chợ</string>
-    <string name="marketplace_search_placeholder">Tìm kiếm sản phẩm</string>
+    <string name="marketplace_search_placeholder">Tìm kiếm gì đó</string>
     <string name="marketplace_section_bird_pictures">Ảnh chim</string>
     <string name="marketplace_section_categories">Danh mục</string>
     <string name="marketplace_section_deals">Ưu đãi</string>
@@ -222,13 +233,13 @@
 
     <!-- Bird Info Screen -->
     <string name="bird_info_characteristics_title">Đặc điểm</string>
-    <string name="bird_info_common_name">Tên thông thường</string>
+    <string name="bird_info_common_name">Tên thường gọi</string>
     <string name="bird_info_scientific_name">Tên khoa học</string>
     <string name="bird_info_species_code">Mã loài</string>
     <string name="bird_info_category">Loại</string>
     <string name="bird_info_order">Bộ</string>
-    <string name="bird_info_family_common">Họ (Tên thông thường)</string>
-    <string name="bird_info_family_scientific">Họ (Tên khoa học)</string>
+    <string name="bird_info_family_common">Họ (thường gọi)</string>
+    <string name="bird_info_family_scientific">Họ (khoa học)</string>
     <string name="bird_info_taxon_order">Thứ tự phân loại</string>
     <string name="bookmark">Lưu</string>
     <string name="bird_image_description">Ảnh của %1$s</string>
@@ -277,16 +288,45 @@
     <string name="gemini_prompt_initial_question_no_image">Hãy cho tôi biết về loài chim này.</string>
     <string name="gemini_language_suffix"> Vui lòng trả lời bằng tiếng Anh.</string>
 
+Văn bản của người dùng: \"%1$s\"</string>
+    <string name="gemini_prompt_initial_question_no_image">Nói cho tôi biết về loài chim này.</string>
+    <string name="gemini_language_suffix"> Vui lòng trả lời bằng tiếng Việt.</string>
 
     <!-- admin management-->
     <string name="admin_manage_subscriptions">Quản lý Gói đăng ký</string>
     <!-- subscriptions -->
     <string name="subscription_tier_label">Gói hiện tại</string>
-    <string name="subscription_tier_standard">Người dùng Tiêu chuẩn</string>
+    <string name="subscription_tier_standard">Người dùng tiêu chuẩn</string>
     <string name="subscription_tier_unknown">Không xác định</string>
     <string name="loading_ellipsis">Đang tải…</string>
     <string name="settings_my_subscription">Gói của tôi</string>
 
+    <string name="map_action_start_compare">Bắt đầu So sánh</string>
+    <string name="map_action_exit_compare">Thoát chế độ So sánh</string>
+    <string name="map_compare_selected_info">Đã chọn để So sánh: %1$d/%2$d</string>
+    <string name="map_compare_clear_selection">Xóa</string>
+    <string name="map_compare_button_text">So sánh (%1$d)</string>
+    <string name="map_compare_toast_min_selection">Chọn ít nhất 2 điểm nóng để so sánh.</string>
+    <string name="map_compare_set_target_species">Đặt loài mục tiêu</string>
+    <string name="map_compare_target_species_dialog_title">Đặt loài mục tiêu</string>
+    <string name="map_compare_target_species_placeholder">Nhập tên chim (ví dụ: Sáo)</string>
+    <string name="map_compare_confirm">Xác nhận</string>
+    <string name="map_compare_cancel">Hủy</string>
+    <string name="hotspot_comparison_title">So sánh điểm nóng</string>
+    <string name="hotspot_comparison_metric_all_time_species">Tổng số loài</string>
+    <string name="hotspot_comparison_metric_latest_obs">Quan sát gần nhất</string>
+    <string name="hotspot_comparison_metric_recent_sightings">Lượt xem gần đây</string>
+    <string name="hotspot_comparison_metric_target_species">Mục tiêu: %1$s</string>
+    <string name="hotspot_comparison_target_seen_recently">✓ Đã thấy gần đây (%1$s)</string>
+    <string name="hotspot_comparison_target_potential">○ Có khả năng (đã ghi nhận trước đây)</string>
+    <string name="hotspot_comparison_target_not_recorded">✗ Chưa được ghi nhận</string>
+    <string name="hotspot_comparison_metric_accessibility">Khả năng tiếp cận</string>
+    <string name="hotspot_comparison_metric_best_time">Thời gian tốt nhất để tham quan</string>
+    <string name="hotspot_comparison_no_data">Không có dữ liệu để so sánh. Vui lòng chọn điểm nóng.</string>
+    <string name="hotspot_comparison_select_hotspots">Chọn điểm nóng để so sánh.</string>
+    <string name="hotspot_comparison_error_fetch">Không thể lấy dữ liệu cho tất cả các điểm nóng đã chọn.</string>
+    <string name="map_fetch_error_generic">Lỗi lấy dữ liệu: %1$s</string>
+    <string name="map_compare_max_items_toast">Bạn có thể chọn tối đa %1$d điểm nóng để so sánh.</string>
 
     <string name="map_action_start_compare">Bật chế độ So sánh</string>
     <string name="map_action_exit_compare">Tắt chế độ So sánh</string>
