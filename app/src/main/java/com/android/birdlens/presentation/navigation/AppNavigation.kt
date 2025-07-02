@@ -265,7 +265,13 @@ fun AppNavigation(
         }
 
         composable(Screen.BirdIdentifier.route) {
-            val birdIdentifierViewModel: BirdIdentifierViewModel = viewModel()
+            val birdIdentifierViewModel: BirdIdentifierViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        BirdIdentifierViewModel(application, createSavedStateHandle())
+                    }
+                }
+            )
             BirdIdentifierScreen(
                 navController = navController,
                 viewModel = birdIdentifierViewModel,
@@ -309,8 +315,6 @@ fun AppNavigation(
             )
         }
 
-        // Logic: The composable for BirdRangeMap now defines the `scientificName` argument
-        // This makes the value available to the ViewModel via its SavedStateHandle.
         composable(
             route = Screen.BirdRangeMap.route,
             arguments = listOf(navArgument("scientificName") { type = NavType.StringType })

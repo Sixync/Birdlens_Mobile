@@ -1,3 +1,4 @@
+<!-- app/src/main/res/values/strings.xml -->
 <resources>
     <string name="app_name">Birdlens</string>
 
@@ -29,7 +30,6 @@
     <string name="forgot_password_prompt">Forget your password?</string>
     <string name="click_here">Click here</string>
     <string name="login_error_credentials">Please enter email and password</string>
-    <!-- Logic: Add a new string for a personalized welcome message. -->
     <string name="welcome_user">Signed in as %1$s</string>
 
     <!-- Register Screen -->
@@ -271,13 +271,9 @@
     <string name="bird_identifier_possibilities_subtitle">Select a bird to learn more.</string>
 
     <!-- Gemini Prompts -->
-    <string name="gemini_prompt_identify_from_image">Identify the bird in this image. If you are very confident about one species, respond with ONLY that bird\'s most common English name. If it could be several similar-looking birds, respond with a comma-separated list of up to 3 most likely species. For example: \'House Sparrow, Eurasian Tree Sparrow, Chipping Sparrow\'. If there is no bird in the image, respond with \'no bird\'.</string>
-    <string name="gemini_prompt_extract_name_from_text">You are an expert ornithologist and polyglot. Your task is to extract the bird name from the user\'s text.
-- If the name is specific (e.g., \'Blue Jay\', \'Họa mi\'), respond with ONLY that single common English name (e.g., \'Blue Jay\', \'Chinese Hwamei\').
-- If the name is ambiguous (e.g., \'sparrow\', \'chim sẻ\'), respond with a comma-separated list of up to 5 likely species in English (e.g., \'House Sparrow, Eurasian Tree Sparrow, American Tree Sparrow, Song Sparrow, Chipping Sparrow\').
-- If you cannot identify a bird (e.g., the text is \'con mèo\' or \'what is the weather?\'), you MUST respond with the exact text: \'Error: No bird name found\'.
-
-User text: \"%1$s\"</string>
+    <string name="gemini_prompt_identify_from_image">You are an expert ornithologist. Your task is to identify the bird in the provided image. Your response MUST be a comma-separated list of up to 3 possible common English names (e.g., \'House Sparrow, Eurasian Tree Sparrow, American Tree Sparrow\'). Even if you are very confident, you must still provide a list. If there is no bird in the image or you cannot identify it with any confidence, you MUST respond with the exact text: \'Error: No bird name found\'.</string>
+    <string name="gemini_prompt_extract_name_from_text">You are an expert ornithologist and polyglot. Your task is to extract the bird name from the user\'s text.\n- If the name is specific (e.g., \'Blue Jay\', \'Họa mi\'), respond with ONLY that single common English name (e.g., \'Blue Jay\', \'Chinese Hwamei\').\n- If the name is ambiguous (e.g., \'sparrow\', \'chim sẻ\'), respond with a comma-separated list of up to 5 likely species in English (e.g., \'House Sparrow, Eurasian Tree Sparrow, American Tree Sparrow, Song Sparrow, Chipping Sparrow\').\n- If you cannot identify a bird (e.g., the text is \'con mèo\' or \'what is the weather?\'), you MUST respond with the exact text: \'Error: No bird name found\'.\n\nUser text: \"%1$s\"</string>
+    <string name="gemini_prompt_initial_question_for_selected_bird">Tell me about the %1$s.</string>
     <string name="gemini_prompt_initial_question_no_image">Tell me about this bird.</string>
     <string name="gemini_language_suffix"> Please answer in English.</string>
 

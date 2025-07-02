@@ -1,3 +1,4 @@
+// app/src/main/java/com/android/birdlens/presentation/ui/theme/Theme.kt
 package com.android.birdlens.ui.theme
 
 import android.app.Activity
@@ -9,35 +10,28 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+// Custom dark color scheme using the defined brand colors.
+private val BirdlensDarkColorScheme = darkColorScheme(
+    primary = ButtonGreen,
+    onPrimary = VeryDarkGreenBase,
+    background = VeryDarkGreenBase,
+    surface = CardBackground,
+    onSurface = TextWhite,
+    surfaceVariant = CardBackground.copy(alpha = 0.6f), // Used for secondary surfaces like assistant chat bubbles
+    onSurfaceVariant = TextWhite,
+    error = Color(0xFFFFB4AB), // Standard Material 3 error color for dark themes
+    onError = Color(0xFF690005)
 )
 
 @Composable
 fun BirdlensTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // The app now consistently uses the dark theme to match the background.
+    darkTheme: Boolean = true,
+    // Dynamic color is disabled to enforce the brand's color palette.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -45,9 +39,7 @@ fun BirdlensTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        else -> BirdlensDarkColorScheme
     }
 
     MaterialTheme(
