@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.android.birdlens.presentation.navigation.Screen
+import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.ui.theme.ButtonGreen
 import com.android.birdlens.ui.theme.GreenDeep
 import com.android.birdlens.ui.theme.GreenWave2
@@ -29,8 +31,18 @@ import com.android.birdlens.ui.theme.TextWhite
 @Composable
 fun PaymentResultScreen(
     navController: NavController,
-    isSuccess: Boolean
+    isSuccess: Boolean,
+    accountInfoViewModel: AccountInfoViewModel // Accept the ViewModel as a parameter
 ) {
+    // Logic: If the payment was successful, this LaunchedEffect triggers a single time
+    // to call `fetchCurrentUser` on the AccountInfoViewModel. This ensures the app's
+    // user profile state is updated immediately with the new subscription information.
+    LaunchedEffect(isSuccess) {
+        if (isSuccess) {
+            accountInfoViewModel.fetchCurrentUser()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()

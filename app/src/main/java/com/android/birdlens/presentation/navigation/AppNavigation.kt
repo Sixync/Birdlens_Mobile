@@ -337,13 +337,17 @@ fun AppNavigation(
             PayOSCheckoutScreen(navController = navController, checkoutUrl = checkoutUrl)
         }
 
-        // Logic: Add the new PaymentResult screen to the navigation graph.
         composable(
             route = Screen.PaymentResult.route,
             arguments = listOf(navArgument("isSuccess") { type = NavType.BoolType })
         ) { backStackEntry ->
             val isSuccess = backStackEntry.arguments?.getBoolean("isSuccess") ?: false
-            PaymentResultScreen(navController = navController, isSuccess = isSuccess)
+            // Logic: Pass the AccountInfoViewModel to the PaymentResultScreen so it can trigger a data refresh.
+            PaymentResultScreen(
+                navController = navController,
+                isSuccess = isSuccess,
+                accountInfoViewModel = accountInfoViewModel
+            )
         }
     }
 }

@@ -39,7 +39,7 @@ import com.android.birdlens.R
 import com.android.birdlens.data.model.response.UserResponse
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
-import com.android.birdlens.presentation.ui.screens.payment.CheckoutActivity
+// Logic: The import for the obsolete Stripe CheckoutActivity is removed.
 import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.ui.theme.*
@@ -52,9 +52,6 @@ fun AccountInfoScreen(
 ) {
     val uiState by accountInfoViewModel.uiState.collectAsState()
 
-    // Logic: Added a LaunchedEffect to trigger the data fetch when the screen is first composed.
-    // This ensures user data is loaded whenever this screen becomes visible, resolving the infinite loading bug.
-    // The ViewModel is now robust against re-fetching if data is already present.
     LaunchedEffect(key1 = Unit) {
         accountInfoViewModel.fetchCurrentUser()
     }
@@ -93,7 +90,9 @@ fun AccountInfoScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
                 }
                 is AccountInfoUiState.Success -> {
-                    AccountDetails(user = state.user)
+                    // Logic: The NavController is now passed to the AccountDetails composable
+                    // so it can handle navigation events.
+                    AccountDetails(user = state.user, navController = navController)
                 }
                 is AccountInfoUiState.Error -> {
                     Column(
@@ -122,7 +121,7 @@ fun AccountInfoScreen(
 }
 
 @Composable
-fun AccountDetails(user: UserResponse) {
+fun AccountDetails(user: UserResponse, navController: NavController) {
     val context = LocalContext.current
 
     Column(
@@ -181,8 +180,9 @@ fun AccountDetails(user: UserResponse) {
         if (user.subscription != "ExBird") {
             Button(
                 onClick = {
-                    val intent = Intent(context, CheckoutActivity::class.java)
-                    context.startActivity(intent)
+                    // Logic: The onClick action now navigates to the PremiumScreen,
+                    // which contains the PayOS payment flow, instead of the old Stripe activity.
+                    navController.navigate(Screen.Premium.route)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

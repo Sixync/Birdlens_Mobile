@@ -37,7 +37,6 @@ import com.android.birdlens.data.model.Subscription
 import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
-import com.android.birdlens.presentation.ui.screens.payment.CheckoutActivity
 import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.presentation.viewmodel.GenericUiState
@@ -53,32 +52,22 @@ fun PremiumScreen(
     navController: NavController,
     subscriptionViewModel: SubscriptionViewModel = viewModel(),
     accountInfoViewModel: AccountInfoViewModel = viewModel(),
-    paymentViewModel: PaymentViewModel = viewModel() // Add the PaymentViewModel
+    paymentViewModel: PaymentViewModel = viewModel()
 ) {
     val subscriptionState by subscriptionViewModel.subscriptionsState.collectAsState()
     val accountState by accountInfoViewModel.uiState.collectAsState()
-    val paymentState by paymentViewModel.uiState.collectAsState() // Observe payment state
+    val paymentState by paymentViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
     val isAlreadySubscribed = (accountState as? AccountInfoUiState.Success)?.user?.subscription == "ExBird"
 
-    val stripeCheckoutLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            Toast.makeText(context, "Subscription successful! Refreshing profile...", Toast.LENGTH_SHORT).show()
-            accountInfoViewModel.fetchCurrentUser()
-        } else {
-            Toast.makeText(context, "Payment process was not completed.", Toast.LENGTH_SHORT).show()
-        }
-    }
+    // Logic: The launcher for the Stripe checkout activity is removed as it's no longer needed.
 
-    // Logic: Handle the PayOS link creation state
     LaunchedEffect(paymentState) {
         when (val state = paymentState) {
             is PaymentUiState.LinkCreated -> {
                 navController.navigate(Screen.PayOSCheckout.createRoute(state.checkoutUrl))
-                paymentViewModel.resetState() // Reset state after navigation
+                paymentViewModel.resetState()
             }
             is PaymentUiState.Error -> {
                 Toast.makeText(context, "Error: ${state.message}", Toast.LENGTH_LONG).show()
@@ -127,10 +116,7 @@ fun PremiumScreen(
                             subscription = exBirdSubscription,
                             isSubscribed = isAlreadySubscribed,
                             isLoadingPayment = paymentState is PaymentUiState.Loading,
-                            onPayWithStripeClick = {
-                                val intent = Intent(context, CheckoutActivity::class.java)
-                                stripeCheckoutLauncher.launch(intent)
-                            },
+                            // Logic: The onPayWithStripeClick parameter is removed.
                             onPayWithPayOSClick = {
                                 paymentViewModel.createPayOSPaymentLink()
                             }
@@ -147,7 +133,6 @@ fun PremiumScreen(
                     }
                 }
                 is GenericUiState.Idle -> {
-                    // Handled by loading state
                 }
             }
         }
@@ -159,7 +144,6 @@ fun PremiumContent(
     subscription: Subscription,
     isSubscribed: Boolean,
     isLoadingPayment: Boolean,
-    onPayWithStripeClick: () -> Unit,
     onPayWithPayOSClick: () -> Unit
 ) {
     Column(
@@ -199,7 +183,6 @@ fun PremiumContent(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         } else {
-            // Logic: Show two distinct payment options.
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -224,24 +207,7 @@ fun PremiumContent(
                             fontWeight = FontWeight.Bold
                         )
                     }
-
-                    Button(
-                        onClick = onPayWithStripeClick,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5469C4)) // Stripe's brand color
-                    ) {
-                        Icon(painter = painterResource(id = R.drawable.ic_launcher_foreground), contentDescription = "Stripe", modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Pay with International Card",
-                            color = TextWhite,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    // Logic: The Button for paying with Stripe is removed, leaving only the PayOS option.
                 }
             }
         }
@@ -255,7 +221,6 @@ fun PremiumContent(
     }
 }
 
-// FeatureList and FeatureItem composables remain unchanged
 @Composable
 fun FeatureList() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {

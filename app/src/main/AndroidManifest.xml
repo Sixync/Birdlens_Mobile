@@ -52,7 +52,6 @@
                     android:scheme="app" />
             </intent-filter>
 
-            <!-- Logic: Add intent filters to handle PayOS return URLs -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -66,7 +65,6 @@
                 <data android:scheme="app" android:host="birdlens" android:path="/payment-cancel" />
             </intent-filter>
 
-            <!-- This intent filter handles the generic app open deep link. It remains unchanged. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -78,13 +76,7 @@
 
         </activity>
 
-        <activity
-            android:name=".presentation.ui.screens.payment.CheckoutActivity"
-            android:exported="false"
-            android:label="Checkout"
-            android:theme="@style/Theme.Birdlens">
-        </activity>
-
+        <!-- Logic: The <activity> declaration for the Stripe-specific CheckoutActivity is removed. -->
     </application>
 
 </manifest>

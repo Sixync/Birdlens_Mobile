@@ -21,16 +21,14 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
     private val apiService = RetrofitInstance.api(application.applicationContext)
 
     init {
-        // The automatic fetch on initialization is removed to prevent race conditions.
-        // The UI layer (e.g., MainActivity or a specific screen) is now responsible
-        // for calling fetchCurrentUser() when it's appropriate.
     }
 
     fun fetchCurrentUser() {
-        // Logic: Prevent redundant API calls if data is already being loaded or has been successfully loaded.
-        // This makes the function safer to call from multiple places without causing unnecessary network traffic.
-        if (_uiState.value is AccountInfoUiState.Loading || _uiState.value is AccountInfoUiState.Success) {
-            Log.d("AccountInfoVM", "FetchCurrentUser skipped. State is already Loading or Success.")
+        // Logic: Removed the check that prevented re-fetching if the state was already `Success`.
+        // This allows the payment result screen to force a refresh of the user's profile,
+        // ensuring their new subscription status is correctly loaded.
+        if (_uiState.value is AccountInfoUiState.Loading) {
+            Log.d("AccountInfoVM", "FetchCurrentUser skipped. State is already Loading.")
             return
         }
         _uiState.value = AccountInfoUiState.Loading
@@ -58,20 +56,11 @@ class AccountInfoViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    /**
-     * Resets the user state to Idle. This should be called on logout to ensure
-     * stale user data is not displayed.
-     */
     fun onUserLoggedOut() {
         _uiState.value = AccountInfoUiState.Idle
         Log.d("AccountInfoVM", "User state has been reset to Idle due to logout.")
     }
 
-    /**
-     * Resets the UI state back to Idle. This is used to "consume" a one-time event
-     * like a successful login message, preventing it from being shown again on
-     * recomposition.
-     */
     fun resetUiStateToIdle() {
         Log.d("AccountInfoVM", "Resetting UI state to Idle post-event.")
         _uiState.value = AccountInfoUiState.Idle

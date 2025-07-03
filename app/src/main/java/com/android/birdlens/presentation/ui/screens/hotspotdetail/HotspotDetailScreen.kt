@@ -40,7 +40,7 @@ import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.BarChart
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
-import com.android.birdlens.presentation.ui.screens.payment.CheckoutActivity
+// Logic: The import for the obsolete Stripe CheckoutActivity is removed.
 import com.android.birdlens.presentation.viewmodel.HotspotDetailData
 import com.android.birdlens.presentation.viewmodel.HotspotDetailUiState
 import com.android.birdlens.presentation.viewmodel.HotspotDetailViewModel
@@ -104,7 +104,6 @@ fun HotspotDetailContent(data: HotspotDetailData, navController: NavController) 
                 country = formatCountry(data.basicInfo.countryCode, data.basicInfo.subnational1Code),
                 onCompareClick = {
                     navController.navigate(Screen.Map.route) {
-                        // Logic to pop up to map and potentially send an event to enter compare mode
                     }
                 }
             )
@@ -148,15 +147,10 @@ fun HotspotDetailContent(data: HotspotDetailData, navController: NavController) 
             )
         }
 
-        // Logic: This conditional block is the core of the premium feature gating.
-        // The `data.isSubscribed` boolean, determined by the ViewModel, decides whether
-        // to show the `AnalysisSection` (for paying users) or the `PremiumUpsellCard` (for free users).
         item {
             if (data.isSubscribed && data.analysis != null) {
-                // User has "ExBird", show the premium analysis data.
                 AnalysisSection(analysis = data.analysis)
             } else {
-                // User does not have "ExBird", show a clear message encouraging them to subscribe.
                 PremiumUpsellCard(navController)
             }
         }
@@ -260,9 +254,6 @@ fun AnalysisSection(analysis: VisitingTimesAnalysis) {
     }
 }
 
-// Logic: This Composable serves as the call-to-action for non-subscribed users.
-// It clearly explains the benefit of subscribing ("Unlock Pro Analysis") and provides
-// a direct button ("Go Premium") to navigate to the payment flow.
 @Composable
 fun PremiumUpsellCard(navController: NavController) {
     val context = LocalContext.current
@@ -276,8 +267,9 @@ fun PremiumUpsellCard(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    val intent = Intent(context, CheckoutActivity::class.java)
-                    context.startActivity(intent)
+                    // Logic: The onClick action now navigates to the PremiumScreen,
+                    // which contains the PayOS payment flow, instead of the old Stripe activity.
+                    navController.navigate(Screen.Premium.route)
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
             ) {
