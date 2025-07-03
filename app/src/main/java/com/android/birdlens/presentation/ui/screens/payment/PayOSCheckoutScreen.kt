@@ -3,6 +3,8 @@ package com.android.birdlens.presentation.ui.screens.payment
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.util.Log
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavController
+import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.ui.theme.GreenDeep
 import com.android.birdlens.ui.theme.TextWhite
 import com.google.accompanist.web.AccompanistWebViewClient
@@ -43,19 +46,46 @@ fun PayOSCheckoutScreen(
     val state = rememberWebViewState(url = checkoutUrl)
     var isLoading by remember { mutableStateOf(true) }
 
-    // This is the corrected WebViewClient with the proper method signatures.
-    val webViewClient = remember {
+    // This is the updated WebViewClient with interception logic.
+    val webViewClient = remember(navController) {
         object : AccompanistWebViewClient() {
-            // Corrected signature: `view` is non-nullable WebView.
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 isLoading = true
             }
 
-            // Corrected signature: `view` is non-nullable WebView.
             override fun onPageFinished(view: WebView, url: String?) {
                 super.onPageFinished(view, url)
                 isLoading = false
+            }
+
+            // Logic: This function intercepts every URL navigation attempt within the WebView.
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: ""
+                Log.d("PayOSCheckout", "WebView trying to load URL: $url")
+
+                // Check if the URL is our custom deep link for success.
+                if (url.startsWith("app://birdlens/payment-success")) {
+                    Log.d("PayOSCheckout", "Success deep link intercepted. Navigating to success screen.")
+                    // Navigate to the success screen and clear the back stack.
+                    navController.navigate(Screen.PaymentResult.createRoute(true)) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                    return true // Return true to tell the WebView we've handled this URL.
+                }
+
+                // Check if the URL is our custom deep link for cancellation.
+                if (url.startsWith("app://birdlens/payment-cancel")) {
+                    Log.d("PayOSCheckout", "Cancel deep link intercepted. Navigating to cancel screen.")
+                    // Navigate to the cancel screen and clear the back stack.
+                    navController.navigate(Screen.PaymentResult.createRoute(false)) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                    return true // We've handled it.
+                }
+
+                // For any other URL (e.g., links within the PayOS page), let the WebView handle it.
+                return super.shouldOverrideUrlLoading(view, request)
             }
         }
     }

@@ -16,7 +16,7 @@ val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 var googleMapsApiKeyFromProperties = "YOUR_API_KEY_MISSING_IN_LOCAL_PROPERTIES"
 var ebirdApiKeyFromProperties = "YOUR_EBIRD_API_KEY_MISSING"
-var stripePublishableKeyFromProperties: String? = null
+// Logic: The reference to the Stripe publishable key is removed.
 var backendBaseUrlFromProperties: String? = null
 
 if (localPropertiesFile.exists()) {
@@ -25,7 +25,7 @@ if (localPropertiesFile.exists()) {
             localProperties.load(fis)
             googleMapsApiKeyFromProperties = localProperties.getProperty("MAPS_API_KEY")
             ebirdApiKeyFromProperties = localProperties.getProperty("EBIRD_API_KEY")
-            stripePublishableKeyFromProperties = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY")
+            // Logic: The loading of STRIPE_PUBLISHABLE_KEY is removed.
             backendBaseUrlFromProperties = localProperties.getProperty("BACKEND_BASE_URL_LOCAL")
 
 
@@ -40,11 +40,6 @@ if (localPropertiesFile.exists()) {
                 println("Warning: EBIRD_API_KEY not found in local.properties.")
             }
 
-            if (stripePublishableKeyFromProperties != null) {
-                println("Successfully loaded STRIPE_PUBLISHABLE_KEY from local.properties. Value: '${stripePublishableKeyFromProperties}'")
-            } else {
-                println("Warning: STRIPE_PUBLISHABLE_KEY not found or is null in local.properties.")
-            }
         }
     } catch (e: Exception) {
         System.err.println("Warning: Could not load API keys from local.properties: ${e.message}")
@@ -68,13 +63,7 @@ val googleMapsApiKey = if (googleMapsApiKeyFromProperties.isNullOrBlank()) {
     googleMapsApiKeyFromProperties!!
 }
 
-val stripePublishableKey = if (stripePublishableKeyFromProperties.isNullOrBlank()) {
-    println("Stripe Key from properties was null or blank. Using default/fallback Stripe Publishable Key: 'pk_test_DEFAULT_FALLBACK_KEY'")
-    "pk_test_DEFAULT_FALLBACK_KEY"
-} else {
-    println("Stripe Key successfully read from properties. Using value: '${stripePublishableKeyFromProperties}'")
-    stripePublishableKeyFromProperties!!
-}
+// Logic: The stripePublishableKey variable and its related logic are removed.
 
 val backendBaseUrl = if (backendBaseUrlFromProperties.isNullOrBlank()) {
     println("Using default/fallback Backend URL: 'http://10.0.2.2/'")
@@ -85,7 +74,7 @@ val backendBaseUrl = if (backendBaseUrlFromProperties.isNullOrBlank()) {
 }
 
 println("MAPS_API_KEY to be used in build: ${googleMapsApiKey.take(5)}...")
-println("FINAL STRIPE_PUBLISHABLE_KEY to be injected into BuildConfig: '${stripePublishableKey.take(8)}...'")
+// Logic: The log for the final Stripe key is removed.
 
 
 android {
@@ -103,7 +92,7 @@ android {
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
         resourceConfigurations.addAll(listOf("en", "vi"))
         buildConfigField("String", "EBIRD_API_KEY", "\"$ebirdApiKey\"")
-        buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
+        // Logic: The BuildConfig field for STRIPE_PUBLISHABLE_KEY is removed.
         buildConfigField("String", "BACKEND_BASE_URL", "\"$backendBaseUrl\"")
     }
 
@@ -159,17 +148,13 @@ dependencies {
     implementation(libs.core.ktx)
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
-    // Logic: Add the Accompanist WebView library. This provides a Composable wrapper
-    // for Android's WebView, which we need to display the PayOS checkout page.
     implementation("com.google.accompanist:accompanist-webview:0.34.0")
     implementation(libs.androidx.compose.material)
 
-    // Google Maps Compose Utilities (Clustering, Heatmaps, etc.)
-    implementation("com.google.maps.android:maps-compose-utils:4.3.3") // Updated to latest
-    implementation("com.google.maps.android:maps-compose-widgets:4.3.3") // For ScaleBar, etc. - Updated to latest
-    // Logic: This dependency provides the HeatmapTileProvider and resolves the 'Unresolved reference: heatmaps' error.
+    implementation("com.google.maps.android:maps-compose-utils:4.3.3")
+    implementation("com.google.maps.android:maps-compose-widgets:4.3.3")
     implementation ("com.google.maps.android:android-maps-utils:3.8.2")
-    implementation(libs.play.services.location) // For HeatmapTileProvider
+    implementation(libs.play.services.location)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -198,8 +183,7 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.05.00"))
     implementation("androidx.compose.foundation:foundation")
 
-    // Stripe SDK Dependencies
-    implementation("com.stripe:stripe-android:21.17.0")
+    // Logic: The Stripe SDK dependencies are removed from the project.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     implementation("androidx.datastore:datastore-preferences:1.0.0")

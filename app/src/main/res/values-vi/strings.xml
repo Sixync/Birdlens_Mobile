@@ -1,4 +1,4 @@
-<!-- Birdlens_Mobile/app/src/main/res/values-vi/strings.xml -->
+<!-- path: EXE201/app/src/main/res/values-vi/strings.xml -->
 <resources>
     <string name="app_name">Birdlens</string>
 
@@ -86,23 +86,12 @@
     <string name="account_info_error_loading">Lỗi: %s</string>
     <string name="user_avatar_description">Ảnh đại diện</string>
     <string name="purchase_exbird_subscription">Mua gói ExBird</string>
-    <string name="manage_subscription">Quản lý gói đăng ký</string>
-    <!-- Tour Screen -->
-    <string name="tour_screen_title_birdlens">BIRDLENS</string>
-    <string name="tour_screen_subtitle_tours">Các chuyến đi</string>
-    <string name="tour_screen_events_of_year">Sự kiện của năm</string>
-    <string name="tour_screen_popular_tour">Tour phổ biến</string>
-    <string name="tour_screen_all_tours">Tất cả tour</string>
-    <string name="tour_image_description">Ảnh tour</string>
-    <string name="popular_tour_image_description">Ảnh tour phổ biến</string>
-
-    <string name="tour_screen_preview_image_small">Ảnh xem trước</string>
-    <string name="tour_screen_preview_image_popular">Ảnh xem trước phổ biến</string>
-
-    <!-- All Events/Tours List Screens -->
-    <string name="all_events_title">Tất cả sự kiện</string>
-    <string name="all_tours_title">Tất cả tour</string>
     <string name="manage_subscription">Quản lý gói</string>
+    <string name="subscription_tier_label">Gói hiện tại</string>
+    <string name="subscription_tier_standard">Người dùng tiêu chuẩn</string>
+    <string name="subscription_tier_unknown">Không xác định</string>
+    <string name="loading_ellipsis">Đang tải…</string>
+    <string name="settings_my_subscription">Gói của tôi</string>
 
     <!-- Tour Screen -->
     <string name="tour_screen_title_birdlens">BIRDLENS</string>
@@ -167,16 +156,6 @@
     <!-- Map Screen -->
     <string name="map_screen_title_birdlens">BIRDLENS</string>
     <string name="map_error_loading">Không thể tải bản đồ. Hãy đảm bảo Dịch vụ Google Play đã được cập nhật và khóa API hợp lệ.</string>
-    <string name="map_action_bird_locations">Vị trí chim</string>
-    <string name="map_action_bookmarks">Đã lưu</string>
-    <string name="map_action_weather">Thời tiết</string>
-    <string name="map_action_popular_hotspots">Điểm nóng nổi bật</string>
-    <string name="map_action_migration_routes">Đường di cư</string>
-    <string name="map_action_show_bird_locations_toast">Hiển thị vị trí chim</string>
-    <string name="map_action_show_bookmarks_toast">Hiển thị đã lưu</string>
-    <string name="map_action_show_weather_toast">Hiển thị thời tiết</string>
-    <string name="map_action_show_hotspots_toast">Hiển thị điểm nóng</string>
-    <string name="map_action_show_migration_toast">Hiển thị di cư (chưa thực hiện)</string>
     <string name="map_action_home">Về vị trí nhà</string>
     <string name="map_action_refresh_hotspots">Làm mới điểm nóng</string>
     <string name="map_action_identify_bird">Nhận dạng chim</string>
@@ -211,9 +190,9 @@
     <string name="map_search_icon_description">Tìm chim</string>
     <string name="map_search_clear_description">Xóa tìm kiếm</string>
     <string name="map_search_error_not_found">Không tìm thấy loài chim có tên \'%1$s\'. Vui lòng kiểm tra chính tả.</string>
-    <string name="map_search_error_no_hotspots">Không tìm thấy quan sát gần đây của \'%1$s\' tại Việt Nam.</string>
     <string name="map_search_local_finding">Đang tìm \'%1$s\'…</string>
-    <string name="map_search_ai_finding">Đang tìm địa điểm cho %1$s…</string>
+    <string name="map_search_ai_finding_region">Đang tìm vị trí cho %1$s tại %2$s…</string>
+    <string name="map_search_error_no_hotspots_region">Không tìm thấy quan sát gần đây của \'%1$s\' tại %2$s.</string>
 
     <!-- Marketplace Screen -->
     <string name="marketplace_title_birdlens">BIRDLENS</string>
@@ -255,7 +234,6 @@
     <string name="bird_seen_on">Đã thấy: %1$s</string>
     <string name="bird_count">Số lượng: %1$d</string>
 
-
     <!-- Bird Identifier Screen -->
     <string name="bird_identifier_title">Nhận dạng chim bằng AI</string>
     <string name="bird_identifier_select_prompt">Chạm để chọn ảnh chim (tùy chọn)</string>
@@ -282,52 +260,16 @@
     <string name="bird_identifier_possibilities_subtitle">Chọn một loài chim để tìm hiểu thêm.</string>
 
     <!-- Gemini Prompts -->
-    <string name="gemini_prompt_identify_from_image">Nhận dạng con chim trong ảnh này. Vui lòng cung cấp danh sách tối đa 3 loài có thể, với loài có khả năng cao nhất đứng đầu, ngay cả khi bạn tự tin. Nếu không có chim trong ảnh, hãy trả lời \'không có chim\'.</string>
-    <string name="gemini_prompt_extract_name_from_text">Bạn là một nhà điểu học và đa ngôn ngữ chuyên nghiệp. Nhiệm vụ của bạn là trích xuất tên loài chim từ văn bản của người dùng.\n- Nếu tên là cụ thể (ví dụ: \'Blue Jay\', \'Họa mi\'), hãy chỉ trả lời bằng một tên tiếng Anh phổ biến duy nhất đó (ví dụ: \'Blue Jay\', \'Chinese Hwamei\').\n- Nếu tên không rõ ràng (ví dụ: \'sparrow\', \'chim sẻ\'), hãy trả lời bằng một danh sách tối đa 5 loài có khả năng cao bằng tiếng Anh, được phân tách bằng dấu phẩy (ví dụ: \'House Sparrow, Eurasian Tree Sparrow, American Tree Sparrow, Song Sparrow, Chipping Sparrow\').\n- Nếu bạn không thể nhận dạng được một loài chim (ví dụ: văn bản là \'con mèo\' hoặc \'what is the weather?\'), bạn BẮT BUỘC phải trả lời bằng văn bản chính xác: \'Error: No bird name found\'.\n\nVăn bản người dùng: \"%1$s\"</string>
+    <string name="gemini_prompt_identify_from_image">Bạn là một nhà điểu học chuyên nghiệp. Nhiệm vụ của bạn là nhận dạng con chim trong ảnh được cung cấp. Phản hồi của bạn BẮT BUỘC phải là một danh sách các tên tiếng Anh thông dụng có thể có, tối đa 3 tên, được phân tách bằng dấu phẩy (ví dụ: \'House Sparrow, Eurasian Tree Sparrow, American Tree Sparrow\'). Ngay cả khi bạn rất tự tin, bạn vẫn phải cung cấp một danh sách. Nếu không có con chim nào trong ảnh hoặc bạn không thể nhận dạng nó với bất kỳ sự tự tin nào, bạn BẮT BUỘC phải trả lời bằng văn bản chính xác: \'Error: No bird name found\'.</string>
+    <string name="gemini_prompt_extract_name_from_text">Bạn là một nhà điểu học và đa ngôn ngữ chuyên nghiệp. Nhiệm vụ của bạn là trích xuất tên loài chim từ văn bản của người dùng.\n- Nếu tên là cụ thể (ví dụ: \'Blue Jay\', \'Họa mi\'), hãy chỉ trả lời bằng một tên tiếng Anh phổ biến duy nhất đó (ví dụ: \'Blue Jay\', \'Chinese Hwamei\').\n- Nếu tên không rõ ràng (ví dụ: \'sparrow\', \'chim sẻ\'), hãy trả lời bằng một danh sách tối đa 5 loài có khả năng cao bằng tiếng Anh, được phân tách bằng dấu phẩy (ví dụ: \'House Sparrow, Eurasian Tree Sparrow, American Tree Sparrow, Song Sparrow, Chipping Sparrow\').\n- Nếu bạn không thể nhận dạng được một loài chim (ví dụ: văn bản là \'con mèo\' hoặc \'thời tiết thế nào?\'), bạn BẮT BUỘC phải trả lời bằng văn bản chính xác: \'Error: No bird name found\'.\n\nVăn bản người dùng: \"%1$s\"</string>
     <string name="gemini_prompt_initial_question_for_selected_bird">Hãy cho tôi biết về %1$s.</string>
     <string name="gemini_prompt_initial_question_no_image">Hãy cho tôi biết về loài chim này.</string>
-    <string name="gemini_language_suffix"> Vui lòng trả lời bằng tiếng Anh.</string>
-
-Văn bản của người dùng: \"%1$s\"</string>
-    <string name="gemini_prompt_initial_question_no_image">Nói cho tôi biết về loài chim này.</string>
     <string name="gemini_language_suffix"> Vui lòng trả lời bằng tiếng Việt.</string>
 
     <!-- admin management-->
     <string name="admin_manage_subscriptions">Quản lý Gói đăng ký</string>
-    <!-- subscriptions -->
-    <string name="subscription_tier_label">Gói hiện tại</string>
-    <string name="subscription_tier_standard">Người dùng tiêu chuẩn</string>
-    <string name="subscription_tier_unknown">Không xác định</string>
-    <string name="loading_ellipsis">Đang tải…</string>
-    <string name="settings_my_subscription">Gói của tôi</string>
 
-    <string name="map_action_start_compare">Bắt đầu So sánh</string>
-    <string name="map_action_exit_compare">Thoát chế độ So sánh</string>
-    <string name="map_compare_selected_info">Đã chọn để So sánh: %1$d/%2$d</string>
-    <string name="map_compare_clear_selection">Xóa</string>
-    <string name="map_compare_button_text">So sánh (%1$d)</string>
-    <string name="map_compare_toast_min_selection">Chọn ít nhất 2 điểm nóng để so sánh.</string>
-    <string name="map_compare_set_target_species">Đặt loài mục tiêu</string>
-    <string name="map_compare_target_species_dialog_title">Đặt loài mục tiêu</string>
-    <string name="map_compare_target_species_placeholder">Nhập tên chim (ví dụ: Sáo)</string>
-    <string name="map_compare_confirm">Xác nhận</string>
-    <string name="map_compare_cancel">Hủy</string>
-    <string name="hotspot_comparison_title">So sánh điểm nóng</string>
-    <string name="hotspot_comparison_metric_all_time_species">Tổng số loài</string>
-    <string name="hotspot_comparison_metric_latest_obs">Quan sát gần nhất</string>
-    <string name="hotspot_comparison_metric_recent_sightings">Lượt xem gần đây</string>
-    <string name="hotspot_comparison_metric_target_species">Mục tiêu: %1$s</string>
-    <string name="hotspot_comparison_target_seen_recently">✓ Đã thấy gần đây (%1$s)</string>
-    <string name="hotspot_comparison_target_potential">○ Có khả năng (đã ghi nhận trước đây)</string>
-    <string name="hotspot_comparison_target_not_recorded">✗ Chưa được ghi nhận</string>
-    <string name="hotspot_comparison_metric_accessibility">Khả năng tiếp cận</string>
-    <string name="hotspot_comparison_metric_best_time">Thời gian tốt nhất để tham quan</string>
-    <string name="hotspot_comparison_no_data">Không có dữ liệu để so sánh. Vui lòng chọn điểm nóng.</string>
-    <string name="hotspot_comparison_select_hotspots">Chọn điểm nóng để so sánh.</string>
-    <string name="hotspot_comparison_error_fetch">Không thể lấy dữ liệu cho tất cả các điểm nóng đã chọn.</string>
-    <string name="map_fetch_error_generic">Lỗi lấy dữ liệu: %1$s</string>
-    <string name="map_compare_max_items_toast">Bạn có thể chọn tối đa %1$d điểm nóng để so sánh.</string>
-
+    <!-- Compare Mode -->
     <string name="map_action_start_compare">Bật chế độ So sánh</string>
     <string name="map_action_exit_compare">Tắt chế độ So sánh</string>
     <string name="map_compare_selected_info">Đã chọn để so sánh: %1$d/%2$d</string>
@@ -355,13 +297,11 @@ Văn bản của người dùng: \"%1$s\"</string>
     <string name="map_fetch_error_generic">Lỗi lấy dữ liệu: %1$s</string>
     <string name="map_compare_max_items_toast">Bạn có thể chọn tối đa %1$d địa điểm để so sánh.</string>
 
-
+    <!-- Map Search Scopes -->
     <string name="map_search_scope_home">Quê nhà (%1$s)</string>
     <string name="map_search_scope_current_region">Khu vực bản đồ hiện tại</string>
     <string name="map_search_scope_global">Toàn cầu (Chế độ xem hiện tại)</string>
     <string name="map_select_search_scope_title">Chọn phạm vi tìm kiếm loài</string>
-    <string name="map_search_ai_finding_region">Đang tìm vị trí cho %1$s tại %2$s…</string>
-    <string name="map_search_error_no_hotspots_region">Không tìm thấy quan sát gần đây của \'%1$s\' tại %2$s.</string>
     <string name="settings_change_home_country">Thay đổi quốc gia</string>
     <string name="dialog_select_home_country">Chọn quốc gia của bạn</string>
     <string name="explore_birds_title">Khám phá các loài chim</string>
@@ -374,5 +314,5 @@ Văn bản của người dùng: \"%1$s\"</string>
     <string name="map_status_radius">Bán kính: %1$dkm</string>
     <string name="map_radius_select_prompt">Chọn bán kính:</string>
     <string name="show_tutorial_content_description">Hiển thị hướng dẫn bản đồ</string>
- 
+
 </resources>

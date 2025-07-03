@@ -1,4 +1,4 @@
-// app/src/main/java/com/android/birdlens/presentation/ui/theme/Color.kt
+// path: EXE201/app/src/main/java/com/android/birdlens/ui/theme/Color.kt
 package com.android.birdlens.ui.theme
 
 import androidx.compose.ui.graphics.Color
@@ -12,9 +12,12 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // The darkest green, used as the primary background for screens.
-val VeryDarkGreenBase = Color(0xFF0d1b06)
+val VeryDarkGreenBase = Color(0xFF050F07)
 
+// Logic: Restored the original GreenDeep variable name to fix the unresolved reference errors.
+// This color is used in many screens for backgrounds and top app bars.
 val GreenDeep = Color(0xFF0A1F0F)
+
 // Intermediate green shades for UI elements and gradients.
 val GreenWave1 = Color(0xFF466043)
 val GreenWave2 = Color(0xFF7BA06A)
@@ -22,9 +25,10 @@ val GreenWave3 = Color(0xFF6DCFA8)
 val GreenWave4 = Color(0xFF61FC7D)
 
 // Specific UI element colors based on the new palette.
-val ButtonGreen = Color(0xFF3cb056) // Vibrant accent green for primary actions.
+val ButtonGreen = Color(0xFF466043) // Using GreenWave1 for a consistent, deep green.
 val TextWhite = Color.White
-val CardBackground = Color(0xFF1b4020) // Dark green for card surfaces.
+// CardBackground now uses GreenDeep for consistency.
+val CardBackground = GreenDeep
 
 // Auth screen specific colors.
 val AuthCardBackground = Color.Black.copy(alpha = 0.35f)
