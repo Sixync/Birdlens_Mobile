@@ -68,7 +68,8 @@ fun AppNavigation(
         composable(Screen.Welcome.route) {
             WelcomeScreen(
                 onLoginClicked = { navController.navigate(Screen.Login.route) },
-                onNewUserClicked = { navController.navigate(Screen.Register.route) }
+                onNewUserClicked = { navController.navigate(Screen.Register.route) },
+                navController = navController
             )
         }
         composable(Screen.Login.route) {
@@ -342,7 +343,6 @@ fun AppNavigation(
             arguments = listOf(navArgument("isSuccess") { type = NavType.BoolType })
         ) { backStackEntry ->
             val isSuccess = backStackEntry.arguments?.getBoolean("isSuccess") ?: false
-            // Logic: Pass the AccountInfoViewModel to the PaymentResultScreen so it can trigger a data refresh.
             PaymentResultScreen(
                 navController = navController,
                 isSuccess = isSuccess,

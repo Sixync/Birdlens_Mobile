@@ -12,6 +12,9 @@ object LanguageManager {
 
     private const val PREFS_NAME = "birdlens_lang_prefs"
     private const val KEY_SELECTED_LANGUAGE = "selected_language"
+    // Logic: Add a new key to track if the user has ever set a language.
+    // This will determine if the initial language selection screen should be shown.
+    private const val KEY_LANGUAGE_HAS_BEEN_SET = "language_has_been_set"
     const val LANGUAGE_ENGLISH = "en"
     const val LANGUAGE_VIETNAMESE = "vi"
 
@@ -19,48 +22,39 @@ object LanguageManager {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    // Logic: A new function to check if the language has been set at least once.
+    fun hasLanguageBeenSet(context: Context): Boolean {
+        return getPreferences(context).getBoolean(KEY_LANGUAGE_HAS_BEEN_SET, false)
+    }
+
     fun saveLanguagePreference(context: Context, languageCode: String) {
-        getPreferences(context).edit().putString(KEY_SELECTED_LANGUAGE, languageCode).apply()
+        getPreferences(context).edit()
+            .putString(KEY_SELECTED_LANGUAGE, languageCode)
+            .putBoolean(KEY_LANGUAGE_HAS_BEEN_SET, true) // Also mark that the language has been set.
+            .apply()
     }
 
     fun getLanguagePreference(context: Context): String {
-        // Default to English if no preference is found
         return getPreferences(context).getString(KEY_SELECTED_LANGUAGE, LANGUAGE_ENGLISH) ?: LANGUAGE_ENGLISH
     }
 
-    /**
-     * Sets the app's locale and returns a new context with this locale.
-     * This should be used in Activity's attachBaseContext.
-     * This method is crucial for ensuring the Activity and its Composables use the correct resources.
-     */
     fun wrapContext(context: Context): Context {
-        val savedLanguage = getLanguagePreference(context) // Reads saved lang using the original context
+        val savedLanguage = getLanguagePreference(context)
         val locale = Locale(savedLanguage)
-        Locale.setDefault(locale) // Sets default locale for the entire application process
+        Locale.setDefault(locale)
 
         val resources: Resources = context.resources
-        val config: Configuration = Configuration(resources.configuration) // Create a mutable copy of the current configuration
+        val config: Configuration = Configuration(resources.configuration)
 
-        // Apply the new locale to the configuration
-        // For API level N (24) and above (minSdk is 33, so this path is always taken)
         config.setLocale(locale)
         val localeList = android.os.LocaleList(locale)
-        android.os.LocaleList.setDefault(localeList) // Sets default locale list for the app process
+        android.os.LocaleList.setDefault(localeList)
         config.setLocales(localeList)
 
-        // Create and return a new context with the updated configuration.
-        // This new context will provide resources (like strings) based on the new locale.
         return context.createConfigurationContext(config)
     }
 
-    /**
-     * Call this when the user actively changes the language in settings.
-     * It saves the preference and then expects the calling Activity to recreate itself.
-     */
     fun changeLanguage(context: Context, languageCode: String) {
         saveLanguagePreference(context, languageCode)
-        // The activity needs to be recreated for the change to take full effect.
-        // This is typically handled in the UI layer (e.g., SettingsScreen calls activity.recreate()).
-        // No need to update locale here directly, as attachBaseContext will handle it on recreation.
     }
 }

@@ -12,6 +12,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -25,6 +29,7 @@ import com.android.birdlens.data.LanguageManager
 import com.android.birdlens.data.repository.BirdSpeciesRepository
 import com.android.birdlens.presentation.navigation.AppNavigation
 import com.android.birdlens.presentation.navigation.Screen
+import com.android.birdlens.presentation.ui.screens.language.LanguageSelectionScreen
 import com.android.birdlens.presentation.viewmodel.AccountInfoUiState
 import com.android.birdlens.presentation.viewmodel.AccountInfoViewModel
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
@@ -131,29 +136,38 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            // Logic: This state determines whether to show the language selection or the main app navigation.
+            var showLanguageSelection by remember {
+                mutableStateOf(!LanguageManager.hasLanguageBeenSet(this))
+            }
+
             navController = rememberNavController()
             BirdlensTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = GreenDeep
                 ) {
-                    AppNavigation(
-                        navController = navController,
-                        googleAuthViewModel = googleAuthViewModel,
-                        accountInfoViewModel = accountInfoViewModel,
-                        triggerAd = { triggerInterstitialAd() }
-                    )
+                    // Logic: Based on the `showLanguageSelection` flag, either display the one-time
+                    // language setup screen or the full application navigation graph.
+                    if (showLanguageSelection) {
+                        LanguageSelectionScreen()
+                    } else {
+                        AppNavigation(
+                            navController = navController,
+                            googleAuthViewModel = googleAuthViewModel,
+                            accountInfoViewModel = accountInfoViewModel,
+                            triggerAd = { triggerInterstitialAd() }
+                        )
+                    }
                 }
             }
         }
 
-        // Logic: Process the initial intent when the app is created.
         handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // Logic: Process subsequent intents (e.g., if the app is already open).
         handleIntent(intent)
     }
 
@@ -163,25 +177,21 @@ class MainActivity : ComponentActivity() {
             Log.d(TAG_AUTH, "Handling deep link: $uri")
             when (uri.path) {
                 "/payment-success" -> {
-                    // Navigate to a success screen. Pop up everything back to home first.
                     navController.navigate(Screen.Home.route) {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
                     navController.navigate(Screen.PaymentResult.createRoute(true))
                 }
                 "/payment-cancel" -> {
-                    // Navigate to a failure/cancelled screen.
                     navController.navigate(Screen.Home.route) {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
                     navController.navigate(Screen.PaymentResult.createRoute(false))
                 }
                 else -> {
-                    // Handle other deep links like password reset if needed
                     Log.d(TAG_AUTH, "onNewIntent called with unhandled deep link path: ${uri.path}")
                 }
             }
-            // Clear the intent data so it's not processed again on configuration change.
             setIntent(null)
         }
     }
