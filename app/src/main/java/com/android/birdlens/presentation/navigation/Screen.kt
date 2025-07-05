@@ -50,7 +50,17 @@ sealed class Screen(val route: String) {
     data object BirdIdentifier : Screen("bird_identifier_screen")
     data object AdminSubscriptionList : Screen("admin_subscription_list_screen")
     data object AdminCreateSubscription : Screen("admin_create_subscription_screen")
-    data object CreatePost : Screen("create_post_screen")
+    // Logic: The CreatePost route is updated to accept optional arguments from the AI Identifier screen.
+    // This allows pre-filling the form. Using query parameters is a standard way to pass optional data.
+    data object CreatePost : Screen("create_post_screen?speciesCode={speciesCode}&speciesName={speciesName}&imageUri={imageUri}") {
+        fun createRoute(speciesCode: String, speciesName: String, imageUri: String): String {
+            val encodedUri = URLEncoder.encode(imageUri, StandardCharsets.UTF_8.toString())
+            return "create_post_screen?speciesCode=$speciesCode&speciesName=$speciesName&imageUri=$encodedUri"
+        }
+    }
+    // Logic: Add a new route for the location picker map.
+    data object LocationPicker : Screen("location_picker_screen")
+
     data object HotspotComparison : Screen("hotspot_comparison_screen/{locIds}") {
         fun createRoute(locIds: List<String>) = "hotspot_comparison_screen/${locIds.joinToString(",")}"
     }

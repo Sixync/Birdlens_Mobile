@@ -2,6 +2,7 @@
 package com.android.birdlens.presentation.navigation
 
 import android.app.Application
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -28,6 +29,7 @@ import com.android.birdlens.presentation.ui.screens.cart.CartScreen
 import com.android.birdlens.presentation.ui.screens.comparison.HotspotComparisonScreen
 import com.android.birdlens.presentation.ui.screens.community.CreatePostScreen
 import com.android.birdlens.presentation.ui.screens.community.CommunityScreen
+import com.android.birdlens.presentation.ui.screens.community.LocationPickerScreen
 import com.android.birdlens.presentation.ui.screens.eventdetail.EventDetailScreen
 import com.android.birdlens.presentation.ui.screens.forgotpassword.ForgotPasswordScreen
 import com.android.birdlens.presentation.ui.screens.hotspotbirdlist.HotspotBirdListScreen
@@ -48,6 +50,7 @@ import com.android.birdlens.presentation.ui.screens.tour.TourScreen
 import com.android.birdlens.presentation.ui.screens.tourdetail.TourDetailScreen
 import com.android.birdlens.presentation.ui.screens.welcome.WelcomeScreen
 import com.android.birdlens.presentation.viewmodel.*
+import com.google.android.gms.maps.model.LatLng
 
 @Composable
 fun AppNavigation(
@@ -120,6 +123,7 @@ fun AppNavigation(
         composable(Screen.Home.route) {
             val eventViewModel: EventViewModel = viewModel()
             val tourViewModel: TourViewModel = viewModel()
+            val exploreViewModel: ExploreViewModel = viewModel() // Add this
             TourScreen(
                 navController = navController,
                 onNavigateToAllEvents = { navController.navigate(Screen.AllEventsList.route) },
@@ -132,7 +136,8 @@ fun AppNavigation(
                     navController.navigate(Screen.EventDetail.createRoute(eventId))
                 },
                 eventViewModel = eventViewModel,
-                tourViewModel = tourViewModel
+                tourViewModel = tourViewModel,
+                exploreViewModel = exploreViewModel // Pass it here
             )
         }
         composable(Screen.AllEventsList.route) {
@@ -183,8 +188,43 @@ fun AppNavigation(
         composable(Screen.Community.route) {
             CommunityScreen(navController = navController, communityViewModel = communityViewModel)
         }
-        composable(Screen.CreatePost.route) {
-            CreatePostScreen(navController = navController, communityViewModel = communityViewModel)
+        composable(
+            route = Screen.CreatePost.route,
+            arguments = listOf(
+                navArgument("speciesCode") { type = NavType.StringType; nullable = true },
+                navArgument("speciesName") { type = NavType.StringType; nullable = true },
+                navArgument("imageUri") { type = NavType.StringType; nullable = true }
+            )
+        ) { backStackEntry ->
+            // Logic: Create a dedicated ViewModel for this screen.
+            val createPostViewModel: CreatePostViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        CreatePostViewModel(
+                            application = application,
+                            savedStateHandle = createSavedStateHandle()
+                        )
+                    }
+                }
+            )
+            // Logic: Observe the SavedStateHandle for results from the location picker.
+            val locationResult = navController.currentBackStackEntry?.savedStateHandle?.get<LatLng>("picked_location")
+            LaunchedEffect(locationResult) {
+                locationResult?.let {
+                    createPostViewModel.setLocation(it)
+                    // Clear the result from the SavedStateHandle so it's not processed again
+                    navController.currentBackStackEntry?.savedStateHandle?.remove<LatLng>("picked_location")
+                }
+            }
+
+            CreatePostScreen(
+                navController = navController,
+                viewModel = createPostViewModel
+            )
+        }
+        // Logic: Add the new LocationPickerScreen to the navigation graph.
+        composable(Screen.LocationPicker.route) {
+            LocationPickerScreen(navController = navController)
         }
         composable(Screen.Settings.route) {
             SettingsScreen(

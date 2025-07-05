@@ -50,6 +50,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.android.birdlens.R
 import com.android.birdlens.data.model.ChatMessage
+import com.android.birdlens.presentation.navigation.Screen
 import com.android.birdlens.presentation.ui.components.AppScaffold
 import com.android.birdlens.presentation.ui.components.SimpleTopAppBar
 import com.android.birdlens.presentation.viewmodel.BirdIdentifierUiState
@@ -107,6 +108,7 @@ fun BirdIdentifierScreen(
             when (val state = uiState) {
                 is BirdIdentifierUiState.ConversationReady -> {
                     ConversationScreen(
+                        navController = navController,
                         uiState = state,
                         onSendMessage = { viewModel.askQuestion(it) }
                     )
@@ -139,6 +141,56 @@ fun BirdIdentifierScreen(
         }
     }
 }
+
+@Composable
+fun ConversationScreen(
+    navController: NavController,
+    uiState: BirdIdentifierUiState.ConversationReady,
+    onSendMessage: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        ConversationFeed(
+            messages = uiState.messages,
+            modifier = Modifier.weight(1f)
+        )
+        // Logic: Add the "Post this Sighting!" button to the Conversation screen.
+        Button(
+            onClick = {
+                // Navigate to CreatePostScreen with pre-filled data
+                navController.navigate(
+                    Screen.CreatePost.createRoute(
+                        speciesCode = uiState.identifiedSpeciesCode,
+                        speciesName = uiState.messages.firstNotNullOfOrNull { it.text.substringBefore("\n").trim() } ?: "Unknown Bird",
+                        imageUri = uiState.birdImageUrl ?: ""
+                    )
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen)
+        ) {
+            Icon(Icons.Default.PostAdd, contentDescription = "Post Sighting", modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Post this Sighting!")
+        }
+
+        InputBar(
+            onSendMessage = onSendMessage,
+            isLoading = uiState.isLoading
+        )
+    }
+}
+
+// The rest of the file (InitialLayout, ImageSelectionBox, etc.) remains unchanged.
+// For brevity, I will omit them here but they should be kept in your file.
+// The omitted composables are: InitialLayout, ImageSelectionBox, InitialPromptView, LoadingView,
+// ErrorView, ConversationFeed, UserMessageBubble, AssistantMessageBubble, InputBar, UserInputSection, PossibilitiesList
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -334,26 +386,6 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
     }
 }
 
-@Composable
-fun ConversationScreen(
-    uiState: BirdIdentifierUiState.ConversationReady,
-    onSendMessage: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-    ) {
-        ConversationFeed(
-            messages = uiState.messages,
-            modifier = Modifier.weight(1f)
-        )
-        InputBar(
-            onSendMessage = onSendMessage,
-            isLoading = uiState.isLoading
-        )
-    }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
