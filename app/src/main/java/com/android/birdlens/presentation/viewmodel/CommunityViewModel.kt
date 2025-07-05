@@ -2,6 +2,7 @@
 package com.android.birdlens.presentation.viewmodel
 
 import android.app.Application
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -174,10 +175,14 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             _createPostState.value = GenericUiState.Loading
             try {
+                // Logic: Instead of directly using the file from the Uri, this now calls the
+                // new conversion utility. Each image selected by the user is converted to a
+                // standard JPEG format before being added to the upload list.
                 val files: List<File> = mediaUris.mapNotNull { uri ->
-                    fileUtil.getFileFromUri(uri)
+                    // Convert every selected image to a JPEG file before uploading.
+                    fileUtil.getConvertedImageFileFromUri(uri, Bitmap.CompressFormat.JPEG, 90)
                 }
-                Log.d(TAG, "Preparing to upload ${files.size} files for post.")
+                Log.d(TAG, "Preparing to upload ${files.size} converted files for post.")
 
                 val response = postRepository.createPost(
                     content, locationName, latitude, longitude, privacyLevel, type, isFeatured, files, sightingDate, taggedSpeciesCode
