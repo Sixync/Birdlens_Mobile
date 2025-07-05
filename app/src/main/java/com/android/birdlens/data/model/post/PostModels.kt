@@ -14,7 +14,10 @@ data class PostResponse(
     @SerializedName("likes_count") var likesCount: Int, // var to allow local update
     @SerializedName("comments_count") val commentsCount: Int,
     @SerializedName("shares_count") val sharesCount: Int, // Assuming it's present as per Go struct & example
-    @SerializedName("is_liked") var isLiked: Boolean // var to allow local update, matches 'is_liked' from example
+    @SerializedName("is_liked") var isLiked: Boolean, // var to allow local update, matches 'is_liked' from example
+    @SerializedName("type") val type: String,
+    @SerializedName("sighting_date") val sightingDate: String?,
+    @SerializedName("tagged_species_code") val taggedSpeciesCode: String?
 )
 
 data class CommentResponse(
@@ -37,7 +40,9 @@ data class CreatePostRequestFields(
     val longitude: Double?,
     val privacyLevel: String,
     val type: String?,
-    val isFeatured: Boolean
+    val isFeatured: Boolean,
+    val sightingDate: String?, // New field
+    val taggedSpeciesCode: String? // New field
 )
 
 data class PaginatedPostsResponse(

@@ -167,7 +167,9 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
         privacyLevel: String,
         type: String?,
         isFeatured: Boolean,
-        mediaUris: List<Uri>
+        mediaUris: List<Uri>,
+        sightingDate: String?,
+        taggedSpeciesCode: String?
     ) {
         viewModelScope.launch {
             _createPostState.value = GenericUiState.Loading
@@ -178,7 +180,7 @@ class CommunityViewModel(application: Application) : AndroidViewModel(applicatio
                 Log.d(TAG, "Preparing to upload ${files.size} files for post.")
 
                 val response = postRepository.createPost(
-                    content, locationName, latitude, longitude, privacyLevel, type, isFeatured, files
+                    content, locationName, latitude, longitude, privacyLevel, type, isFeatured, files, sightingDate, taggedSpeciesCode
                 )
 
                 if (response.isSuccessful && response.body() != null) {

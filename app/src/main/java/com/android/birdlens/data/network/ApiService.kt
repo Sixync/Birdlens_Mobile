@@ -37,6 +37,10 @@ interface ApiService {
     @GET("users/me")
     suspend fun getCurrentUser(): Response<GenericApiResponse<UserResponse>>
 
+    // Add new endpoint for life list
+    @GET("users/{user_id}/life-list")
+    suspend fun getUserLifeList(@Path("user_id") userId: Long): Response<GenericApiResponse<List<String>>>
+
     @POST("auth/forgot-password")
     suspend fun forgotPassword(@Body forgotPasswordRequest: ForgotPasswordRequest): Response<GenericApiResponse<Unit?>>
 
@@ -112,7 +116,9 @@ interface ApiService {
         @Part("privacy_level") privacyLevel: RequestBody,
         @Part("type") type: RequestBody?,
         @Part("is_featured") isFeatured: RequestBody,
-        @Part mediaFiles: List<MultipartBody.Part>
+        @Part mediaFiles: List<MultipartBody.Part>,
+        @Part("sighting_date") sightingDate: RequestBody?,
+        @Part("tagged_species_code") taggedSpeciesCode: RequestBody?
     ): Response<GenericApiResponse<PostResponse>>
 
     @GET("posts/{post_id}/comments")
