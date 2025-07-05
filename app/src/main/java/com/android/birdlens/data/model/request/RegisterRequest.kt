@@ -3,15 +3,10 @@ package com.android.birdlens.data.model.request
 
 import com.google.gson.annotations.SerializedName
 
+// Logic: The RegisterRequest class is simplified to only include email and password.
+// The other fields (username, firstName, lastName, age) are no longer sent from the client
+// as they are now auto-generated on the backend.
 data class RegisterRequest(
-    val username: String,
-    val password: String,
     val email: String,
-    @SerializedName("first_name") // Matches the backend Go struct field tag
-    val firstName: String,
-    @SerializedName("last_name")
-    val lastName: String,
-    val age: Int,
-    @SerializedName("avatar_url")
-    val avatarUrl: String? = null // Optional
+    val password: String
 )

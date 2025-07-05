@@ -45,19 +45,14 @@ fun RegisterScreen(
     modifier: Modifier = Modifier
 ) {
     var email by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var retypePassword by remember { mutableStateOf("") }
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
-    var ageString by remember { mutableStateOf("") }
 
     val context = LocalContext.current
 
     val backendAuthState by googleAuthViewModel.backendAuthState.collectAsState()
     val firebaseSignInState by googleAuthViewModel.firebaseSignInState.collectAsState()
 
-    // Email validation pattern
     val emailPattern = remember { Pattern.compile("[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+") }
 
     LaunchedEffect(firebaseSignInState) {
@@ -86,19 +81,15 @@ fun RegisterScreen(
                     GoogleAuthViewModel.AuthOperation.REGISTER -> "Registration"
                     else -> "Authentication"
                 }
-                // Use only the message for the Toast
                 Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
                 Log.e("RegisterScreen", "$operationType Backend Error: ${state.message}")
                 googleAuthViewModel.resetBackendAuthState()
             }
             is GoogleAuthViewModel.BackendAuthState.RegistrationSuccess -> {
-                // Use only the message for the Toast, or a custom success message
                 Toast.makeText(context, "Registration initiated. Signing into Firebase...", Toast.LENGTH_SHORT).show()
                 Log.d("RegisterScreen", "Registration with backend successful. Got custom token.")
             }
             is GoogleAuthViewModel.BackendAuthState.CustomTokenReceived -> {
-                // This state might not be hit directly in registration flow before Firebase sign-in,
-                // but if it were, use only the message.
                 Toast.makeText(context, "Authentication progressing...", Toast.LENGTH_SHORT).show()
                 Log.d("RegisterScreen", "Auth with backend successful (custom token received). Signing into Firebase...")
             }
@@ -111,11 +102,7 @@ fun RegisterScreen(
 
     val backText = stringResource(id = R.string.back)
     val createAccountTitleText = stringResource(id = R.string.create_account_title)
-    val firstNamePlaceholderText = stringResource(id = R.string.first_name_placeholder)
-    val lastNamePlaceholderText = stringResource(id = R.string.last_name_placeholder)
-    val agePlaceholderText = stringResource(id = R.string.age_placeholder)
     val emailPlaceholderText = stringResource(id = R.string.email_placeholder)
-    val usernamePlaceholderText = stringResource(id = R.string.username_placeholder)
     val passwordPlaceholderText = stringResource(id = R.string.password_placeholder)
     val retypePasswordPlaceholderText = stringResource(id = R.string.retype_password_placeholder)
     val continueButtonText = stringResource(id = R.string.continue_button)
@@ -165,15 +152,7 @@ fun RegisterScreen(
                     modifier = Modifier.padding(bottom = 20.dp)
                 )
 
-                CustomTextField(value = firstName, onValueChange = { firstName = it }, placeholder = firstNamePlaceholderText, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), backgroundColor = AuthInputBackground)
-                Spacer(modifier = Modifier.height(12.dp))
-                CustomTextField(value = lastName, onValueChange = { lastName = it }, placeholder = lastNamePlaceholderText, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), backgroundColor = AuthInputBackground)
-                Spacer(modifier = Modifier.height(12.dp))
-                CustomTextField(value = ageString, onValueChange = { ageString = it.filter { char -> char.isDigit() } }, placeholder = agePlaceholderText, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), backgroundColor = AuthInputBackground)
-                Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField(value = email, onValueChange = { email = it }, placeholder = emailPlaceholderText, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next), backgroundColor = AuthInputBackground)
-                Spacer(modifier = Modifier.height(12.dp))
-                CustomTextField(value = username, onValueChange = { username = it }, placeholder = usernamePlaceholderText, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), backgroundColor = AuthInputBackground)
                 Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField(value = password, onValueChange = { password = it }, placeholder = passwordPlaceholderText, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next), backgroundColor = AuthInputBackground)
                 Spacer(modifier = Modifier.height(12.dp))
@@ -183,34 +162,29 @@ fun RegisterScreen(
 
                 Button(
                     onClick = {
-                        val age = ageString.toIntOrNull()
+                        // Logic: Trim whitespace from inputs before validation and submission.
+                        // This prevents user errors from extra spaces and ensures clean data.
+                        val trimmedEmail = email.trim()
+                        val trimmedPassword = password.trim()
+                        val trimmedRetypePassword = retypePassword.trim()
+
                         var errorMessage = ""
 
-                        if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || username.isBlank() || password.isBlank() || retypePassword.isBlank() || ageString.isBlank()) {
+                        if (trimmedEmail.isBlank() || trimmedPassword.isBlank() || trimmedRetypePassword.isBlank()) {
                             errorMessage = context.getString(R.string.register_error_all_fields)
-                        } else if (username.length < 3 || username.length > 20) {
-                            errorMessage = context.getString(R.string.register_error_username_length)
-                        } else if (password.length < 6) { // Using 6 as per your request
-                            errorMessage = context.getString(R.string.register_error_password_min_length, 6)
-                        } else if (password != retypePassword) {
+                        } else if (trimmedPassword.length < 3) {
+                            errorMessage = context.getString(R.string.register_error_password_min_length, 3)
+                        } else if (trimmedPassword != trimmedRetypePassword) {
                             errorMessage = context.getString(R.string.register_error_passwords_mismatch)
-                        } else if (!emailPattern.matcher(email).matches()) {
+                        } else if (!emailPattern.matcher(trimmedEmail).matches()) {
                             errorMessage = context.getString(R.string.register_error_invalid_email)
-                        } else if (firstName.length < 3 || firstName.length > 20) {
-                            errorMessage = context.getString(R.string.register_error_firstname_length)
-                        } else if (lastName.length < 3 || lastName.length > 20) {
-                            errorMessage = context.getString(R.string.register_error_lastname_length)
-                        } else if (age == null || age < 1 || age > 120) {
-                            errorMessage = context.getString(R.string.register_error_age_range)
                         }
-
 
                         if (errorMessage.isNotEmpty()) {
                             Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                         } else {
                             val request = RegisterRequest(
-                                username = username, password = password, email = email,
-                                firstName = firstName, lastName = lastName, age = age!! // Safe due to prior check
+                                email = trimmedEmail, password = trimmedPassword
                             )
                             googleAuthViewModel.registerUser(request)
                         }
@@ -233,21 +207,5 @@ fun RegisterScreen(
             }
         }
         Spacer(modifier = Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp))
-    }
-}
-
-@SuppressLint("ViewModelConstructorInComposable")
-@Preview(showBackground = true, device = "spec:width=360dp,height=780dp,dpi=480")
-@Composable
-fun RegisterScreenPreview() {
-    BirdlensTheme {
-        val navController = rememberNavController()
-        // In a real app, use Hilt or a proper ViewModel factory. For preview, this is okay.
-        val dummyViewModel = GoogleAuthViewModel(LocalContext.current.applicationContext as Application)
-        RegisterScreen(
-            navController = navController,
-            googleAuthViewModel = dummyViewModel,
-            onNavigateBack = {}
-        )
     }
 }

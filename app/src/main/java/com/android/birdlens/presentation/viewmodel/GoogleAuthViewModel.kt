@@ -41,7 +41,7 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
         // Logic: Reset state before starting a new operation to prevent showing stale errors.
         resetBackendAuthState()
         _backendAuthState.value = BackendAuthState.Loading
-        Log.d("AuthVM", "Registering user: ${registerRequest.username}")
+        Log.d("AuthVM", "Registering user: ${registerRequest.email}")
         viewModelScope.launch {
             try {
                 val response = apiService.registerUser(registerRequest)

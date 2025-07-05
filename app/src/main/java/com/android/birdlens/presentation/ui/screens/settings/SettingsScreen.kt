@@ -86,8 +86,6 @@ fun SettingsScreen(
     }
 
 
-    // Logic: Create an intent to open the official website in a browser.
-    // This is triggered by the "Help & Support" settings item.
     val openWebsiteIntent = remember {
         Intent(Intent.ACTION_VIEW, Uri.parse("https://birdlens.netlify.app/"))
     }
@@ -111,7 +109,6 @@ fun SettingsScreen(
         ),
         SettingsItem(R.string.settings_notifications, Icons.Outlined.Notifications, { /* TODO */ }),
         SettingsItem(R.string.settings_privacy_security, Icons.Outlined.Lock, { /* TODO */ }),
-        // Logic: The onClick for this item now launches the browser intent.
         SettingsItem(R.string.settings_help_support, Icons.AutoMirrored.Filled.HelpOutline, { context.startActivity(openWebsiteIntent) }, isExternalLink = true),
         SettingsItem(R.string.settings_about, Icons.Outlined.Info, { /* TODO */ }, isExternalLink = true)
     )
@@ -120,13 +117,8 @@ fun SettingsScreen(
         SettingsItem(R.string.settings_liked, Icons.Outlined.FavoriteBorder, { /* TODO */ })
     )
 
-    val adminSettingsItems = listOf(
-        SettingsItem(
-            titleResId = R.string.admin_manage_subscriptions,
-            icon = Icons.Outlined.AdminPanelSettings,
-            onClick = { navController.navigate(Screen.AdminSubscriptionList.route) }
-        )
-    )
+    // Logic: The adminSettingsItems list has been removed.
+    // This removes the "Manage Subscriptions" option from the UI for regular users.
 
     AppScaffold(
         navController = navController,
@@ -221,32 +213,12 @@ fun SettingsScreen(
                             )
                         }
                     }
-
-                    item { Spacer(modifier = Modifier.height(24.dp)) }
-                    item {
-                        Text(
-                            "Admin Area",
-                            style = MaterialTheme.typography.titleMedium.copy(color = TextWhite.copy(alpha = 0.7f)),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                    items(adminSettingsItems.size) { index ->
-                        val item = adminSettingsItems[index]
-                        SettingsListItem(item = item)
-                        if (index < adminSettingsItems.size - 1) {
-                            HorizontalDivider(
-                                color = DividerColor,
-                                thickness = 0.5.dp,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                    }
+                    // Logic: The "Admin Area" section and its items have been completely removed.
                     item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
 
                 Button(
                     onClick = {
-                        // Logic: Explicitly reset the user profile state before signing out.
                         accountInfoViewModel.onUserLoggedOut()
                         googleAuthViewModel.signOut(context)
                         navController.navigate(Screen.Welcome.route) {
@@ -293,18 +265,17 @@ fun SettingsScreen(
 }
 @Composable
 fun SettingsListItem(item: SettingsItem) {
-    // stringResource will fetch the string based on the current LocalContext's locale
     val title = stringResource(id = item.titleResId)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = item.onClick)
-            .padding(vertical = 12.dp), // Padding for each item for touch target and spacing
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = item.icon,
-            contentDescription = title, // Use localized title for accessibility
+            contentDescription = title,
             tint = TextWhite,
             modifier = Modifier.size(24.dp)
         )
@@ -313,22 +284,20 @@ fun SettingsListItem(item: SettingsItem) {
             text = title,
             color = TextWhite,
             fontSize = 16.sp,
-            modifier = Modifier.weight(1f) // Text takes available space
+            modifier = Modifier.weight(1f)
         )
-        // Display subtext (like current language) if available
         item.subText?.let {
             Text(
-                text = it, // This is already a localized string (currentLanguageName)
+                text = it,
                 color = TextWhite.copy(alpha = 0.7f),
                 fontSize = 14.sp
             )
-            Spacer(modifier = Modifier.width(8.dp)) // Space before chevron if subtext exists
+            Spacer(modifier = Modifier.width(8.dp))
         }
-        // Show chevron for items that navigate or have subtext indicating selection
         if (item.isExternalLink || item.subText != null) {
             Icon(
                 Icons.Filled.ChevronRight,
-                contentDescription = null, // Decorative
+                contentDescription = null,
                 tint = TextWhite.copy(alpha = 0.7f)
             )
         }
@@ -341,18 +310,15 @@ fun LanguageSelectionDialog(
     onLanguageSelected: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    // Define languages with their codes and localized names
     val languages = listOf(
         LanguageManager.LANGUAGE_ENGLISH to stringResource(R.string.language_english),
         LanguageManager.LANGUAGE_VIETNAMESE to stringResource(R.string.language_vietnamese)
-        // To add more languages:
-        // LanguageManager.LANGUAGE_FRENCH to stringResource(R.string.language_french)
     )
 
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = AuthCardBackground // Use a consistent dialog background
+            color = AuthCardBackground
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -373,7 +339,7 @@ fun LanguageSelectionDialog(
                             selected = (code == currentLanguageCode),
                             onClick = { onLanguageSelected(code) },
                             colors = RadioButtonDefaults.colors(
-                                selectedColor = GreenWave2, // Themed color for selection
+                                selectedColor = GreenWave2,
                                 unselectedColor = TextWhite.copy(alpha = 0.7f)
                             )
                         )
@@ -391,7 +357,6 @@ fun LanguageSelectionDialog(
 @Composable
 fun SettingsScreenPreview() {
     BirdlensTheme {
-        // For preview, create a dummy Application context if needed by ViewModel
         val context = LocalContext.current
         val application = context.applicationContext as Application
         val dummyGoogleAuthViewModel: GoogleAuthViewModel = viewModel { GoogleAuthViewModel(application) }
