@@ -156,6 +156,10 @@ dependencies {
     implementation ("com.google.maps.android:android-maps-utils:3.8.2")
     implementation(libs.play.services.location)
 
+    // Logic: Add the Jetpack Media3 Transformer dependency to handle video conversion.
+    implementation("androidx.media3:media3-transformer:1.3.1")
+
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

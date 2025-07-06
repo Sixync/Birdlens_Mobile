@@ -3,16 +3,22 @@ package com.android.birdlens.utils
 
 import android.content.Context
 import android.graphics.Bitmap
-// Logic: Import Build and ImageDecoder for modern image handling.
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.Transformer
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.UUID
 
 class FileUtil(private val context: Context) {
     fun getFileFromUri(uri: Uri): File? {
@@ -62,10 +68,6 @@ class FileUtil(private val context: Context) {
         return result ?: "temp_media_file" // Fallback filename
     }
 
-    // Logic: This new function reads an image from any given Uri, decodes it into a Bitmap,
-    // and then compresses it into a standard format (like JPEG). This allows the app
-    // to accept any image type from the user's gallery (e.g., HEIC, WEBP) and convert
-    // it into a format the backend understands, ensuring compatibility and reducing upload size.
     fun getConvertedImageFileFromUri(uri: Uri, format: Bitmap.CompressFormat, quality: Int): File? {
         return try {
             val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -75,7 +77,6 @@ class FileUtil(private val context: Context) {
                 MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
             }
 
-            // Create a temporary file with a new name and the correct extension.
             val extension = when (format) {
                 Bitmap.CompressFormat.JPEG -> ".jpg"
                 Bitmap.CompressFormat.PNG -> ".png"
@@ -93,6 +94,30 @@ class FileUtil(private val context: Context) {
             Log.e("FileUtil", "Error converting image from URI: $uri", e)
             null
         }
+    }
+
+    @OptIn(UnstableApi::class)
+    fun convertVideoToMp4(
+        uri: Uri,
+        listener: Transformer.Listener
+    ): File {
+        val outputFileName = "converted_video_${UUID.randomUUID()}.mp4"
+        val outputFile = File(context.cacheDir, outputFileName)
+        val mediaItem = MediaItem.fromUri(uri)
+
+        // Updated API: Use addListener() instead of setListener()
+        val transformer = Transformer.Builder(context)
+            .setVideoMimeType(MimeTypes.VIDEO_H264) // Standard H.264 codec
+            .setAudioMimeType(MimeTypes.AUDIO_AAC)   // Standard AAC audio codec
+            .addListener(listener)  // Changed from setListener() to addListener()
+            .setLooper(context.mainLooper)
+            .build()
+
+        // Use the new API: start() method with EditedMediaItem
+        val editedMediaItem = EditedMediaItem.Builder(mediaItem).build()
+        transformer.start(editedMediaItem, outputFile.absolutePath)
+
+        return outputFile
     }
 
     fun createFileFromBitmap(bitmap: Bitmap, fileName: String): File {
