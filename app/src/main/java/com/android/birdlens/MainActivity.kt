@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    Log.d(TAG_ADS, "Started collecting AccountInfoUiState for advertising logic.")
+                    Log.d(TAG_ADS, "Started collecting AccountInfoUiState for ad logic.")
                     accountInfoViewModel.uiState.collect { state ->
                         val newAdPolicy = when (state) {
                             is AccountInfoUiState.Success -> {
