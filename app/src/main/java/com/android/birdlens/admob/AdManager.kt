@@ -134,7 +134,7 @@ class AdManager(private val applicationContext: Context) {
 
                 override fun onAdClicked() {
                     super.onAdClicked()
-                    Log.d(TAG, "Ad was clicked.")
+                    Log.d(TAG, "Ad was clicked HERE.")
                 }
             }
             mInterstitialAd?.show(activity)
