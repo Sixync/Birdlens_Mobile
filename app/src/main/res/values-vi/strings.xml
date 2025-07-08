@@ -153,6 +153,13 @@
     <string name="community_action_comment">Bình luận</string>
     <string name="community_action_share">Chia sẻ</string>
 
+    <!-- Logic: Added new string resources for the Sighting Card UI. -->
+    <string name="sighting_post_badge">Ghi nhận</string>
+    <string name="sighting_card_species_label">Ghi nhận:</string>
+    <string name="sighting_card_date_label">Ngày:</string>
+    <string name="sighting_card_location_label">Vị trí:</string>
+    <string name="sighting_card_view_on_map">Xem trên bản đồ</string>
+
     <!-- Map Screen -->
     <string name="map_screen_title_birdlens">BIRDLENS</string>
     <string name="map_error_loading">Không thể tải bản đồ. Hãy đảm bảo Dịch vụ Google Play đã được cập nhật và khóa API hợp lệ.</string>

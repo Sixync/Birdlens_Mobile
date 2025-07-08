@@ -20,6 +20,13 @@ class AdManager(private val applicationContext: Context) {
 
 
     companion object {
+        // Logic: This is the new global master switch for all ads.
+        // Set to `false` to completely disable ads for all users, regardless of their subscription.
+        // This is ideal for the initial community-building phase.
+        // Set to `true` to re-enable the ad logic. When `true`, ads will still be
+        // disabled for users with an "ExBird" subscription, as per the existing logic.
+        private const val ADS_GLOBALLY_ENABLED = false
+
         // This is a Test Ad Unit ID for Interstitial ads.
         // IMPORTANT: Replace with your actual Ad Unit ID from AdMob for production.
         private const val AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712" // Google's Test Ad Unit ID
@@ -39,6 +46,11 @@ class AdManager(private val applicationContext: Context) {
     }
 
     private fun loadAd() {
+        // Logic: Check the global ad switch before attempting to load an ad.
+        if (!ADS_GLOBALLY_ENABLED) {
+            Log.d(TAG, "Ads are globally disabled. Skipping ad load.")
+            return
+        }
         if (isLoadingAd || mInterstitialAd != null) {
             Log.d(TAG, "Ad is already loaded or currently loading. Skipping loadAd().")
             return
@@ -73,6 +85,14 @@ class AdManager(private val applicationContext: Context) {
      *                           This allows the caller (MainActivity) to decide if the timer should restart.
      */
     fun showInterstitialAd(activity: Activity, onAdFlowComplete: () -> Unit) { // Renamed callback
+        // Logic: Check the global ad switch. If disabled, immediately complete the flow
+        // without showing an ad. This keeps the timer logic in MainActivity intact.
+        if (!ADS_GLOBALLY_ENABLED) {
+            Log.d(TAG, "Ads are globally disabled. Ad flow is completing immediately without showing an ad.")
+            onAdFlowComplete()
+            return
+        }
+
         if (isAdShowing) {
             Log.d(TAG, "An ad is already showing. Skipping new ad request.")
             // Logic: It's important to still call onAdFlowComplete so the timer logic isn't stuck.

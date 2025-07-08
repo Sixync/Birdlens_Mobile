@@ -2,6 +2,7 @@
 package com.android.birdlens.presentation.ui.screens.community
 
 import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -56,9 +58,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityScreen(
-        navController: NavController,
-        modifier: Modifier = Modifier,
-        communityViewModel: CommunityViewModel = viewModel()
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    communityViewModel: CommunityViewModel = viewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val postFeedState by communityViewModel.postFeedState.collectAsState()
@@ -82,8 +84,8 @@ fun CommunityScreen(
                 val lastVisibleItemIndex = visibleItems.last().index
                 val currentSuccessState = postFeedState
                 if (currentSuccessState is PostFeedUiState.Success &&
-                                currentSuccessState.canLoadMore &&
-                                !currentSuccessState.isLoadingMore
+                    currentSuccessState.canLoadMore &&
+                    !currentSuccessState.isLoadingMore
                 ) {
                     if (lastVisibleItemIndex >= currentSuccessState.posts.size - 5) {
                         communityViewModel.fetchPosts()
@@ -94,109 +96,120 @@ fun CommunityScreen(
     }
 
     AppScaffold(
-            navController = navController,
-            topBar = {
-                CommunityHeader(
-                        searchQuery = searchQuery,
-                        onSearchQueryChange = { searchQuery = it },
-                        onNavigateToCart = { navController.navigate(Screen.Cart.route) }
-                )
-            },
-            floatingActionButton = {
-                FloatingActionButton(
-                        onClick = { navController.navigate(Screen.CreatePost.route) },
-                        containerColor = ButtonGreen,
-                        contentColor = TextWhite
-                ) { Icon(Icons.Filled.Add, contentDescription = "Create Post") }
-            },
-            showBottomBar = true
+        navController = navController,
+        topBar = {
+            CommunityHeader(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                onNavigateToCart = { navController.navigate(Screen.Cart.route) }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navController.navigate(Screen.CreatePost.route) },
+                containerColor = ButtonGreen,
+                contentColor = TextWhite
+            ) { Icon(Icons.Filled.Add, contentDescription = "Create Post") }
+        },
+        showBottomBar = true
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            // A TabRow allows the user to switch between different feed types like "trending" and
-            // "all".
+        Column(modifier = Modifier
+            .padding(innerPadding)
+            .fillMaxSize()) {
             val tabTitles = listOf("For You", "Following")
             val selectedTabIndex = if (feedType == "trending") 0 else 1
             TabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    containerColor = Color.Transparent,
-                    contentColor = TextWhite,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
-                                Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                                color = GreenWave2 // A highlight color for the selected tab
-                        )
-                    }
+                selectedTabIndex = selectedTabIndex,
+                containerColor = Color.Transparent,
+                contentColor = TextWhite,
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                        color = GreenWave2
+                    )
+                }
             ) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = {
-                                val newType = if (index == 0) "trending" else "all"
-                                communityViewModel.setFeedType(newType)
-                            },
-                            text = { Text(text = title) },
-                            selectedContentColor = GreenWave2,
-                            unselectedContentColor = TextWhite.copy(alpha = 0.7f)
+                        selected = selectedTabIndex == index,
+                        onClick = {
+                            val newType = if (index == 0) "trending" else "all"
+                            communityViewModel.setFeedType(newType)
+                        },
+                        text = { Text(text = title) },
+                        selectedContentColor = GreenWave2,
+                        unselectedContentColor = TextWhite.copy(alpha = 0.7f)
                     )
                 }
             }
 
             Box(
-                    modifier =
-                            Modifier.weight(1f) // The list of posts takes the remaining space
-                                    .fillMaxSize()
+                modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxSize()
             ) {
                 when (val state = postFeedState) {
                     is PostFeedUiState.Loading -> {
                         CircularProgressIndicator(
-                                modifier = Modifier.align(Alignment.Center),
-                                color = TextWhite
+                            modifier = Modifier.align(Alignment.Center),
+                            color = TextWhite
                         )
                     }
                     is PostFeedUiState.Success -> {
                         if (state.posts.isEmpty() && !state.isLoadingMore) {
                             Text(
-                                    "No posts yet. Be the first to share!",
-                                    color = TextWhite.copy(alpha = 0.8f),
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                                "No posts yet. Be the first to share!",
+                                color = TextWhite.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(16.dp)
                             )
                         } else {
                             LazyColumn(
-                                    state = listState,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding =
-                                            PaddingValues(
-                                                    top = 8.dp,
-                                                    bottom = 80.dp
-                                            ) // Added bottom padding for FAB
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding =
+                                PaddingValues(
+                                    top = 8.dp,
+                                    bottom = 80.dp
+                                )
                             ) {
                                 items(state.posts, key = { it.id }) { post ->
-                                    CommunityPostCard(
+                                    // Logic: Conditionally render the correct card based on the post's `type`.
+                                    // This is the core of the differentiation logic.
+                                    when (post.type) {
+                                        "sighting" -> SightingPostCard(
                                             post = post,
-                                            onLikeClick = {
-                                                communityViewModel.addReactionToPost(
-                                                        post.id.toString(),
-                                                        "like"
-                                                )
-                                            },
+                                            onLikeClick = { communityViewModel.addReactionToPost(post.id.toString(), "like") },
                                             onCommentClick = {
                                                 showCommentSheetForPostId = post.id.toString()
-                                                communityViewModel.fetchCommentsForPost(
-                                                        post.id.toString(),
-                                                        initialLoad = true
-                                                ) // Fetch comments for this post
+                                                communityViewModel.fetchCommentsForPost(post.id.toString(), initialLoad = true)
+                                                coroutineScope.launch { sheetState.show() }
+                                            },
+                                            onShareClick = { /* TODO */ },
+                                            onViewOnMapClick = { /* TODO: Navigate to map with coordinates */ }
+                                        )
+                                        else -> StandardPostCard( // Renamed from CommunityPostCard
+                                            post = post,
+                                            onLikeClick = { communityViewModel.addReactionToPost(post.id.toString(), "like") },
+                                            onCommentClick = {
+                                                showCommentSheetForPostId = post.id.toString()
+                                                communityViewModel.fetchCommentsForPost(post.id.toString(), initialLoad = true)
                                                 coroutineScope.launch { sheetState.show() }
                                             },
                                             onShareClick = { /* TODO */}
-                                    )
+                                        )
+                                    }
                                 }
-                                // Loading indicator for pagination
                                 if (state.isLoadingMore) {
                                     item {
                                         Row(
-                                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                                horizontalArrangement = Arrangement.Center
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            horizontalArrangement = Arrangement.Center
                                         ) { CircularProgressIndicator(color = TextWhite) }
                                     }
                                 }
@@ -205,303 +218,310 @@ fun CommunityScreen(
                     }
                     is PostFeedUiState.Error -> {
                         Column(
-                                modifier = Modifier.fillMaxSize().padding(16.dp),
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                    "Error: ${state.message}",
-                                    color = TextWhite.copy(alpha = 0.8f),
-                                    textAlign = TextAlign.Center
+                                "Error: ${state.message}",
+                                color = TextWhite.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Button(
-                                    onClick = { communityViewModel.fetchPosts(initialLoad = true) }
-                            ) { // Pass initialLoad = true for retry
+                                onClick = { communityViewModel.fetchPosts(initialLoad = true) }
+                            ) {
                                 Text("Retry")
                             }
                         }
                     }
                     is PostFeedUiState.Idle -> {
-                        // This state should ideally transition to Loading quickly
                     }
                 }
             }
         }
 
-        // Modal Bottom Sheet for Comments
         if (showCommentSheetForPostId != null) {
             ModalBottomSheet(
-                    onDismissRequest = {
-                        showCommentSheetForPostId = null
-                        communityViewModel
-                                .resetCommentsState() // Reset comment state when sheet dismissed
-                        coroutineScope.launch { sheetState.hide() }
-                    },
-                    sheetState = sheetState,
-                    containerColor =
-                            CardBackground.copy(alpha = 0.95f) // Semi-transparent background
+                onDismissRequest = {
+                    showCommentSheetForPostId = null
+                    communityViewModel
+                        .resetCommentsState()
+                    coroutineScope.launch { sheetState.hide() }
+                },
+                sheetState = sheetState,
+                containerColor =
+                CardBackground.copy(alpha = 0.95f)
             ) {
                 CommentSection(
-                        postId = showCommentSheetForPostId!!,
-                        communityViewModel = communityViewModel,
-                        onDismiss = {
-                            showCommentSheetForPostId = null
-                            communityViewModel.resetCommentsState()
-                            coroutineScope.launch { sheetState.hide() }
-                        }
+                    postId = showCommentSheetForPostId!!,
+                    communityViewModel = communityViewModel,
+                    onDismiss = {
+                        showCommentSheetForPostId = null
+                        communityViewModel.resetCommentsState()
+                        coroutineScope.launch { sheetState.hide() }
+                    }
                 )
             }
         }
     }
 }
 
+// Logic: Renamed CommunityPostCard to StandardPostCard to better reflect its purpose.
+@Composable
+fun StandardPostCard(
+    post: PostResponse,
+    onLikeClick: () -> Unit,
+    onCommentClick: () -> Unit,
+    onShareClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            PostHeader(post = post) // Use a common header
+
+            if (!post.imagesUrls.isNullOrEmpty()) {
+                Image(
+                    painter = rememberAsyncImagePainter(model = post.imagesUrls.first(), error = painterResource(id = R.drawable.bg_placeholder_image), placeholder = painterResource(id = R.drawable.bg_placeholder_image)),
+                    contentDescription = stringResource(id = R.string.community_post_image_description),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp, max = 350.dp).aspectRatio(16f / 9f, matchHeightConstraintsFirst = false).background(Color.DarkGray),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Text(
+                text = post.content,
+                color = TextWhite,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp)
+            )
+
+            PostActions(post, onLikeClick, onCommentClick, onShareClick)
+        }
+    }
+}
+
+// Logic: Created a new, distinct SightingPostCard composable.
+@Composable
+fun SightingPostCard(
+    post: PostResponse,
+    onLikeClick: () -> Unit,
+    onCommentClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onViewOnMapClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .border( // A gradient border to make it stand out as special.
+                width = 2.dp,
+                brush = Brush.linearGradient(colors = listOf(GreenWave2.copy(alpha = 0.8f), GreenWave3.copy(alpha = 0.6f))),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            PostHeader(post = post, isSighting = true) // Pass flag to show sighting badge
+
+            if (!post.imagesUrls.isNullOrEmpty()) {
+                Image(
+                    painter = rememberAsyncImagePainter(model = post.imagesUrls.first(), error = painterResource(id = R.drawable.bg_placeholder_image), placeholder = painterResource(id = R.drawable.bg_placeholder_image)),
+                    contentDescription = stringResource(id = R.string.community_post_image_description),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp, max = 350.dp).aspectRatio(16f / 9f).background(Color.DarkGray),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            // Data Strip: A structured section for key sighting info.
+            SightingDataStrip(
+                speciesCode = post.taggedSpeciesCode,
+                sightingDate = post.sightingDate,
+                locationName = post.locationName
+            )
+
+            if (post.content.isNotBlank()) {
+                Text(
+                    text = post.content, // User content is now more like a caption.
+                    color = TextWhite.copy(alpha = 0.85f),
+                    fontSize = 15.sp,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp)
+                )
+            }
+
+            PostActions(post, onLikeClick, onCommentClick, onShareClick, onViewOnMapClick)
+        }
+    }
+}
+
+// Logic: A common header composable to reduce code duplication between cards.
+// It includes logic to display a "Sighting" badge.
+@Composable
+fun PostHeader(post: PostResponse, isSighting: Boolean = false) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(
+            painter = rememberAsyncImagePainter(model = post.posterAvatarUrl, error = painterResource(id = R.drawable.ic_launcher_foreground), placeholder = painterResource(id = R.drawable.ic_launcher_background)),
+            contentDescription = stringResource(id = R.string.community_user_avatar_description),
+            modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.Gray),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = post.posterName, color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(text = formatTimestamp(post.createdAt), color = TextWhite.copy(alpha = 0.7f), fontSize = 14.sp)
+        }
+        if (isSighting) {
+            Icon(Icons.Default.Verified, contentDescription = stringResource(id = R.string.sighting_post_badge), tint = GreenWave2, modifier = Modifier.size(24.dp))
+        }
+    }
+}
+
+// Logic: Common action bar to reduce duplication. It conditionally shows "View on Map" button.
+@Composable
+fun PostActions(
+    post: PostResponse,
+    onLikeClick: () -> Unit,
+    onCommentClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onViewOnMapClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        ActionButton(icon = if (post.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder, text = "${post.likesCount}", accessibilityTextResId = R.string.community_action_like, onClick = onLikeClick, tint = if (post.isLiked) Color.Red else TextWhite)
+        ActionButton(icon = Icons.Outlined.ChatBubbleOutline, text = "${post.commentsCount}", accessibilityTextResId = R.string.community_action_comment, onClick = onCommentClick)
+        ActionButton(icon = Icons.Outlined.Share, text = "${post.sharesCount}", accessibilityTextResId = R.string.community_action_share, onClick = onShareClick)
+        onViewOnMapClick?.let {
+            ActionButton(icon = Icons.Outlined.Map, text = stringResource(id = R.string.sighting_card_view_on_map), accessibilityTextResId = R.string.sighting_card_view_on_map, onClick = it)
+        }
+    }
+}
+
+// Logic: A new composable specifically for the structured data in a Sighting.
+@Composable
+fun SightingDataStrip(speciesCode: String?, sightingDate: String?, locationName: String?) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        speciesCode?.let {
+            SightingInfoRow(icon = painterResource(id = R.drawable.ic_bird_placeholder), label = stringResource(id = R.string.sighting_card_species_label), value = it)
+        }
+        sightingDate?.let {
+            SightingInfoRow(icon = Icons.Default.CalendarToday, label = stringResource(id = R.string.sighting_card_date_label), value = formatSightingDate(it))
+        }
+        locationName?.let {
+            SightingInfoRow(icon = Icons.Default.LocationOn, label = stringResource(id = R.string.sighting_card_location_label), value = it)
+        }
+    }
+}
+
+@Composable
+fun SightingInfoRow(icon: Any, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        when (icon) {
+            is ImageVector -> Icon(imageVector = icon, contentDescription = label, tint = GreenWave3, modifier = Modifier.size(18.dp))
+            is androidx.compose.ui.graphics.painter.Painter -> Icon(painter = icon, contentDescription = label, tint = GreenWave3, modifier = Modifier.size(18.dp))
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = label, color = TextWhite.copy(alpha = 0.8f), fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = value, color = TextWhite, fontWeight = FontWeight.Normal)
+    }
+}
+
+// ... (Other composables like CommunityHeader, ActionButton, formatSightingDate, formatTimestamp remain the same) ...
 @Composable
 fun CommunityHeader(
-        searchQuery: String,
-        onSearchQueryChange: (String) -> Unit,
-        onNavigateToCart: () -> Unit,
-        modifier: Modifier = Modifier
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onNavigateToCart: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)) {
         Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                    stringResource(id = R.string.community_title),
-                    color = TextWhite,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                stringResource(id = R.string.community_title),
+                color = TextWhite,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
             )
             IconButton(onClick = onNavigateToCart) {
                 Icon(
-                        Icons.Default.ShoppingCart,
-                        contentDescription = stringResource(id = R.string.icon_cart_description),
-                        tint = TextWhite
+                    Icons.Default.ShoppingCart,
+                    contentDescription = stringResource(id = R.string.icon_cart_description),
+                    tint = TextWhite
                 )
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        // Using the CustomTextField from login screen for consistency, or define a similar one
         com.android.birdlens.presentation.ui.screens.login.CustomTextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                placeholder = stringResource(id = R.string.community_search_placeholder),
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                backgroundColor = SearchBarBackground,
-                leadingIcon = {
-                    Icon(
-                            Icons.Default.Search,
-                            contentDescription =
-                                    stringResource(id = R.string.icon_search_description),
-                            tint = SearchBarPlaceholderText
-                    )
-                }
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            placeholder = stringResource(id = R.string.community_search_placeholder),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            backgroundColor = SearchBarBackground,
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription =
+                    stringResource(id = R.string.icon_search_description),
+                    tint = SearchBarPlaceholderText
+                )
+            }
         )
     }
 }
 
 @Composable
-fun CommunityPostCard(
-        post: PostResponse,
-        onLikeClick: () -> Unit,
-        onCommentClick: () -> Unit,
-        onShareClick: () -> Unit,
-        modifier: Modifier = Modifier
+fun ActionButton(
+    icon: ImageVector,
+    text: String,
+    accessibilityTextResId: Int, // For accessibility
+    onClick: () -> Unit,
+    tint: Color = TextWhite // Default tint
 ) {
-    val isSighting = post.type == "sighting"
-    val cardModifier =
-            if (isSighting) {
-                modifier.border(
-                        width = 2.dp,
-                        brush =
-                                Brush.linearGradient(
-                                        colors =
-                                                listOf(
-                                                        GreenWave2.copy(alpha = 0.8f),
-                                                        GreenWave3.copy(alpha = 0.6f)
-                                                )
-                                ),
-                        shape = RoundedCornerShape(16.dp)
-                )
-            } else {
-                modifier
-            }
-
-    Card(
-            modifier =
-                    cardModifier
-                            .fillMaxWidth()
-                            .padding(
-                                    horizontal = 16.dp,
-                                    vertical = 8.dp
-                            ), // Ensure cards have padding if LazyColumn doesn't
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.5f))
+    val actionName = stringResource(id = accessibilityTextResId)
+    Row(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // User Info Header
-            Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                        painter =
-                                rememberAsyncImagePainter(
-                                        model = post.posterAvatarUrl,
-                                        error =
-                                                painterResource(
-                                                        id = R.drawable.ic_launcher_foreground
-                                                ), // Generic placeholder
-                                        placeholder =
-                                                painterResource(
-                                                        id = R.drawable.ic_launcher_background
-                                                )
-                                ),
-                        contentDescription =
-                                stringResource(id = R.string.community_user_avatar_description),
-                        modifier =
-                                Modifier.size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.Gray), // Placeholder background
-                        contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                            text = post.posterName,
-                            color = TextWhite,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                            text = formatTimestamp(post.createdAt),
-                            color = TextWhite.copy(alpha = 0.7f),
-                            fontSize = 14.sp
-                    )
-                }
-                if (isSighting) {
-                    Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = "Sighting Post",
-                            tint = GreenWave2,
-                            modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            // Post Image (if any)
-            if (!post.imagesUrls.isNullOrEmpty()) {
-                Image(
-                        painter =
-                                rememberAsyncImagePainter(
-                                        model = post.imagesUrls.first(), // Show first image
-                                        error =
-                                                painterResource(
-                                                        id = R.drawable.bg_placeholder_image
-                                                ), // More fitting placeholder
-                                        placeholder =
-                                                painterResource(
-                                                        id = R.drawable.bg_placeholder_image
-                                                )
-                                ),
-                        contentDescription =
-                                stringResource(id = R.string.community_post_image_description),
-                        modifier =
-                                Modifier.fillMaxWidth()
-                                        .heightIn(min = 200.dp, max = 350.dp) // Constrain height
-                                        .aspectRatio(
-                                                16f / 9f,
-                                                matchHeightConstraintsFirst = false
-                                        ) // Maintain aspect ratio
-                                        .background(
-                                                Color.DarkGray
-                                        ), // Placeholder background for image area
-                        contentScale = ContentScale.Crop
-                )
-            }
-
-            // Sighting-specific Info
-            if (isSighting && (post.taggedSpeciesCode != null || post.sightingDate != null)) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    post.taggedSpeciesCode?.let {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                    painterResource(id = R.drawable.ic_bird_placeholder),
-                                    contentDescription = "Species",
-                                    tint = GreenWave3,
-                                    modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                    "Sighting: $it",
-                                    color = TextWhite.copy(alpha = 0.9f),
-                                    fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                    post.sightingDate?.let {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                    Icons.Default.CalendarToday,
-                                    contentDescription = "Date",
-                                    tint = GreenWave3,
-                                    modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                    "Date: ${formatSightingDate(it)}",
-                                    color = TextWhite.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Post Content
-            Text(
-                    text = post.content,
-                    color = TextWhite,
-                    fontSize = 16.sp,
-                    modifier =
-                            Modifier.padding(
-                                    start = 16.dp,
-                                    end = 16.dp,
-                                    top = if (isSighting) 8.dp else 16.dp,
-                                    bottom = 16.dp
-                            )
-            )
-
-            // Action Buttons
-            Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceAround // Distribute buttons evenly
-            ) {
-                ActionButton(
-                        icon =
-                                if (post.isLiked) Icons.Filled.Favorite
-                                else Icons.Outlined.FavoriteBorder,
-                        text = "${post.likesCount}", // Dynamic count
-                        accessibilityTextResId = R.string.community_action_like,
-                        onClick = onLikeClick,
-                        tint = if (post.isLiked) Color.Red else TextWhite // Change tint if liked
-                )
-                ActionButton(
-                        icon = Icons.Outlined.ChatBubbleOutline,
-                        text = "${post.commentsCount}", // Dynamic count
-                        accessibilityTextResId = R.string.community_action_comment,
-                        onClick = onCommentClick
-                )
-                ActionButton(
-                        icon = Icons.Outlined.Share,
-                        text = "${post.sharesCount}", // Dynamic count
-                        accessibilityTextResId = R.string.community_action_share,
-                        onClick = onShareClick
-                )
-            }
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = actionName, // Use localized string for accessibility
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = text, color = tint, fontSize = 14.sp)
     }
 }
 
@@ -516,81 +536,57 @@ fun formatSightingDate(isoTimestamp: String): String {
     }
 }
 
-@Composable
-fun ActionButton(
-        icon: ImageVector,
-        text: String,
-        accessibilityTextResId: Int, // For accessibility
-        onClick: () -> Unit,
-        tint: Color = TextWhite // Default tint
-) {
-    val actionName = stringResource(id = accessibilityTextResId)
-    Row(
-            modifier = Modifier.clickable(onClick = onClick).padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-                imageVector = icon,
-                contentDescription = actionName, // Use localized string for accessibility
-                tint = tint,
-                modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = text, color = tint, fontSize = 14.sp)
-    }
-}
-
-// Preview for CommunityScreen - assumes ViewModel is handled by compose viewModel()
 @SuppressLint("StateFlowValueCalledInComposition")
 @Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
 @Composable
 fun CommunityScreenPreview_Success_WithData() {
     BirdlensTheme {
         val samplePost =
-                PostResponse(
-                        id = 1L,
-                        posterAvatarUrl = null,
-                        posterName = "BirdLover123",
-                        createdAt = OffsetDateTime.now().toString(),
-                        imagesUrls =
-                                listOf(
-                                        "https://images.unsplash.com/photo-1518992028580-6d57bd80f2dd?w=800&auto=format&fit=crop&q=60"
-                                ),
-                        content =
-                                "Look at this beautiful Eastern Bluebird I spotted today! #birdwatching #nature",
-                        likesCount = 15,
-                        commentsCount = 3,
-                        sharesCount = 2,
-                        isLiked = false,
-                        type = "general",
-                        sightingDate = null,
-                        taggedSpeciesCode = null
-                )
+            PostResponse(
+                id = 1L,
+                posterAvatarUrl = null,
+                posterName = "BirdLover123",
+                createdAt = OffsetDateTime.now().toString(),
+                imagesUrls =
+                listOf(
+                    "https://images.unsplash.com/photo-1518992028580-6d57bd80f2dd?w=800&auto=format&fit=crop&q=60"
+                ),
+                content =
+                "Look at this beautiful Eastern Bluebird I spotted today! #birdwatching #nature",
+                likesCount = 15,
+                commentsCount = 3,
+                sharesCount = 2,
+                isLiked = false,
+                type = "general",
+                sightingDate = null,
+                taggedSpeciesCode = null,
+                locationName = null,
+                latitude = null,
+                longitude = null
+            )
         val sampleSighting =
-                samplePost.copy(
-                        id = 2L,
-                        isLiked = true,
-                        likesCount = 1,
-                        type = "sighting",
-                        sightingDate = "2023-10-27T10:00:00Z",
-                        taggedSpeciesCode = "easblu"
-                )
+            samplePost.copy(
+                id = 2L,
+                isLiked = true,
+                likesCount = 1,
+                type = "sighting",
+                sightingDate = "2023-10-27T10:00:00Z",
+                taggedSpeciesCode = "easblu",
+                locationName = "Central Park"
+            )
         val mockViewModel: CommunityViewModel = viewModel()
-        // For preview, directly set the state if possible (requires making _postFeedState internal
-        // or having a setter)
-        // This is a simplified way; in complex scenarios, use Hilt for preview or mock repository.
         LaunchedEffect(Unit) {
             val internalStateField =
-                    CommunityViewModel::class.java.getDeclaredField("_postFeedState")
+                CommunityViewModel::class.java.getDeclaredField("_postFeedState")
             internalStateField.isAccessible = true
             @Suppress("UNCHECKED_CAST")
             val mutableFlow =
-                    internalStateField.get(mockViewModel) as MutableStateFlow<PostFeedUiState>
+                internalStateField.get(mockViewModel) as MutableStateFlow<PostFeedUiState>
             mutableFlow.value =
-                    PostFeedUiState.Success(
-                            posts = listOf(sampleSighting, samplePost),
-                            canLoadMore = true
-                    )
+                PostFeedUiState.Success(
+                    posts = listOf(sampleSighting, samplePost),
+                    canLoadMore = true
+                )
         }
 
         CommunityScreen(navController = rememberNavController(), communityViewModel = mockViewModel)

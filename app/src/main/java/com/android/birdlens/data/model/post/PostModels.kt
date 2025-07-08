@@ -3,7 +3,9 @@ package com.android.birdlens.data.model.post
 
 import com.google.gson.annotations.SerializedName
 
-// Corrected PostResponse to match the backend's JSON structure for GET /posts
+// Logic: The PostResponse data class is updated to match the new backend structure.
+// This ensures that the location name and coordinates for a sighting are correctly
+// deserialized from the JSON response, making them available to the UI.
 data class PostResponse(
     @SerializedName("id") val id: Long,
     @SerializedName("poster_avatar_url") val posterAvatarUrl: String?,
@@ -13,11 +15,14 @@ data class PostResponse(
     @SerializedName("content") val content: String,
     @SerializedName("likes_count") var likesCount: Int, // var to allow local update
     @SerializedName("comments_count") val commentsCount: Int,
-    @SerializedName("shares_count") val sharesCount: Int, // Assuming it's present as per Go struct & example
-    @SerializedName("is_liked") var isLiked: Boolean, // var to allow local update, matches 'is_liked' from example
+    @SerializedName("shares_count") val sharesCount: Int,
+    @SerializedName("is_liked") var isLiked: Boolean, // var to allow local update
     @SerializedName("type") val type: String,
     @SerializedName("sighting_date") val sightingDate: String?,
-    @SerializedName("tagged_species_code") val taggedSpeciesCode: String?
+    @SerializedName("tagged_species_code") val taggedSpeciesCode: String?,
+    @SerializedName("location_name") val locationName: String?,
+    @SerializedName("latitude") val latitude: Double?,
+    @SerializedName("longitude") val longitude: Double?
 )
 
 data class CommentResponse(

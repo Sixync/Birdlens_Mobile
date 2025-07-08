@@ -153,6 +153,13 @@
     <string name="community_action_comment">Comment</string>
     <string name="community_action_share">Share</string>
 
+    <!-- Logic: Added new string resources for the Sighting Card UI. -->
+    <string name="sighting_post_badge">Sighting</string>
+    <string name="sighting_card_species_label">Sighting:</string>
+    <string name="sighting_card_date_label">Date:</string>
+    <string name="sighting_card_location_label">Location:</string>
+    <string name="sighting_card_view_on_map">View on Map</string>
+
     <!-- Map Screen -->
     <string name="map_screen_title_birdlens">BIRDLENS</string>
     <string name="map_error_loading">Could not load map. Ensure Google Play Services is updated and API key is valid.</string>
