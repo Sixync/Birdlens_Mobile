@@ -38,6 +38,8 @@ import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
+// Logic: Import the new NotificationScreen.
+import com.android.birdlens.presentation.ui.screens.notification.NotificationScreen
 import com.android.birdlens.presentation.ui.screens.payment.PayOSCheckoutScreen
 import com.android.birdlens.presentation.ui.screens.payment.PaymentResultScreen
 import com.android.birdlens.presentation.ui.screens.pickdays.PickDaysScreen
@@ -356,20 +358,15 @@ fun AppNavigation(
             )
         }
 
-        composable(
-            route = Screen.BirdRangeMap.route,
-            arguments = listOf(navArgument("scientificName") { type = NavType.StringType })
-        ) {
-            val birdRangeMapViewModel: BirdRangeMapViewModel = viewModel(
-                factory = viewModelFactory {
-                    initializer { BirdRangeMapViewModel(application, createSavedStateHandle()) }
-                }
-            )
-            BirdRangeMapScreen(
+        // Logic: Add the new NotificationScreen to the navigation graph.
+        composable(Screen.Notifications.route) {
+            val notificationViewModel: NotificationViewModel = viewModel()
+            NotificationScreen(
                 navController = navController,
-                viewModel = birdRangeMapViewModel
+                notificationViewModel = notificationViewModel
             )
         }
+
         composable(
             route = Screen.PayOSCheckout.route,
             arguments = listOf(navArgument("checkoutUrl") { type = NavType.StringType })

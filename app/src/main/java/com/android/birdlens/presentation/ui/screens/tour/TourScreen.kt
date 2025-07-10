@@ -96,6 +96,8 @@ fun TourScreen(
             TourScreenHeader(
                 searchQuery = searchQuery,
                 onSearchQueryChange = { exploreViewModel.onSearchQueryChanged(it) },
+                // Logic: Pass the NavController to the header to handle navigation clicks.
+                onNavigateToNotifications = { navController.navigate(Screen.Notifications.route) },
                 onNavigateToCart = { navController.navigate(Screen.Cart.route) },
                 onClearSearch = { exploreViewModel.clearSearch() }
             )
@@ -308,6 +310,8 @@ fun TourScreenHeader(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onClearSearch: () -> Unit,
+    // Logic: Add a callback for the new notifications button.
+    onNavigateToNotifications: () -> Unit,
     onNavigateToCart: () -> Unit
 ) {
     Column(Modifier.padding(top = 16.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)) {
@@ -347,8 +351,14 @@ fun TourScreenHeader(
                             style = MaterialTheme.typography.titleLarge.copy(color = TextWhite, fontWeight = FontWeight.SemiBold)
                         )
                     }
-                    IconButton(onClick = onNavigateToCart) {
-                        Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart", tint = TextWhite, modifier = Modifier.size(28.dp))
+                    Row {
+                        // Logic: Add the new notifications icon button.
+                        IconButton(onClick = onNavigateToNotifications) {
+                            Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = TextWhite, modifier = Modifier.size(28.dp))
+                        }
+                        IconButton(onClick = onNavigateToCart) {
+                            Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart", tint = TextWhite, modifier = Modifier.size(28.dp))
+                        }
                     }
                 }
             }

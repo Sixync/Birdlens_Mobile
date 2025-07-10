@@ -66,6 +66,9 @@ sealed class Screen(val route: String) {
     }
     data object Premium : Screen("premium_screen")
 
+    // Logic: Added a new route for the notifications screen.
+    data object Notifications : Screen("notifications_screen")
+
     // Logic: Add new screens for the PayOS flow.
     data object PayOSCheckout : Screen("payos_checkout_screen/{checkoutUrl}") {
         fun createRoute(checkoutUrl: String): String {

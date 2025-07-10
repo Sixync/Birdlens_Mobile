@@ -41,6 +41,13 @@ interface ApiService {
     @GET("users/{user_id}/life-list")
     suspend fun getUserLifeList(@Path("user_id") userId: Long): Response<GenericApiResponse<List<String>>>
 
+    // Logic: Add a new endpoint to fetch notifications for the current user.
+    @GET("users/me/notifications")
+    suspend fun getNotifications(
+        @Query("limit") limit: Int,
+        @Query("offset") offset: Int
+    ): Response<GenericApiResponse<PaginatedNotificationsResponse>>
+
     @POST("auth/forgot-password")
     suspend fun forgotPassword(@Body forgotPasswordRequest: ForgotPasswordRequest): Response<GenericApiResponse<Unit?>>
 
