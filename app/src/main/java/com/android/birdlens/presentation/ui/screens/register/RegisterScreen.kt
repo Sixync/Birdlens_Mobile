@@ -1,4 +1,3 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/ui/screens/register/RegisterScreen.kt
 package com.android.birdlens.presentation.ui.screens.register
 
 import android.annotation.SuppressLint
@@ -35,7 +34,7 @@ import com.android.birdlens.presentation.ui.components.AuthScreenLayout
 import com.android.birdlens.presentation.ui.screens.login.CustomTextField
 import com.android.birdlens.presentation.viewmodel.GoogleAuthViewModel
 import com.android.birdlens.ui.theme.*
-import java.util.regex.Pattern // For email validation
+import java.util.regex.Pattern
 
 @Composable
 fun RegisterScreen(
@@ -47,6 +46,7 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var retypePassword by remember { mutableStateOf("") }
+    var referralCodeInput by remember { mutableStateOf(googleAuthViewModel.referralCodeFromLink ?: "") }
 
     val context = LocalContext.current
 
@@ -157,16 +157,17 @@ fun RegisterScreen(
                 CustomTextField(value = password, onValueChange = { password = it }, placeholder = passwordPlaceholderText, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next), backgroundColor = AuthInputBackground)
                 Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField(value = retypePassword, onValueChange = { retypePassword = it }, placeholder = retypePasswordPlaceholderText, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done), backgroundColor = AuthInputBackground)
+                Spacer(modifier = Modifier.height(12.dp))
+                CustomTextField(value = referralCodeInput, onValueChange = { referralCodeInput = it }, placeholder = "Referral Code (Optional)", modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done), backgroundColor = AuthInputBackground)
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
                     onClick = {
-                        // Logic: Trim whitespace from inputs before validation and submission.
-                        // This prevents user errors from extra spaces and ensures clean data.
                         val trimmedEmail = email.trim()
                         val trimmedPassword = password.trim()
                         val trimmedRetypePassword = retypePassword.trim()
+                        val trimmedReferralCode = referralCodeInput.trim()
 
                         var errorMessage = ""
 
@@ -184,7 +185,9 @@ fun RegisterScreen(
                             Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                         } else {
                             val request = RegisterRequest(
-                                email = trimmedEmail, password = trimmedPassword
+                                email = trimmedEmail,
+                                password = trimmedPassword,
+                                referralCode = if(trimmedReferralCode.isBlank()) null else trimmedReferralCode
                             )
                             googleAuthViewModel.registerUser(request)
                         }

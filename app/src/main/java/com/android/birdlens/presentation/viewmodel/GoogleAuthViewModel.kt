@@ -1,4 +1,3 @@
-// EXE201/app/src/main/java/com/android/birdlens/presentation/viewmodel/GoogleAuthViewModel.kt
 package com.android.birdlens.presentation.viewmodel
 
 import android.app.Application
@@ -36,12 +35,12 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     private val _firebaseSignInState = MutableStateFlow<FirebaseSignInState>(FirebaseSignInState.Idle)
     val firebaseSignInState: StateFlow<FirebaseSignInState> = _firebaseSignInState.asStateFlow()
 
+    var referralCodeFromLink: String? = null
 
     fun registerUser(registerRequest: RegisterRequest) {
-        // Logic: Reset state before starting a new operation to prevent showing stale errors.
         resetBackendAuthState()
         _backendAuthState.value = BackendAuthState.Loading
-        Log.d("AuthVM", "Registering user: ${registerRequest.email}")
+        Log.d("AuthVM", "Registering user: ${registerRequest.email} with referral: ${registerRequest.referralCode}")
         viewModelScope.launch {
             try {
                 val response = apiService.registerUser(registerRequest)
@@ -71,7 +70,6 @@ class GoogleAuthViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun loginUser(loginRequest: LoginRequest) {
-        // Logic: Reset state before starting a new operation to prevent showing stale errors.
         resetBackendAuthState()
         _backendAuthState.value = BackendAuthState.Loading
         Log.d("AuthVM", "Logging in user: ${loginRequest.email}")

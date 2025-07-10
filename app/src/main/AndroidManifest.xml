@@ -41,7 +41,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- This intent filter handles the password reset deep links. It remains unchanged. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -74,9 +73,16 @@
                     android:scheme="birdlens" />
             </intent-filter>
 
+            <!-- Intent Filter for Referral Links -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="birdlens.netlify.app" android:pathPrefix="/join" />
+            </intent-filter>
+
         </activity>
 
-        <!-- Logic: The <activity> declaration for the Stripe-specific CheckoutActivity is removed. -->
     </application>
 
 </manifest>

@@ -1,4 +1,3 @@
-// app/src/main/java/com/android/birdlens/MainActivity.kt
 package com.android.birdlens
 
 import android.content.Context
@@ -136,7 +135,6 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            // Logic: This state determines whether to show the language selection or the main app navigation.
             var showLanguageSelection by remember {
                 mutableStateOf(!LanguageManager.hasLanguageBeenSet(this))
             }
@@ -147,8 +145,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = GreenDeep
                 ) {
-                    // Logic: Based on the `showLanguageSelection` flag, either display the one-time
-                    // language setup screen or the full application navigation graph.
                     if (showLanguageSelection) {
                         LanguageSelectionScreen()
                     } else {
@@ -173,29 +169,42 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val uri = intent?.data
-        if (uri != null && uri.scheme == "app" && uri.host == "birdlens") {
-            Log.d(TAG_AUTH, "Handling deep link: $uri")
-            when (uri.path) {
-                "/payment-success" -> {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+        Log.d("MainActivity", "Handling intent with URI: $uri")
+        if (uri != null) {
+            when {
+                // Referral Link Handling
+                uri.scheme == "https" && uri.host == "birdlens.netlify.app" && uri.path?.startsWith("/join") == true -> {
+                    val refCode = uri.getQueryParameter("ref")
+                    if (!refCode.isNullOrBlank()) {
+                        Log.i(TAG_AUTH, "Referral code found in deep link: $refCode")
+                        googleAuthViewModel.referralCodeFromLink = refCode
+                        if (navController.currentDestination?.route != Screen.Register.route) {
+                            navController.navigate(Screen.Register.route)
+                        }
                     }
-                    navController.navigate(Screen.PaymentResult.createRoute(true))
                 }
-                "/payment-cancel" -> {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                // Payment and Other Deep Links
+                uri.scheme == "app" && uri.host == "birdlens" -> {
+                    Log.d(TAG_AUTH, "Handling custom scheme deep link: $uri")
+                    when (uri.path) {
+                        "/payment-success" -> {
+                            navController.navigate(Screen.Home.route) { popUpTo(navController.graph.startDestinationId) { inclusive = true } }
+                            navController.navigate(Screen.PaymentResult.createRoute(true))
+                        }
+                        "/payment-cancel" -> {
+                            navController.navigate(Screen.Home.route) { popUpTo(navController.graph.startDestinationId) { inclusive = true } }
+                            navController.navigate(Screen.PaymentResult.createRoute(false))
+                        }
+                        else -> Log.d(TAG_AUTH, "Unhandled custom scheme path: ${uri.path}")
                     }
-                    navController.navigate(Screen.PaymentResult.createRoute(false))
                 }
                 else -> {
-                    Log.d(TAG_AUTH, "onNewIntent called with unhandled deep link path: ${uri.path}")
+                    Log.d(TAG_AUTH, "Intent with unhandled URI received: $uri")
                 }
             }
             setIntent(null)
         }
     }
-
 
     private fun startAdTimer() {
         if (adTimerJob?.isActive == true) {
