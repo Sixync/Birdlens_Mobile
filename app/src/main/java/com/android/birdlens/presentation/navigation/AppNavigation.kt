@@ -38,7 +38,6 @@ import com.android.birdlens.presentation.ui.screens.login.LoginScreen
 import com.android.birdlens.presentation.ui.screens.loginsuccess.LoginSuccessScreen
 import com.android.birdlens.presentation.ui.screens.map.MapScreen
 import com.android.birdlens.presentation.ui.screens.marketplace.MarketplaceScreen
-// Logic: Import the new NotificationScreen.
 import com.android.birdlens.presentation.ui.screens.notification.NotificationScreen
 import com.android.birdlens.presentation.ui.screens.payment.PayOSCheckoutScreen
 import com.android.birdlens.presentation.ui.screens.payment.PaymentResultScreen
@@ -278,6 +277,28 @@ fun AppNavigation(
             )
         }
 
+        // START: This is the new composable block that fixes the crash.
+        composable(
+            route = Screen.BirdRangeMap.route,
+            arguments = listOf(navArgument("scientificName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val birdRangeMapViewModel: BirdRangeMapViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        BirdRangeMapViewModel(
+                            application = application,
+                            savedStateHandle = createSavedStateHandle()
+                        )
+                    }
+                }
+            )
+            BirdRangeMapScreen(
+                navController = navController,
+                viewModel = birdRangeMapViewModel
+            )
+        }
+        // END: This is the new composable block that fixes the crash.
+
         composable(
             route = Screen.HotspotBirdList.route,
             arguments = listOf(navArgument("hotspotId") { type = NavType.StringType })
@@ -358,7 +379,6 @@ fun AppNavigation(
             )
         }
 
-        // Logic: Add the new NotificationScreen to the navigation graph.
         composable(Screen.Notifications.route) {
             val notificationViewModel: NotificationViewModel = viewModel()
             NotificationScreen(
